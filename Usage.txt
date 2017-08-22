@@ -1,0 +1,135 @@
+Usage:
+
+
+Prompts for number of turns to buff
+
+Prompts for number of turns to execute
+
+Prompts for which familiar to use
+
+
+If you specify a negative number turns of buff, it will provide minimum 1 turn of each buff, including some more expensive ones (like Mick's Inhaler) only used in this scenario.  This is meant as "night before" buffing, when you still have a bunch of turn-free embezzlers to fight, and can then turn around the next day and use those same buffs on another set of free embezzlers, all without using any turns.
+
+
+Standard buff package:
+
+* Summon Preturnatural Greed demon
+
+* Concert Winklered buff
+
+* Game grid token
+
+* Asdon Martin: Driving Observantly
+
+* Knob Goblin Nasal Spray
+
+* Knob Goblin Pet Buffing Spray
+
+* Resolution: Be Wealthier
+
+* How to scam tourist
+
+* Polka of Plenty
+
+* Leon's Phat Loot
+
+* Mad Hatter Dances With Tweedles
+
+* Source Terminal: Meat.enh
+
+* Glenn's Golden Dice
+
+* Incredible Self Esteem skill, only if "Always Be Collecting" buff is active
+
+* Flaskfull of Hollow (if half a purse is part of "Barf" outfit)
+
+* Leash of Linguini
+
+* Sweet Syntheses (+300% meat)
+
+* KGB "A View to Some Meat" buff (requires Ezandora's KGB control script)
+
+* Eats optimized using Mayo Clinic (and with milk of magnesium):
+
+* Jumping Horseradish: Kicked in the Sinuses
+
+* Thanksgiving Feast (including buying and/or cooking)
+
+* Maximum of 5 Ambitious Turkey if you have Fist Turkey familiar (all drinking casts Ode To Booze first)
+
+* Use Bag O' Tricks to increase buff lengths
+
+If you specify more than 320 turns and have pantsgiving, it will run 5 adventures and then use a distention pill to either time-spinner (if possible), or eat (if no time spinner) another serving of thanksgiving, for up to 340 turns of Thanksgetting buff.
+
+It will use the Adson Martin instakill before switching to Mayo Clinic, and eat one last mayo and buy a sphygmayomonometer before swapping out the mayo clinic.
+
+It will make and use copies of Knob Goblin Embezzlers from the following sources:
+
+* Chateau (fight only, not install)
+
+* 4-d camera (1/day)
+
+* Rain Doh (untested)
+
+* Spooky Putty (5/day)
+
+* LOV Enamorang (1/day)
+
+* Print Screen Button (1/day)
+
+* Digitize (re-digitize every 97 turns)
+
+It will also use free kills to extend the buff duration:
+
+* Jokester's Gun
+
+* Replica Bat-oomerang
+
+* Shattering Punch
+
+* Gingerbread Mob Hit
+
+* Asdon Martin: Missile Launcher
+
+
+If outfit "Barf" contains an accordion and a bakelite backpack, it will execute accordion bash in each combat.
+
+Uses free combat (witchess or snojo) before each digitize to activate bag o' tricks "Badger Underfoot" buff.
+
+Optionally clear gingerbread to grab candies and a chocolate sculpture (if you have 300 sprinkles) or gingerbread wine (if you don't have the sprinkles).  Useful because you will normally have a large number of pet buffs.  Requires Bandersnatch or Stomping Boots.
+
+Feeds Robortender if he's your familiar with the following bonuses:
+
+* + meat
+
+* + item
+
+* mana regen
+
+* hobo drops
+
+* candy drops
+
+Grabs a pirate costume if orphan tot is your familiar.
+
+Visits protonic accelorator pack quest adventures, uses combat with a "drops" familiar in this priority:
+
+* Fist Turkey
+
+* Space Jellyfish (if elemental)
+
+* Intergnat
+
+* Rockin' Robin
+
+
+Before casting buffs, automatically equips Oscus's outfit for -5 MP cost, KGB for -3 MP cost (or orcish rubber if that's not available), and brimstone bracelet for -3 MP cost.
+
+
+If you have libram of resolutions, auto-burn mana between combats.
+
+
+Automatically goes to castle in the clouds top floor when semi-rare timer expires (this is buggy, timer currently stops the script).  If last semi-rare was Mick's, it visits purple light district if available, or knob treasury if not.
+
+
+

@@ -1,3 +1,199 @@
+// Costs:
+// 11 bacon @300                                          =     3,000
+// 1 4-d camera @7500                                     =     7,500
+// 6 cornucopia for thanksgiving feast @14,000            =    84,000
+// 1 scroll of ancient forbidden unspeakable evil @3100   =     3,100
+// 1 distention pill @????                                = turns
+// 1 drive-by shooting  @12000                            =    12,000
+// 1 hell in a bucket @2400                               =     2,400
+// 1 jumping horseradish @3333                            =     3,333
+// 1 Newark @4000                                         =     4,000
+// 1 Milk Studs @640                                      =       640
+// 3 pie man was not meant to eat @2500                   =     7,500
+// 10 resolution: be wealthier @1300                      =    13,000
+// 1 senior mints @100                                    =       100
+// 1 single entendre @19000                               =    19,000
+// 3 thin black candles @288                              =       900
+// 24 bags of W&Ws @1300                                  =    31,200
+
+// total                                                  =   191,673 
+// income over 340 turns                                  = 2,412,711
+// net gain                                               = 2,221,038
+
+// TODO:
+
+// semi-rare needs adventures skipped if it turns out to not be
+// once we visit a semi-rare adventure and run away or skip choice,
+// keep track so we don't semi-rare it again
+
+
+// burn mana down to 300 or so during buffing
+
+// free rests while wearing pantsgiving if giant pilgrim hat installed
+
+
+// Add mana burning and LOV tunnel running:
+// cast Milk Studs + Senior Mints for Max MP +300%
+// cast Milk Studs + Daffy Taffy for Max Myst +300%
+// buy sphygnomayomonometer
+// spacegate vaccine
+// telescope look high
+// free rests (wearing pantsgiving if available)
+// cast summon resolutions with mana reduction
+// use eternal car battery and oscus's neverending soda
+// cast summon resolutions with mana reduction
+// get broad spectrum vaccine, starry-eye (telescope)
+// wear max MP
+// run LOV tunnel
+// cast summon resolutions
+// use License to Chill
+// cast summon resolutions
+// use Yendorian Express card
+// cast summon resolutions
+// clara's bell and hobopolis if 20 hobo glyphs and have access
+
+
+// CODE BORROWED FROM VMF:
+
+void suit_up( location loc, familiar fam, item famequip, boolean meat )
+{
+//    switch ( loc.to_string() ) {
+//    case BARF_MOUNTAIN:
+//	outfit( barf_outfit );
+//	use_familiar( fam );
+//	break;
+//    case ICY_PEAK:
+//	outfit( icy_peak_outfit );
+//	use_familiar( fam );
+//	break;
+//    case DMT:
+//	outfit( dmt_outfit );
+//	use_familiar( MACHINE_ELF );
+//	break;
+//    case TUNNEL:
+//	outfit( lov_ensemble );
+//	// LOV Engineer will not drop LOV Elixer #6 if your familiar acts
+//	use_familiar( NO_FAMILIAR );
+//	return;
+//    default:
+//	outfit( meat ? farm_outfit : item_outfit );
+//	use_familiar( fam );
+//	break;
+//    }
+//
+//    // If unspecified, use whatever the familiar is already wearing
+//    if ( fam != NO_FAMILIAR && famequip != NO_ITEM ) {
+//	equip( famequip );
+//    }
+}
+
+void suit_up( location loc, familiar fam, item famequip )
+{
+    suit_up( loc, fam, famequip, true );
+}
+
+void suit_up( location loc, familiar fam, boolean meat )
+{
+//    item famequip = default_famequip;
+//
+//    if ( fam == TOT ) {
+//	if ( meat ) {
+//	    famequip = ( available_amount( PIRATE_COSTUME ) > 0 ? PIRATE_COSTUME :
+//			 available_amount( LIBERTY_COSTUME ) > 0 ? LIBERTY_COSTUME :
+//			 default_famequip );
+//	} else {
+//	    famequip = ( available_amount( NINJA_COSTUME ) > 0 ? NINJA_COSTUME :
+//			 available_amount( LIBERTY_COSTUME ) > 0 ? LIBERTY_COSTUME :
+//			 default_famequip );
+//	}
+//    }
+//
+//    suit_up( loc, fam, famequip, meat );
+}
+
+void suit_up( location loc, familiar fam )
+{
+    suit_up( loc, fam, true );
+}
+
+void suit_up( location loc )
+{
+    //boolean meat = true;
+    //suit_up( loc, meat ? meat_familiar : item_familiar, meat );
+}
+
+boolean use_tunnel_of_love = false;
+boolean love_tunnel_available = get_property( "loveTunnelAvailable" ).to_boolean();
+static familiar NO_FAMILIAR = $familiar[ none ];
+static location TUNNEL = $location[ The Tunnel of L.O.V.E. ];
+static monster LOV_ENFORCER = $monster[ LOV Enforcer ];
+static monster LOV_ENGINEER = $monster[ LOV Engineer ];
+static monster LOV_EQUIVOCATOR = $monster[ LOV Equivocator ];
+
+void use_tunnel_of_love()
+{
+    // Adventuring in the Tunnel of L.O.V.E. is optional
+    if ( !use_tunnel_of_love ) {
+        return;
+    }
+
+    if ( !love_tunnel_available || get_property( "_loveTunnelUsed" ).to_boolean() ) {
+        return;
+    }
+
+    print( "Taking a trip through the Tunnel of L.O.V.E." );
+
+    // LOV Engineer will not drop LOV Elixer #6 if your familiar acts
+    suit_up( TUNNEL, NO_FAMILIAR );
+
+    visit_url( "place.php?whichplace=town_wrong" );
+
+    string page = visit_url( "place.php?whichplace=town_wrong&action=townwrong_tunnel" );
+    if ( !page.contains_text( "choice.php" ) ) {
+        // Already been through here. Unexpected.
+        return;
+    }
+
+    // Enter the tunnel
+    run_choice( 1 );
+
+    // Fight or sneak around the LOV Enforcer
+    {
+        run_choice( 1 );
+        run_combat();
+    }
+    visit_url( "choice.php" );
+
+
+    run_choice( 3 ); // LOV_EARRINGS
+
+    // Fight or sneak around the LOV Engineer
+    {
+        run_choice( 1 );
+        run_combat();
+    }
+    visit_url( "choice.php" );
+
+
+    run_choice( 2 ); // open heart surgery
+
+    // Fight or sneak around the LOV Equivocator
+    {
+        run_choice( 1 );
+        run_combat();
+    }
+    visit_url( "choice.php" );
+
+    // Optionally choose an endowment
+    page = run_choice( 1 ); // LOV_ENAMORANG
+
+    if ( page.contains_text( "choice.php" ) ) {
+        // If there is another choice, we went through doing nothing
+        run_choice( 1 );
+    }
+}
+
+
 // LINKNOIDBARF.ASH
 
 
@@ -5,8 +201,8 @@
 
     int saveDigitizes = 1;
     int savePutties = 0;
-    int useCameras = 0;
     int usePrintScreens = 1;
+    int useEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
 
     // _firedJokestersGun
@@ -87,6 +283,7 @@
     stat moxie = ToStat("Moxie");
 
     slot head = ToSlot("hat");
+    slot back = ToSlot("back");
     slot shirt = ToSlot("shirt");
     slot weapon = ToSlot("weapon");
     slot offhand = ToSlot("off-hand");
@@ -96,15 +293,19 @@
     slot acc3 = ToSlot("acc3");
     slot famEqp = ToSlot("familiar");
 
-    // campground items
+// campground items
     item witchess = ToItem("Witchess Set");
     item terminal = ToItem("Source terminal");
+    item mayoClinic = ToItem("portable Mayo Clinic");
+    item asdonMartin = ToItem("Asdon Martin keyfob");
+    effect observantly = ToEffect("Driving Observantly");
+    item pieFuel = ToItem("pie man was not meant to eat");
+    item breadFuel = ToItem("loaf of soda bread");
+    item sphygmayo = ToItem("sphygmayomanometer");
 
-
-    // items for eating
+// items for eating
     item milk = ToItem("milk of magnesium");
     effect gotmilk = "Got Milk".ToEffect();
-    item mayoClinic = ToItem("portable Mayo Clinic");
     item mayoFullToDrunk = ToItem("Mayodiol"); // 1 full to drunk
     item mayoIncreaseStats = ToItem("Mayozapine"); // double stats
     item cashew = ToItem("cashew");
@@ -122,19 +323,22 @@
     item thanks8 = ToItem("thanksgiving turkey");
     item thanks9 = ToItem("warm gravy");
     item distention = ToItem("distention pill");
+    item timeSpinner = ToItem("Time Spinner");
 
-
-    //
+// booze to drink
     item dirt = ToItem("dirt julep"); // booze from plants with robortender
     item gingerWine = ToItem("high-end ginger wine"); // from gingertown
     item turkey = ToItem("Ambitious Turkey"); // from hand turkey
 
-    // spleen items
+// spleen items
     item egg1 = ToItem("black paisley oyster egg");
     item egg2 = ToItem("black polka-dot oyster egg");
     item egg3 = ToItem("black striped oyster egg");
-    // Sweet Synthesis
+// Sweet Synthesis
     item ww = ToItem("bag of W&Ws");
+    item milkStud = ToItem("Milk Studs");
+    item seniorMint = ToItem("Senior Mints");
+    item swizzler = ToItem("Swizzler");
 
 // orphan tot
     familiar orphan = ToFamiliar("Trick-or-Treating Tot");
@@ -148,64 +352,106 @@
     item roboMeat = ToItem("drive-by shooting");
     item roboHobo = ToItem("Newark");
 
-// fist turkey
+// other familiars of interest
     familiar fistTurkey = ToFamiliar("Fist Turkey");
+    familiar intergnat = ToFamiliar("Intergnat");
+    familiar jellyfish = ToFamiliar("Space Jellyfish");
+    familiar robin = ToFamiliar("Rockin' Robin");
+    familiar stompingBoots = ToFamiliar("Pair of Stomping Boots");
+    familiar bandersnatch = ToFamiliar("Frumious Bandersnatch");
 
-    // Skills and items for extending buffs
+// ghost busting
+    item protonPack = ToItem("protonic accelerator pack");
+    item talisman = ToItem("Talisman o' Namsilat");
+    item antiqueAccordion = ToItem("Antique Accordion");
+    location palindome = ToLocation("Inside the Palindome");
+    location icyPeak = ToLocation("The Icy Peak");
+    skill weakenGhost = ToSkill("Shoot Ghost");
+    skill trapGhost = ToSkill("Trap Ghost");
+    skill extractJelly = ToSkill("Extract Jelly");
+    skill curseOfIslands = ToSkill("Curse of the Thousand Islands");
+    skill soulBubble = ToSkill("Soul Bubble");
+    skill entanglingNoodles = ToSkill("Entangling Noodles");
+
+// familiar equipment
+    item snowSuit = ToItem("Snow Suit");
+    item petSweater = ToItem("Astral pet sweater");
+    item sugarShield = ToItem("sugar shield");
+    item cufflinks = ToItem("recovered cufflinks");
+    item hookah = ToItem("ittah bittah hookah");
+    item filthyLeash = ToItem("filthy child leash");
+
+// Skills and items for extending buffs
     item bagOtricks = ToItem("Bag O' Tricks");
     item jokesterGun = ToItem("Jokester's Gun");
-    item replicaBatommerang = ToItem("Replica Bat-oomerang");
+    item replicaBatoomerang = ToItem("Replica Bat-oomerang");
     skill shatteringPunch = ToSkill("Shattering Punch");
     skill gingerbreadMobHit = ToSkill("Gingerbread Mob Hit");
+    skill missileLauncher = ToSkill("Asdon Martin: Missile Launcher");
+    skill fireJokester = ToSkill("Fire the Jokester's Gun");
 
+// increase drops in combat
+    skill funkslinging = ToSkill("Ambidextrous Funkslinging");
     skill meteorShower = ToSkill("Meteor Shower");
+    skill accordionBash = ToSkill("Accordion Bash");
+    item bling = ToItem("Bling of the New Wave");
+    item bakeBackpack = ToItem("bakelite backpack");
+    item snowglobe = ToItem("KoL Con 13 snowglobe");
 
-    // Skills for consumption
+
+// Skills for consumption
     skill odeToBooze = ToSkill("The Ode to Booze");
 
-    // skills for +meat bonus
+// skills for +meat bonus
     skill leer = ToSkill("Disco Leer");
     skill polka = ToSkill("The Polka of Plenty");
+    skill phatLoot = ToSkill("Fat Leon's Phat Loot Lyric");
     skill sweetSynth = ToSkill("Sweet Synthesis");
-    // skiils for pet bonus
+    skill selfEsteem = ToSkill("Incredible Self-Esteem");
+// skiils for pet bonus
     skill leash = ToSkill("Leash of Linguini");
     skill empathy = ToSkill("Empathy of the Newt");
     item petBuff = ToItem("Knob Goblin pet-buffing spray");
     item kinder = ToItem("resolution: be kinder");
     item joy = ToItem("abstraction: joy");
 
-    // items for +meat bonus
+// items for +meat bonus
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
     item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
-    item wealthy = ToItem("resolution: be wealthier"); // from machine elf
+    item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
+    item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
     item avoidScams = ToItem("How to Avoid Scams"); // only relevant for barf mountain
     item flaskfull = ToItem("Flaskfull of Hollow"); // + smithness for Half a Purse
     item dice = ToItem("Glenn's golden dice"); // once a day random buffs
     item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
+    item gameToken = ToItem("defective Game Grid token"); // once a day activate for 5 turns of +5 everything
 
-    // 2 day items for +meat bonus
+// 2 day items for +meat bonus
     item peppermint = ToItem("peppermint twist"); // candy drop from robort
     item micks = ToItem("Mick's IcyVapoHotness Inhaler"); // from semi-rare
     item sugar = ToItem("bag of powdered sugar"); // 
     item pinkHeart = ToItem("pink candy heart");
 
-    // special activations for +meat bonus
+// special activations for +meat bonus
     string summonGreed = "summon 2"; // summoning chamber if you've learned the Hoom-Ha name
     string meatEnh = "terminal enhance meat.enh"; // if you have a source terminal
     string concertWinklered = "concert Winklered"; // if you helped the Orcs in the island war and finished fliering for the concert
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
-    // effects for +meat bonus
+// effects for +meat bonus
     effect odeToBoozeEffect = "Ode to Booze".ToEffect(); //
     effect winklered = "Winklered".ToEffect(); // from concert if you helped orcs
     effect sinuses = "Sinuses For Miles".ToEffect(); // from Mick's
     effect wasabi = "Wasabi Sinuses".ToEffect(); // from Knob Goblin nasal spray
     effect resolve = "Greedy Resolve".ToEffect(); // from resolution: be wealthy
+    effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
+    effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
     effect scamTourist = "How to Scam Tourists".ToEffect(); // from How to Avoid Scams
     effect leering = "Disco Leer".ToEffect(); // from Disco Leer (disco bandit skill)
     effect polkad = "Polka of Plenty".ToEffect(); // from Polka (accordion thief)
+    effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Polka (accordion thief)
     effect meatEnhanced = "meat.enh".ToEffect(); // source terminal, 60%, 3x 100 turns a day
     effect danceTweedle = "Dances with Tweedles".ToEffect(); // from DRINK ME potion, once a day, 40%, 30 turns
     effect merrySmith = "Merry Smithsness".ToEffect(); // from Flaskfull of Hollow
@@ -223,33 +469,47 @@
     effect pinkHeartEffect = "Heart of Pink".ToEffect();
     effect peppermintEffect = "Peppermint Twisted".ToEffect();
     effect sugarEffect = "So You Can Work More...".ToEffect();
+    effect kgbMeat = "A View to Some Meat".ToEffect();
+    effect kgbItems = "Items Are Forever".ToEffect();
+    effect bagOTricksEffect1 = "Badger Underfoot".ToEffect();
+    effect bagOTricksEffect2 = "Weasels Underfoot".ToEffect();
+    effect bagOTricksEffect3 = "Chihuahua Underfoot".ToEffect();
 
-    // effects for pet weight bonus
+// effects for pet weight bonus
     effect leashEffect = ToEffect("Leash of Linguini");
     effect empathyEffect = ToEffect("Empathy");
     effect petBuffEffect = ToEffect("Heavy Petting");
     effect kinderEffect = ToEffect("Kindly Resolve");
 
-    // skills to activate Bag O' Tricks
-    skill spell1 = ToSkill("Stream of Sauce");
-    skill spell2 = ToSkill("Saucestorm");
-    skill spell3 = ToSkill("Wave of Sauce");
-    skill spell4 = ToSkill("Spaghetti Spear");
-    skill spell5 = ToSkill("Cannelloni Cannon");
+// skills to activate Bag O' Tricks
+    skill BoTspell0 = ToSkill("Cannelloni Cannon"); // this one is special because it has a one turn delay
+    skill BoTspell1 = ToSkill("Spaghetti Spear"); // low damage
+    skill BoTspell2 = ToSkill("Salsaball"); // low damage
+    skill BoTspell3 = ToSkill("Saucestorm"); // likely to have skill
+    skill BoTnonspell0 = ToSkill("Lunging Thrust-Smack");
 
-    // between turns skills
+// between turns skills
     skill summonRes = ToSkill("Summon Resolutions");
-    // reducing mana costs
+    skill soulFood = ToSkill("Soul Food");
+// mana cost reduction
+    item oscusWeapon = ToItem("Wand of Oscus");
+    item oscusPants = ToItem("Oscus's dumpster waders");
+    item oscusAccessory = ToItem("Oscus's pelt");
+    item brimstoneBracelet = ToItem("Brimstone Bracelet");
+    item kgb = ToItem("Kremlin's Greatest Briefcase");
+    item rubber = ToItem("orcish rubber");
+    effect rubberEffect = ToEffect("Using Protection");
 
-    // locations for adventuring
+// locations for adventuring
     location garbagePirates = ToLocation("Pirates of the Garbage Barges"); // for orphan costume
     location covePirates = ToLocation("The Obligatory Pirate's Cove"); // alternate for orphan costume... wait a second, we should always have main pirates location
     location castleTopFloor = ToLocation("The Castle in the Clouds in the Sky (Top Floor)"); // semi-rare
+    location purpleLight = ToLocation("The Purple Light District"); // semi-rare
     location treasury = ToLocation("Cobb's Knob Treasury"); // semi-rare
     location barfMountain = ToLocation("Barf Mountain"); // main adventure location
+    location snojo = ToLocation("The X-32-F Combat Training Snowman");
 
-
-    // makin' copies, at the copy machine
+// makin' copies, at the copy machine
     item camera = ToItem("4-d camera");
     item usedcamera = ToItem("Shaking 4-d camera");
     item enamorang = ToItem("LOV Enamorang");
@@ -266,18 +526,70 @@
     monster tourist = "garbage tourist".to_monster();
     effect olfaction = "On the Trail".ToEffect();
 
+// semi-rare
+    item nickel = ToItem("hobo nickel");
+
+// Gingerbread
+    location gingerCivic = ToLocation("Gingerbread Civic Center");
+    location gingerTrain = ToLocation("Gingerbread Train Station");
+    location gingerRetail = ToLocation("Gingerbread Upscale Retail District");
+    item gingerHead = ToItem("gingerbread tophat");
+    item gingerShirt = ToItem("gingerbread waistcoat");
+    item gingerPants = ToItem("gingerbread trousers");
+    item gingerAcc1 = ToItem("candy dress shoes");
+    item gingerAcc2 = ToItem("candy necktie");
+    item gingerAcc3 = ToItem("chocolate pocketwatch");
+    item gingerSprinkles = ToItem("sprinkles");
 
 
-    boolean pendingPrintScreen = false;
-    boolean pendingCamera = false;
+// script state variables
+    familiar runFamiliar;
+    float snowSuitWeight = 0;
+    boolean canPickpocket = false;
+    boolean canPocketCrumb = false;
+    boolean canRaveNirvana = false; // meat drops
+    boolean canRaveConcentration = false; // item drops
+    boolean canRaveSteal = false; // steal an item
+    boolean canAccordionBash = false;
+    string bagOTricksSkill = "";
+    boolean needsSpookyPutty = false;
+    boolean needsRainDoh = false;
+    boolean needsDigitize = false;
+    boolean needsPrintScreen = false;
+    boolean needsCamera = false;
+    boolean needsEnamorang = false;
+    int enamorangsUsed = 0;
+    boolean canJokesterGun = false;
+    boolean canBatoomerang = false;
+    boolean canMissileLauncher = false;
+    boolean shouldMissileLauncher = false;
+    boolean canShatteringPunch = false;
+    boolean canMobHit = false;
+    int digitizeCounter = 0;
+    int enamorangCounter = 0;
+    int fortuneCookieCounter = 0;
+    int maxItemUse = funkslinging.have_skill() ? 2 : 1;
+    boolean eatWithoutMayo = false;
+    int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry, 
+
+// forward declarations of functions:
+    void ChooseDropsFamiliar(boolean isElemental);
+    boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
+    void PrepareFamiliar(boolean forEmbezzler);
+    void PrepareEmbezzler();
+    boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
+    void BeforeSwapOutAsdon();
+    void BeforeSwapOutMayo();
 
     boolean EmbezzlerPrintScreened()
     {
-        return get_property("screencappedMonster") == embezzler.to_string();
+        return get_property("screencappedMonster") == embezzler.to_string()
+            && get_property("_printscreensUsedToday").to_int() < usePrintScreens; // need guard to prevent infinite print screening
     }
     boolean EmbezzlerCameraed()
     {
-        return get_property("cameraMonster") == embezzler.to_string();
+        return get_property("cameraMonster") == embezzler.to_string()
+            && !get_property("_cameraUsed").to_boolean();
     }
     boolean EmbezzlerRainDohed()
     {
@@ -295,74 +607,238 @@
     {
         return get_property("digitized") == embezzler.to_string();
     }
+    boolean EmbezzlerChateaud()
+    {
+        return get_property("chateauMonster") == embezzler.to_string()
+            && get_property("_chateauMonsterFought") == "false";
+    }
 
+    boolean HaveEquipment(item itm)
+    {
+        return itm.item_amount() > 0 || itm.have_equipped();
+    }
+    boolean OutfitContains(string outfit, item eq)
+    {
+        foreach key,value in outfit_pieces(outfit)
+            if (value == eq)
+                return true;
+        return false;
+    }
     boolean IsAccordion(item it)
     {
         return it.item_type() == "accordion";
     }
+    boolean CanDistention()
+    {
+        return distention.item_amount() > 0 && !get_property("_distentionPillUsed").to_boolean();
+    }
+    boolean InList(string value, string list, string delimiter)
+    {
+        if (value == list)
+            return true;
+        if (list.length() <= value.length())
+            return false;
+        if (list.contains_text(delimiter + value + delimiter))
+            return true;
+        if (list.substring(0, value.length() + 1) == value + delimiter)
+            return true;
+        if (list.substring(list.length() - value.length() - 1) == delimiter + value)
+            return true;
+        return false;
+    }
+    boolean HaveEaten(item food)
+    {
+        string eatenList = get_property("_timeSpinnerFoodAvailable");
+        string itemID = food.to_int().to_string();
+        return InList(itemID, eatenList, ",");
+    }
+    void UseOneTotal(item i, effect e)
+    {
+        if (i.item_amount() > 0 && e.have_effect() == 0)
+        {
+            use(1, i);
+        }
+    }
+    void BurnManaSummoning()
+    {
+        while (summonRes.have_skill() && summonRes.mp_cost() < (my_mp() - 20))
+        {
+            use_skill(1, summonRes);
+        }
+    }
+    void SoulSauceToMana()
+    {
+        while ((my_soulsauce() > 90 && my_mp() + 15 < my_maxmp())
+            || (my_mp() < 30 && my_maxmp() > 30 && my_soulsauce() > 5))
+        {
+            use_skill(1, soulFood);
+        }
+    }
+    int GetRemainingFreeRunaways()
+    {
+        int result = (my_familiar().familiar_weight() + weight_adjustment()) / 5;
+        result -= get_property("_banderRunaways").to_int();
+        return result;
+    }
+    boolean FuelAsdon(int requestedFuel)
+    {
+        if (!(get_campground() contains asdonMartin))
+            return false;
+        int hadFuel = get_fuel();
+        while (hadFuel < requestedFuel)
+        {
+            if (pieFuel.item_amount() > 0)
+                cli_execute("asdonmartin fuel 1 " + pieFuel.to_string());
+            else if (breadFuel.item_amount() > 0)
+                cli_execute("asdonmartin fuel 1 " + breadFuel.to_string());
+            if (get_fuel() == hadFuel)
+            {
+                abort("Asdon Martin is out of gas, please refuel manually, or acquire pies or bake soda bread before resuming.");
+            }
+            hadFuel = get_fuel();
+        }
+        return true;
+    }
+    boolean LoadChoiceAdventure(location loc, boolean optional)
+    {
+        string page = visit_url(loc.to_url().to_string());
+        if (page.contains_text("choice.php"))
+            return true;
+
+        if (!optional)
+            abort("Unexpected adventure at " + loc.to_string());
+        return false;
+    }
 
 
-boolean canPickpocket = false;
-boolean canPocketCrumb = false;
-boolean canAccordionBash = false;
-string bagOTricksSkill = "";
-boolean needsSpookyPutty = false;
-boolean needsRainDoh = false;
-boolean needsDigitize = false;
-boolean needsPrintScreen = false;
-boolean needsCamera = false;
-boolean needsEnamorang = false;
-    void prepareStandardFilter()
+
+    void PrepareStandardFilter()
     {
         if (!canPickpocket)
         {
             canPickpocket = my_class().to_string() == "Disco Bandit" || my_class().to_string() == "Accordion Thief";
+            if (my_class().to_string() == "Disco Bandit")
+            {
+                canRaveNirvana = get_property("raveCombo5") != "";
+                canRaveConcentration = get_property("raveCombo3") != "";
+                canRaveSteal = get_property("raveCombo4") != "";
+            }
         }
-        canPocketCrumb = pantsGiving.item_amount() > 0;
-        //canAccordionBash = ???;
+        canPocketCrumb = HaveEquipment(pantsGiving);
+        canAccordionBash = accordionBash.have_skill()
+            && IsAccordion(weapon.equipped_item())
+            && bakeBackpack.have_equipped();
+
         if (!needsSpookyPutty)
         {
             needsSpookyPutty = spookyPutty.item_amount() > 0 && get_property("spookyPuttyCopiesMade").to_int() < 5;
         }
+        string countersString = get_property("relayCounters");
+        string[int] counters = countersString.split_string(":");
+        fortuneCookieCounter = 0;
+        digitizeCounter = 0;
+        enamorangCounter = 0;
+        for (int i = 2; i < counters.count(); i += 3)
+        {
+            int turns = counters[i - 2].to_int();
+            string type = counters[i - 1];
+            if (type.index_of("Digitize Monster") >= 0)
+            {
+                digitizeCounter = turns;
+            }
+            else if (type.index_of("Enamorang Monster") >= 0)
+            {
+                enamorangCounter = turns;
+            }
+            else if (type.index_of("Fortune Cookie") >= 0)
+            {
+                if (fortuneCookieCounter == 0 || turns < fortuneCookieCounter)
+                    fortuneCookieCounter = turns;
+            }
+        }
         int digitizeCount = get_property("_sourceTerminalDigitizeUses").to_int();
-        needsDigitize = digitizeCount == 0
-            || (digitizeCount < 3
-            && get_property("_sourceTerminalDigitizeMonsterCount").to_int() >= 4);
-        //needsEnamorang = enamorang.item_amount() > 0
-        //    && get_property("enamorangMonster") != embezzler.to_string();
+        needsDigitize = digitizeCount == 0;
+        if (digitizeCount < 3)
+        {
+            int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
+            if (digitizeRange >= 4)
+                needsDigitize = true;
+            else if (my_turnCount() == digitizeCounter && digitizeRange == 3)
+                needsDigitize = true;
+                
+        }
+        if (my_turnCount() == digitizeCounter || my_turnCount() == enamorangCounter)
+        {
+            PrepareEmbezzler();
+        }
+        needsEnamorang = enamorang.item_amount() > 0
+            && get_property("enamorangMonster") == "";
+
+        if (usedCamera.item_amount() == 0 && camera.item_amount() > 0)
+        {
+            needsCamera = true;
+        }
+
+        canJokesterGun = get_property("_firedJokestersGun") == "false"
+            && jokesterGun.have_equipped();
+
+        if (replicaBatoomerang.item_amount() > 0
+            && get_property("_usedReplicaBatoomerang").to_int() < 3)
+        {
+            canBatoomerang = true;
+        }
+        if (get_campground() contains asdonMartin
+            && get_property("_missileLauncherUsed") == "false"
+            && get_fuel() >= 100)
+        {
+            canMissileLauncher = true;
+        }
+        if (shatteringPunch.have_skill()
+            && get_property("_shatteringPunchUsed").to_int() < 3)
+        {
+            canShatteringPunch = true;
+        }
+        if (gingerbreadMobHit.have_skill()
+            && !get_property("_gingerbreadMobHitUsed").to_boolean())
+        {
+            canMobHit = true;
+        }
     }
-    string standardFilter(int round, monster mon, string page)
+    string Filter_Standard(int round, monster mon, string page)
     {
-        static boolean pocketCrumbed = false;
-        static boolean accordionBashed = false;
-        static boolean bagOTricksOpened = false;
-        static boolean digitized = false;
         static boolean meteorShowered = false;
 
-        if (round == 0) print("using standardFilter");
+        if (round == 0)
+            print("using Filter_Standard");
 
         if (canPickpocket && can_still_steal())
         {
             return "\"pickpocket\"";
         }
-        if (canPocketCrumb && !pocketCrumbed)
+        if (canPocketCrumb)
         {
-            pocketCrumbed = true;
+            canPocketCrumb = false;
             return "skill Pocket Crumbs";
         }
-        if (mon == tourist && olfaction.have_effect() == 0)
+        if (mon == tourist && olfaction.have_effect() == 0 && my_mp() > 50)
         {
             return "skill Transcendent Olfaction";
         }
         if (canAccordionBash)
         {
+            canAccordionBash = false;
             return "skill Accordion Bash";
         }
         if (mon == embezzler) // capture embezzler
         {
-            if (needsDigitize && !digitized)
+            if (meteorShower.have_skill() && !meteorShowered)
             {
-                digitized = true;
+                meteorShowered = true;
+                return "skill Meteor Shower";
+            }
+            if (needsDigitize)
+            {
+                needsDigitize = false;
                 return "skill Digitize";
             }
             string s = "";
@@ -373,7 +849,7 @@ boolean needsEnamorang = false;
                 needsSpookyPutty = false;
                 itemCount++;
             }
-            if (needsPrintScreen)
+            if (needsPrintScreen && itemCount < maxItemUse)
             {
                 if (itemCount == 1)
                     s += ",";
@@ -381,7 +857,7 @@ boolean needsEnamorang = false;
                 needsPrintScreen = false;
                 itemCount++;
             }
-            if (needsCamera && itemCount < 2)
+            if (needsCamera && itemCount < maxItemUse)
             {
                 if (itemCount == 1)
                     s += ",";
@@ -389,7 +865,7 @@ boolean needsEnamorang = false;
                 needsCamera = false;
                 itemCount++;
             }
-            if (needsRainDoh && itemCount < 2)
+            if (needsRainDoh && itemCount < maxItemUse)
             {
                 if (itemCount == 1)
                     s += ",";
@@ -397,12 +873,28 @@ boolean needsEnamorang = false;
                 needsRainDoh = false;
                 itemCount++;
             }
-            if (needsEnamorang && itemCount < 2)
+            if (needsEnamorang && itemCount < maxItemUse)
+            {
+                enamorangsUsed = get_property("_enamorangsUsedToday").to_int();
+                if (enamorangsUsed < useEnamorangs)
+                {
+                    set_property("_enamorangsUsedToday", (++enamorangsUsed).to_string());
+                    if (itemCount == 1)
+                        s += ",";
+                    s += enamorang.to_string();
+                    enamorangsUsed++;
+                    needsEnamorang = false;
+                    itemCount++;
+                }
+            }
+            // free kill, needs to go last in the items.  Also Jokester's gun gets first
+            // priority because we don't want to equip that more than 1 turn
+            if (canBatoomerang && itemCount < maxItemUse && !canJokesterGun)
             {
                 if (itemCount == 1)
                     s += ",";
-                s += enamorang.to_string();
-                needsEnamorang = false;
+                s += replicaBatoomerang.to_string();
+                canBatoomerang = false;
                 itemCount++;
             }
             if (itemCount > 0)
@@ -411,31 +903,60 @@ boolean needsEnamorang = false;
                     s += ",none";
                 return "item " + s;
             }
-            if (jokesterGun.item_amount() > 0
-                && !get_property("_firedJokestersGun").to_boolean())
+        }
+        if (canMissileLauncher && shouldMissileLauncher)
+        {
+            // if "shouldMissileLauncher" is true, takes precedence over jokester's gun
+            canMissileLauncher = false;
+            return "skill " + missileLauncher.to_string();
+        }
+        if (canJokesterGun)
+        {
+            canJokesterGun = false;
+            return "skill " + fireJokester.to_string();
+        }
+        if (canMissileLauncher)
+        {
+            canMissileLauncher = false;
+            return "skill " + missileLauncher.to_string();
+        }
+        if (canShatteringPunch)
+        {
+            canShatteringPunch = false;
+            return "skill " + shatteringPunch.to_string();
+        }
+        if (canMobHit)
+        {
+            canMobHit = false;
+            return "skill " + gingerbreadMobHit.to_string();
+        }
+        // rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
+        // Only do combos when HP are over 100, don't want to get beat up
+        if (canRaveNirvana && my_hp() > 100) // increase meat drops
+        {
+            static boolean ravedNirvana = false;
+            if (!ravedNirvana)
             {
-                if (weapon.equip(jokesterGun))
-                    return "skill Fire Jokster's Gun";
+                ravedNirvana = true;
+                return "combo rave nirvana";
             }
-            if (replicaBatommerang.item_amount() > 0
-                && get_property("_usedReplicaBatoomerang").to_int() < 3)
+        }
+        if (canRaveConcentration && my_hp() > 100) // increase item drops
+        {
+            static boolean ravedConcentration = false;
+            if (!ravedConcentration)
             {
-                return "item Replica Bat-oomerang";
+                ravedConcentration = true;
+                return "combo rave nirvana";
             }
-            if (shatteringPunch.have_skill()
-                && get_property("_shatteringPunchUsed").to_int() < 3)
+        }
+        if (canRaveSteal && my_hp() > 100) // sometimes steals an item
+        {
+            static boolean ravedSteal = false;
+            if (!ravedSteal)
             {
-                return "skill Shattering Punch";
-            }
-            if (gingerbreadMobHit.have_skill()
-                && !get_property("_gingerbreadMobHitUsed").to_boolean())
-            {
-                return "skill Gingerbread Mob Hit";
-            }
-            if (meteorShower.have_skill() && !meteorShowered)
-            {
-                meteorShowered = true;
-                return "skill Meteor Shower";
+                ravedSteal = true;
+                return "combo rave steal";
             }
         }
         return "";
@@ -459,89 +980,76 @@ boolean needsEnamorang = false;
         return puttyAvailable - (puttiesUsed + raindohsUsed + savePutties);
     }
 
-    // always make sure we have one copy of the embezzler left
-    string BuildCopyEmbezzler()
-    {
-        pendingPrintScreen = false;
-        pendingCamera = false;
-
-        int existingCopyCount = 0;
-        boolean screenCapped = EmbezzlerPrintScreened();
-        boolean cameraed = EmbezzlerCameraed();
-        boolean dohed = EmbezzlerRainDohed();
-        boolean puttied = EmbezzlerPuttied();
-        boolean digitized = EmbezzlerDigitized();
-        if (screenCapped)
-            existingCopyCount++;
-        if (cameraed)
-            existingCopyCount++;
-        if (dohed)
-            existingCopyCount++;
-        if (puttied)
-            existingCopyCount++;
-
-        string digitize = "";
-        string copy = "";
-
-        int digitizes = get_property("_sourceTerminalDigitizeUses").to_int();
-        if (digitizes + saveDigitizes < 3)
-        {
-            if (!digitized)
-            {
-                // todo: space the digitizes out for optimal number
-                digitize = "skill Digitize\r\n";
-            }
-        }
-
-        if (existingCopyCount == 0)
-        {
-            int puttyRemaining = PuttyCopiesRemaining();
-            if (puttyRemaining > 0)
-            {
-                if (spookyPutty.item_amount() > 0)
-                    copy = "item " + spookyPutty.to_string() + "\r\n";
-                else if (rainDoh.item_amount() > 0)
-                    copy = "item " + rainDoh.to_string() + "\r\n";
-            }
-            if (copy == "")
-            {
-                if (get_property("printscreensUsedToday").to_int() < usePrintScreens
-                    && (printScreen.item_amount() > 0 || BACON.item_amount() >= 111))
-                {
-                    pendingPrintScreen = true;
-                    copy = "item " + printScreen.to_string() + "\r\n";
-                }
-                else if (get_property("camerasUsedToday").to_int() < useCameras && camera.item_amount() > 0)
-                {
-                    pendingCamera = true;
-                    copy = "item " + rainDoh.to_string() + "\r\n";
-                }
-            }
-        }
-        return digitize + copy;
-    }
 
     boolean CopiedEmbezzlerAvailable()
     {
-        if (PuttyCopiesRemaining() > 0)
-            return true;
-        if (EmbezzlerDigitized())
-        {
-            return PuttyCopiesRemaining() > 1;
-        }
         int count = 0;
         if (EmbezzlerPrintScreened())
-            count++;
+            return true;
         if (EmbezzlerCameraed())
-            count++;
+            return true;
         if (EmbezzlerRainDohed())
-            count++;
+            return true;
         if (EmbezzlerPuttied())
-            count++;
-        return count > 0;
+            return true;
+        if (EmbezzlerChateaud())
+            return true;
+        return false;
     }
 
 
+    boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus)
+    {
+        // snowsuit weight drops over time, once it gets too low, swap it out
+        if (snowSuitWeight > eqpBonus)
+        {
+            if (famEqp.equipped_item() != snowSuit)
+                famEqp.equip(snowSuit);
+            return true;
+        }
+        if (!HaveEquipment(eqp))
+            return false;
+        if (famEqp.equipped_item() != eqp)
+            famEqp.equip(eqp);
+        return true;
+    }
+    void SwitchToFamiliar(familiar fam)
+    {
+        if (my_familiar() == fam)
+            return;
+       
+        if (snowSuit.have_equipped() || petSweater.have_equipped() || hookah.have_equipped() || cufflinks.have_equipped())
+            famEqp.equip("none".to_item()); // remove the equipment so someone else can wear it
+        fam.use_familiar();
+    }
+    void PrepareFamiliar(boolean forEmbezzler)
+    {
+        if (my_familiar() != runFamiliar)
+            SwitchToFamiliar(runFamiliar);
+        if (my_familiar() == orphan)
+        {
+            // counts as an 80+ pound leprechaun, but just chose some arbitrary number larger
+            // than the 20 pound max of snow suit
+            TryEquipFamiliarEquipment(pirateCostume, 80);
+            return;
+        }
+
+        if (HaveEquipment(snowSuit))
+            snowSuitWeight = snowSuit.numeric_modifier("Familiar Weight");
+
+        if (TryEquipFamiliarEquipment(petSweater, 10))
+            return;
+        if (forEmbezzler && TryEquipFamiliarEquipment(sugarShield, 10))
+            return;
+        if (TryEquipFamiliarEquipment(cufflinks, 6))
+            return;
+        // slight weight bonus for hookah because it gives buffs (but how does that
+        // compare to the +10% item drop from snow suit even at 5 pounds?)
+        if (TryEquipFamiliarEquipment(hookah, 5.1))
+            return;
+        // final fallback, if no other equipment is matching, this should give +5 weight
+        TryEquipFamiliarEquipment(filthyLeash, 5);
+    }
     void PrepareEmbezzler()
     {
         outfit(defaultOutfit);
@@ -572,115 +1080,266 @@ boolean needsEnamorang = false;
         {
             matching.equip(best);
         }
-    }
-    void PrepareBarf()
-    {
-        if (!is_wearing_outfit(defaultOutfit))
-            outfit(defaultOutfit);
-    }
-    string AvailableSpellForBagOfTricks()
-    {
-        if (spell1.have_skill())
-            return spell1.to_string();
-        if (spell2.have_skill())
-            return spell2.to_string();
-        if (spell3.have_skill())
-            return spell3.to_string();
-        if (spell4.have_skill())
-            return spell4.to_string();
-        if (spell5.have_skill())
-            return spell5.to_string();
-        return "";
-    }
-    string PrepareUseBagOfTricks()
-    {
-        if (bagOtricks.item_amount() < 1)
-            return "";
+        if (HaveEquipment(jokesterGun)
+            && jokesterGun.can_equip()
+            && get_property("_firedJokestersGun") == "false")
         {
-            string s = AvailableSpellForBagOfTricks();
-            if (s == "")
-                return "";
-            return AvailableSpellForBagOfTricks();
+            weapon.equip(jokesterGun);
+            canJokesterGun = true;
         }
     }
-    void CheckBagOfTricksUsage()
+    void PrepareBarf(boolean RequireOutfit)
     {
+        if (!is_wearing_outfit(defaultOutfit))
+        {
+            if (RequireOutfit)
+                outfit(defaultOutfit);
+            else
+            {
+                foreach ix,itm in outfit_pieces(defaultOutfit)
+                {
+                    if (itm.to_string() != "none" && HaveEquipment(itm))
+                    {
+                        itm.to_slot().equip(itm);
+                    }
+                }
+            }
+        }
+    }
+    boolean TryRunWitchess(string filter)
+    {
+        if (get_campground() contains witchess
+            && get_property("_witchessFights").to_int() < 5)
+        {
+            visit_url("campground.php?action=witchess", false);
+            run_choice(1);
+            // fight the knight, because we eat a lot of horseradish
+            visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1936", false);
+            run_combat(filter);
+            return true;
+        }
+        return false;
+    }
+    boolean TryRunSnojo(string filter)
+    {
+        if (get_property("snojoAvailable").to_boolean()
+            && get_property("_snojoFreeFights").to_int() < 10
+            && get_property("snojoSetting") != "NONE")
+        {
+            adv1(snojo, -1, filter);
+            return true;
+        }
+        return false;
+    }
+
+    boolean ChooseFreeCombat(string filter)
+    {
+        if (TryRunWitchess(filter))
+            return true;
+        if (TryRunSnojo(filter))
+            return true;
+        return false;
+    }
+
+    boolean CanCast(skill skl)
+    {
+        if (!skl.have_skill())
+            return false;
+        return skl.mp_cost() <= my_mp();
+    }
+
+    string AvailableSpellForBagOfTricks()
+    {
+        if (CanCast(BoTspell0))
+            return "skill " + BoTspell0.to_string();
+        if (CanCast(BoTspell1))
+            return "skill " + BoTspell1.to_string();
+        if (CanCast(BoTspell2))
+            return "skill " + BoTspell2.to_string();
+        if (CanCast(BoTspell3))
+            return "skill " + BoTspell3.to_string();
+        return "";
+    }
+    string NonSpellWhileWearingBagOfTricks()
+    {
+        if (CanCast(BoTnonspell0))
+            return "skill " + BoTnonspell0.to_string();
+        return "attack";
+    }
+    string Filter_BagOTricks(int round, monster mon, string page)
+    {
+        static boolean bagOTricksReadied = false;
+        static boolean bagOTricksOpened = false;
+        if (!bagOTricksReadied)
+        {
+            bagOTricksReadied = true;
+            return AvailableSpellForBagOfTricks();
+        }
+        if (!bagOTricksOpened)
+        {
+            bagOTricksOpened = true;
+            return "skill Open the Bag o' Tricks";
+        }
+        return NonSpellWhileWearingBagOfTricks(); // finish them off with non-spell skills
+    }
+
+    void TryActivateBagOTricks()
+    {
+        if (!HaveEquipment(bagOtricks))
+            return;
+        if (bagOtricksEffect1.have_effect() > 0) // can't re-activate
+            return;
+        if (bagOtricksEffect2.have_effect() > 0) // can't re-activate
+            return;
+        if (bagOtricksEffect3.have_effect() > 0) // can't re-activate
+            return;
+        if (AvailableSpellForBagOfTricks() == "")
+            return;
+        item oldOffhand = offhand.equipped_item();
+        offhand.equip(bagOtricks);
+        if (!bagOtricks.have_equipped()) // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
+            return;
+        ChooseFreeCombat("Filter_BagOTricks");
+        offhand.equip(oldOffhand);
+    }
+    void EquipDropItems()
+    {
+        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well
+            offhand.equip(snowglobe);
+    }
+    boolean TryActivatePantsgivingFullness()
+    {
+        if (!HaveEquipment(pantsGiving))
+            return false;
+        pants.equip(pantsGiving);
+        boolean first = true;
+        while (get_property("_pantsgivingFullness").to_int() == 0)
+        {
+            ChooseDropsFamiliar(false);
+            if (first)
+            {
+                first = false;
+                TryActivateBagOTricks();
+                continue;
+            }
+            else
+            {
+                EquipDropItems();
+                if (!TryRunSnojo(""))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    int ghostShot = 0;
+    int stunRound = 0;
+    string Filter_TrapGhost(int round, monster mon, string page)
+    {
+        static boolean cursed = false;
+        static boolean extracted = false;
+        static boolean bashed = false;
+        static boolean bubbled = false;
+        static boolean noodled = false;
+        if (CanCast(curseOfIslands) && !cursed) // reduce chances of stun breaking early
+        {
+            cursed = true;
+            return "skill " + curseOfIslands.to_string();
+        }
+        if (extractJelly.have_skill())
+        {
+            extracted = true;
+            return "skill " + extractJelly.to_string();
+        }
+        if (CanCast(accordionBash) && round >= stunRound && !bashed) // always stun if you have it
+        {
+            bashed = true;
+            stunRound = round + 3;
+            return "skill " + accordionBash.to_string();
+        }
+        if (soulBubble.have_skill() && round >= stunRound && !bubbled) // only works if you are sauceror and have soulsauce
+        {
+            bubbled = true;
+            stunRound = round + 3;
+            return "skill " + soulBubble.to_string();
+        }
+        if (CanCast(entanglingNoodles) && round >= stunRound && !noodled) // only stuns if you are a pastamancer
+        {
+            noodled = true;
+            stunRound = round + 3;
+            return "skill " + entanglingNoodles.to_string();
+        }
+        if (weakenGhost.have_skill() && ghostShot < 3)
+        {
+            ghostShot++;
+            return "skill " + weakenGhost.to_string();
+        }
+        if (trapGhost.have_skill())
+            return "skill " + trapGhost.to_string();
+        return "";
+    }
+    void EquipGhostGear(location loc)
+    {
+        if (loc == palindome)
+        {
+            acc3.equip(talisman);
+        }
+        else if (loc == icyPeak)
+        {
+            outfit("eXtreme Cold-Weather Gear"); // need 5 resist to visit location
+        }
+        if (!protonPack.have_equipped())
+        {
+            if (protonPack.item_amount() < 1)
+                return;
+            back.equip(protonPack);
+        }
+        if (!IsAccordion(weapon.equipped_item())
+            && accordionBash.have_skill())
+        {
+            weapon.equip(antiqueAccordion);
+        }
+    }
+    void ChooseDropsFamiliar(boolean isElemental)
+    {
+        if (fistTurkey.have_familiar() && get_property("_turkeyBooze").to_int() < 5)
+        {
+            SwitchToFamiliar(fistTurkey);
+            return;
+        }
+        if (isElemental && jellyfish.have_familiar() && get_property("_spaceJellyfishDrops").to_int() < 3)
+        {
+            SwitchToFamiliar(jellyfish);
+            return;
+        }
+        if (intergnat.have_familiar())
+        {
+            SwitchToFamiliar(intergnat);
+            return;
+        }
+        if (robin.have_familiar())
+        {
+            SwitchToFamiliar(intergnat);
+            return;
+        }
+    }
+    boolean TryFightGhost()
+    {
+        location loc = get_property("ghostLocation").to_location();
+        if (loc.to_string() == "none")
+            return false;
+        EquipGhostGear(loc);
+        ChooseDropsFamiliar(true);
+        ghostShot = 0;
+        stunRound = 0;
+        adv1(loc, -1, "Filter_TrapGhost");
+        return true;
     }
     void PreparePirates()
     {
     }
 
-    boolean IsAccordion(item weapon)
-    {
-        if (weapon.to_string() == "Accord ion")
-            return true;
-        return false;
-    }
 
-
-    string BuildCombatString(boolean isEmbezzler, string specialSkill)
-    {
-        int pickpocketCount = 0;
-        string startCombat = "";
-        string initialSkills = "";
-        string maybeFinisher = "";
-        string finisher = "attack with weapon";
-
-        if (isEmbezzler)
-            startCombat = BuildCopyEmbezzler();
-        if (blBackpack.have_equipped()
-            && "Accordion Bash".to_skill().have_skill()
-            && IsAccordion(weapon.equipped_item())
-            )
-        {
-            initialSkills = "skill Accordion Bash\r\n";
-        }
-        switch (my_class().to_string())
-        {
-            case "Seal Clubber":
-                finisher = "skill Lunge Smack";
-                break;
-            case "Turtle Tamer":
-                finisher = "skill Headbutt";
-                break;
-            case "Pastamancer":
-                finisher = "skill Cannelloni Cannon";
-                break;
-            case "Sauceror":
-                finisher = "skill Saucestorm";
-                break;
-            case "Accordion Thief":
-                pickpocketCount = 1;
-                break;
-            case "Disco Bandit":
-                pickpocketCount = 1;
-                if ("Bling of the New Wave".to_item().have_equipped())
-                    pickpocketCount = 2;
-                initialSkills += "combo rave nirvana\r\ncombo rave concentration";
-                maybeFinisher = "skill Disco Dance of Doom\r\nskill Disco Dance II: Electric Boogaloo\r\nskill Knife in the Dark";
-                break;
-        }
-        buffer result;
-        for (int i = 0; i < pickpocketCount; i++)
-            result.append("pickpocket\r\n");
-
-        if (startCombat != "")
-            result.append(startCombat).append("\r\n");
-
-        if (initialSkills != "")
-            result.append(initialSkills).append("\r\n");
-
-        if (specialSkill != "")
-            result.append(specialSkill).append("\r\n");
-
-        if (maybeFinisher != "")
-            result.append(maybeFinisher).append("\r\n");
-
-        for (int i = 0; i < 5; i++)
-            result.append(finisher).append("\r\n");
-
-        return result.to_string();
-    }
 
     void UseItem(item itm, effect resultingEffect, int requestedTurns)
     {
@@ -694,33 +1353,36 @@ boolean needsEnamorang = false;
         }
     }
 
-    item oscusWeapon = ToItem("Wand of Oscus");
-    item oscusPants = ToItem("Oscus's dumpster waders");
-    item oscusAccessory = ToItem("Oscus's pelt");
-    item brimstoneBracelet = ToItem("Brimstone Bracelet");
-    item rubber = ToItem("orcish rubber");
-    effect rubberEffect = ToEffect("Using Protection");
     void TryReduceManaCost(skill skll)
     {
         if (mysticality.my_basestat() >= 200
-            && oscusWeapon.item_amount() > 0
-            && oscusPants.item_amount() > 0
-            && oscusAccessory.item_amount() > 0)
+            && HaveEquipment(oscusWeapon)
+            && HaveEquipment(oscusPants)
+            && HaveEquipment(oscusAccessory))
         {
-            weapon.equip(oscusWeapon);
+            if (weapon_hands(weapon.equipped_item()) > 1)
+                weapon.equip("none".to_item());
+            offhand.equip(oscusWeapon);
             pants.equip(oscusPants);
             acc1.equip(oscusAccessory);
         }
-        if (mysticality.my_basestat() >= 30
-            && brimstoneBracelet.item_amount() > 0)
+        if (HaveEquipment(kgb))
         {
-            acc2.equip(brimstoneBracelet);
+            // todo: verify whether this actually has the proper -3 MP bonus on it
+            float modifier = kgb.numeric_modifier("Mana Cost");
+            print("kgb mana cost modifier = " + modifier);
+            acc2.equip(kgb);
         }
-        if (skll.mp_cost() > 2 && skll.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
+        else if (skll.mp_cost() > 2 && skll.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
             && rubberEffect.have_effect() <= 0
             && rubber.item_amount() > 0)
         {
             use(1, rubber);
+        }
+        if (mysticality.my_basestat() >= 30
+            && HaveEquipment(brimstoneBracelet))
+        {
+            acc3.equip(brimstoneBracelet);
         }
     }
 
@@ -795,6 +1457,18 @@ boolean needsEnamorang = false;
         else
             return i2;
     }
+    item ChooseCheapestThanksgetting()
+    {
+        item bestThanks = ChooseCheapest(thanks1, thanks2);
+        bestThanks = ChooseCheapest(bestThanks, thanks3);
+        bestThanks = ChooseCheapest(bestThanks, thanks4);
+        bestThanks = ChooseCheapest(bestThanks, thanks5);
+        bestThanks = ChooseCheapest(bestThanks, thanks6);
+        bestThanks = ChooseCheapest(bestThanks, thanks7);
+        bestThanks = ChooseCheapest(bestThanks, thanks8);
+        bestThanks = ChooseCheapest(bestThanks, thanks9);
+        return bestThanks;
+    }
 
     boolean AcquireFeast(item food, int cashewCost)
     {
@@ -865,49 +1539,29 @@ boolean needsEnamorang = false;
         {
             CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk);
         }
+        if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+            put_closet(swizzler.item_amount(), swizzler);
         
         drink(1, booze);
     }
 
-    boolean InList(string value, string list, string delimiter)
+
+
+    void ConsumeMayo(boolean convertToDrunk)
     {
-        if (value == list)
-            return true;
-	if (list.length() <= value.length())
-	    return false;
-        if (list.contains_text(delimiter + value + delimiter))
-            return true;
-        if (list.substring(0, value.length() + 1) == value + delimiter)
-            return true;
-        if (list.substring(list.length() - value.length() - 1) == delimiter + value)
-            return true;
-        return false;
-    }
-
-    boolean HaveEaten(item food)
-    {
-        string eatenList = get_property("_timeSpinnerFoodAvailable");
-        string itemID = food.to_int().to_string();
-        return InList(itemID, eatenList, ",");
-    }
-
-    void TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique)
-    {
-        if (desiredEffect.have_effect() >= turnLimit)
-            return;
-
-        if (eatUnique && HaveEaten(food))
-            return;
+        if (!(get_campground() contains mayoClinic))
+        {
+            if (mayoClinic.item_amount() > 0 && !eatWithoutMayo)
+            {
+                if (!user_confirm("Mayo clinic is not in workshed, do you wish to eat without mayo?"))
+                {
+                    abort("Stopping wtithout eating because no mayo clinic");
+                }
+                eatWithoutMayo = true;
+            }
+        }
 
 
-        UseItem(milk, gotmilk, 2);
-
-        int remainingFullness = fullness_limit() - my_fullness();
-        if (providedFullness > remainingFullness)
-            return;
-        boolean remainingDrunk = my_inebriety() < inebriety_limit();
-        boolean convertToDrunk = remainingDrunk
-            && (followupFullness > remainingFullness);
         item mayo;
         if (convertToDrunk)
         {
@@ -917,18 +1571,107 @@ boolean needsEnamorang = false;
         {
             mayo = mayoIncreaseStats;
         }
-        if (!use(1, mayo))
+        if (mayo.item_amount() <= 0)
         {
-            if (mayoClinic.item_amount() > 0)
-            {
-                use(1, mayoClinic);
-            }
-            if (mayo.item_amount() > 0 || buy_using_storage(1, mayo))
-            {
-                use(1, mayo);
-            }
+            cli_execute("buy 1 " + mayo.to_string());
         }
+        if (mayo.item_amount() <= 0)
+        {
+            abort("No " + mayo.to_string() + " to eat with, please buy some manually.");
+        }
+
+        if (mayo.item_amount() > 0)
+        {
+            use(1, mayo);
+        }
+
+    }
+    boolean TimeSpinnerEat(item i)
+    {
+        string pageText = visit_url("inv_use.php?whichitem=9104");
+        if (!pageText.contains_text("Travel back to a Delicious Meal"))
+            return false;
+        pageText = visit_url("choice.php?whichchoice=1195&option=2");
+        if (!pageText.contains_text("Recall a delicious meal"))
+            return false;
+        pageText = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1197&foodid=" + i.to_int(), true);
+        return true;
+    }
+    boolean RoomToEat(int size)
+    {
+        return my_fullness() + size <= fullness_limit();
+    }
+    boolean TryBonusEatThanksgetting(boolean unique)
+    {
+        if (!RoomToEat(2))
+            return true;
+// specifying number of turns of effect as basically infinite because we already did
+// an effect limit check before we got here, but didn't pass in the required number,
+// and this should buff exactly once
+        int infTurns = 10000;
+        // specify a 2 fullness remaining because we don't want to convert to drunk
+        if (RoomToEat(2)) { return TryEat(thanks1, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks2, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks3, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks4, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks5, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks6, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks7, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks8, thanksgetting, 2, 0, infTurns, unique); }
+        if (RoomToEat(2)) { return TryEat(thanks9, thanksgetting, 2, 0, infTurns, unique); }
+        return false;
+    }
+    boolean TryBonusSpinThanksgetting()
+    {
+        if (timeSpinner.item_amount() < 0) // no time spinner
+            return false;
+        if (get_property("_timeSpinnerMinutesUsed") > 7) // no time left
+            return false;
+        ConsumeMayo(false);
+        UseItem(milk, gotmilk, 2);
+        if (HaveEaten(thanks1) && TimeSpinnerEat(thanks1)) return true;
+        if (HaveEaten(thanks2) && TimeSpinnerEat(thanks2)) return true;
+        if (HaveEaten(thanks3) && TimeSpinnerEat(thanks3)) return true;
+        if (HaveEaten(thanks4) && TimeSpinnerEat(thanks4)) return true;
+        if (HaveEaten(thanks5) && TimeSpinnerEat(thanks5)) return true;
+        if (HaveEaten(thanks6) && TimeSpinnerEat(thanks6)) return true;
+        if (HaveEaten(thanks7) && TimeSpinnerEat(thanks7)) return true;
+        if (HaveEaten(thanks8) && TimeSpinnerEat(thanks8)) return true;
+        if (HaveEaten(thanks9) && TimeSpinnerEat(thanks9)) return true;
+        return false;
+    }
+    boolean TryBonusThanksgetting()
+    {
+        print("Attempting bonus eating, fullness at " + my_fullness() + " / " + fullness_limit());
+        if (!RoomToEat(2))
+        {
+            return false;
+        }
+        
+        if (TryBonusEatThanksgetting(true)) // give first shot at eating un-eaten foods
+            return true;
+        if (TryBonusSpinThanksgetting()) // try re-eating something we already ate to increase duration
+            return true;
+        return TryBonusEatThanksgetting(false); // second chance if the time-spinner eating failed, for a non-unique food
+    }
+
+    boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique)
+    {
+        if (desiredEffect.have_effect() >= turnLimit)
+            return false;
+
+        if (eatUnique && HaveEaten(food))
+            return false;
+
+        if (!RoomToEat(providedFullness))
+            return false;
+        UseItem(milk, gotmilk, 2);
+
+        boolean underDrunk = my_inebriety() < inebriety_limit();
+        boolean convertToDrunk = underDrunk && !RoomToEat(providedFullness + followupFullness);
+        ConsumeMayo(convertToDrunk);
         eat(1, food);
+        return true;
     }
     void SweetSynth(int requestedTurns)
     {
@@ -954,20 +1697,20 @@ boolean needsEnamorang = false;
                     break;
                 }
                 PreparePirates();
-                if (!pirates.adv1(0, BuildCombatString(false, PrepareUseBagOfTricks())))
+                if (!pirates.adv1(0, "Filter_Standard"))
                 {
                     pirates = covePirates;
                 }
             }
         }
     }
-    void ValidateRobortender(item booze, string drinkList)
+    void ValidateRobortender(item booze, string drinkList, string purpose)
     {
         if (InList(booze.to_string(), drinkList, ","))
             return;
         if (booze.item_amount() <= 0)
         {
-            if (!user_confirm("Don't have any " + booze.to_string() + " for Robortender, do you wish to continue?"))
+            if (!user_confirm("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?"))
                 abort("Cannot buff Robortender, no " + booze.to_string());
         }
     }
@@ -983,14 +1726,14 @@ boolean needsEnamorang = false;
 
         string drinkList = get_property("_roboDrinks");
 
-        ValidateRobortender(roboMeat, drinkList);
-        ValidateRobortender(roboItems, drinkList);
-        ValidateRobortender(roboMana, drinkList);
-        ValidateRobortender(roboHobo, drinkList);
-        ValidateRobortender(roboCandy, drinkList);
+        ValidateRobortender(roboMeat, drinkList, "meat");
+        ValidateRobortender(roboItems, drinkList, "item");
+        ValidateRobortender(roboMana, drinkList, "mana");
+        ValidateRobortender(roboHobo, drinkList, "hobo");
+        ValidateRobortender(roboCandy, drinkList, "candy");
         if (get_property("_roboDrinks") == "")
         {
-            robort.use_familiar();
+            SwitchToFamiliar(robort);
             FeedRobortender(roboMeat, drinkList);
             FeedRobortender(roboItems, drinkList);
             FeedRobortender(roboMana, drinkList);
@@ -998,181 +1741,78 @@ boolean needsEnamorang = false;
             FeedRobortender(roboCandy, drinkList);
         }
     }
-
-    void UseOne(item itm, effect efct)
+    void DriveObservantly(int turns, boolean promptForActivate)
     {
-        if (itm.item_amount() > 0 && efct.have_effect() == 0)
+        if (observantly.have_effect() >= turns)
+            return;
+           
+        if (!(get_campground() contains asdonMartin))
         {
-            use(1, itm);
+            if (!promptForActivate)
+                return;
+            if (get_property("_workshedItemUsed").to_boolean())
+                return;
+            if (asdonMartin.item_amount() == 0)
+                return;
+            if (user_confirm("Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?"))
+            {
+                BeforeSwapOutMayo();
+                use(1, asdonMartin);
+            }
+        }
+        if (!(get_campground() contains asdonMartin))
+            return;
+
+        int effectTurns = observantly.have_effect();
+        while (effectTurns < turns)
+        {
+            FuelAsdon(37);
+            print("Trying to drive observantly, fuel = " + get_fuel().to_string() + ", existing turns = " + observantly.have_effect());
+            cli_execute("asdonmartin drive observantly");
+            //visit_url("campground.php?pwd="+my_hash()+"&preaction=drive&whichdrive=7");  // apparently this works even while already driving
+
+            if (effectTurns == observantly.have_effect()) // number of effect turns should have increased
+            {
+                print("drive observantly failed to buff");
+                return;
+            }
+            effectTurns = observantly.have_effect();
         }
     }
-    void BuffTurns(int turns, familiar fam)
+    static int kgbClickLimit = 21;
+    void KGBBuff(int turns, effect kgbBuff, string keyword)
     {
-        boolean needWeightBuffs = true;
-        boolean nightBefore = turns < 0;
-        boolean expensiveBuffs =
-            nightBefore
-            && allowExpensiveBuffs
-            && (PuttyCopiesRemaining() >= 5);
-
-        if (fam == orphan)
+        int effectTurns = kgbBuff.have_effect();
+        while (effectTurns < turns)
         {
-            needWeightBuffs = false;
-            GetPirateCostume();
-        }
-        else if (fam.name == "none")
-        {
-            needWeightBuffs = false;
-        }
-        else if (fam == robort)
-        {
-            if (!nightBefore)
-                FeedRobotender();
-        }
-
-
-        AdventureEffect(summonGreed, preternatualGreed, 1);
-        AdventureEffect(concertWinklered, winklered, 1);
-
-        if (nightBefore)
-        {
-            turns = 1;
-            SweetSynth(1);
-            if (expensiveBuffs)
+            if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
+                return;
+            cli_execute("briefcase b " + keyword);
+            if (effectTurns == kgbBuff.have_effect())
             {
-                UseOne(micks, sinuses);
-                UseOne(peppermint, peppermintEffect);
-                UseOne(sugar, sugarEffect);
-                UseOne(pinkHeart, pinkHeartEffect);
-                if (needWeightBuffs)
-                {
-                    UseOne(kinder, kinderEffect);
-                    TrySpleen(joy, joyEffect, 1, turns);
-                }
-                if (egg1.item_amount() > 0)
-                {
-                    TrySpleen(egg1, eggEffect, 1, turns);
-                }
-                else if (egg2.item_amount() > 0)
-                {
-                    TrySpleen(egg2, eggEffect, 1, turns);
-                }
-                else if (egg3.item_amount() > 0)
-                {
-                    TrySpleen(egg3, eggEffect, 1, turns);
-                }
+                print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?");
+                return;
             }
+            effectTurns = kgbBuff.have_effect();
         }
-
-        if (bagOtricks.item_amount() > 0) // want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
-        {
-            use(1, bagOtricks);
-        }
-
-
-        UseItem(nasalSpray, wasabi, turns);
-
-        UseItem(wealthy, resolve, turns);
-
-        UseItem(avoidScams, scamTourist, turns);
-
-        CastSkill(leer, leering, turns);
-
-        CastSkill(polka, polkad, turns);
-
-        if (needWeightBuffs)
-        {
-            CastSkill(leash, leashEffect, turns);
-            CastSkill(empathy, empathyEffect, turns);
-            UseItem(petBuff, petBuffEffect, turns);
-
-            if ((get_campground() contains witchess)
-                 && !get_property("_witchessBuff").to_boolean())
-            {
-                cli_execute("witchess");
-            }
-        }
-
-        AdventureEffect(meatEnh, meatEnhanced, turns);
-
-        AdventureEffect(hatterDreadSack, danceTweedle, 1);
-
-        boolean needSmithness = false;
-        foreach key,value in outfit_pieces(defaultOutfit)
-            if (value.to_string() == halfPurse.to_string())
-                needSmithness = true;
-
-        if (needSmithness)
-        {
-            UseItem(flaskfull, merrySmith, turns);
-        }
-
-        if (!get_property("_glennGoldenDiceUsed").to_boolean()
-            && dice.item_amount() > 0)
-        {
-            use(1, dice);
-        }
-
-        TryDrink(dirt, dirtEffect, 1, turns);
-        if (nightBefore)
-        {
-            TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
-            TryEat(foodCone, foodConeEffect, 2, 0, turns, false);
-            if (expensiveBuffs || fistTurkey.have_familiar())
-            {
-                TryDrink(turkey, turkeyEffect, 1, turns);
-            }
-            if (expensiveBuffs)
-            {
-                TryDrink(gingerWine, gingerWineEffect, 2, turns);
-            }
-            item bestThanks = ChooseCheapest(thanks1, thanks2);
-            bestThanks = ChooseCheapest(bestThanks, thanks3);
-            bestThanks = ChooseCheapest(bestThanks, thanks4);
-            bestThanks = ChooseCheapest(bestThanks, thanks5);
-            bestThanks = ChooseCheapest(bestThanks, thanks6);
-            bestThanks = ChooseCheapest(bestThanks, thanks7);
-            bestThanks = ChooseCheapest(bestThanks, thanks8);
-            bestThanks = ChooseCheapest(bestThanks, thanks9);
-            TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
-        }
-        else
-        {
-            TryEat(horseradish, kickedInSinuses, 1, 27, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 26, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 25, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 24, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 23, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 22, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 21, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 20, turns, false);
-            TryEat(horseradish, kickedInSinuses, 1, 19, turns, false);
-            TryEat(thanks1, thanksgetting, 2, 18, turns, true);
-            if (distention.item_amount() > 0 && !get_property("_distentionPillUsed").to_boolean()
-                && pantsGiving.item_amount() == 0)
-            {
-                use(1, distention);
-            }
-            TryEat(thanks2, thanksgetting, 2, 16, turns, true);
-            TryEat(thanks3, thanksgetting, 2, 14, turns, true);
-            TryEat(thanks4, thanksgetting, 2, 12, turns, true);
-            TryEat(thanks5, thanksgetting, 2, 10, turns, true);
-            TryEat(thanks6, thanksgetting, 2, 8, turns, true);
-            TryEat(thanks7, thanksgetting, 2, 6, turns, true);
-            TryEat(thanks8, thanksgetting, 2, 4, turns, true);
-            TryEat(thanks9, thanksgetting, 2, 2, turns, true);
-            if (fistTurkey.have_familiar())
-            {
-                int turkeyturns = turns > 125 ? 125 : turns;
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-            }
-        }
-
-        SweetSynth(turns);
+    }
+    void KGBBuff(int turns)
+    {
+        if (!HaveEquipment(kgb))
+            return;
+        if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
+            return;
+        // code to control briefcase is too complex, we depend on Ezandora's briefcase script
+        cli_execute("briefcase martinis"); // make sure to get martinis first
+        KGBBuff(turns, kgbMeat, "meat");
+        KGBBuff(turns, kgbItems, "item");
+    }
+    void RentAHorse()
+    {
+return;
+        location horsery = ToLocation("A Horsery");
+        if (LoadChoiceAdventure(horsery, true))
+            run_choice(3); // Rent a Crazy horse
     }
 
     void AcquireFullFeast()
@@ -1189,82 +1829,455 @@ boolean needsEnamorang = false;
         AcquireFeast(thanks9, 3);
     }
 
+
+    void BuffTurns(int turns)
+    {
+        boolean needWeightBuffs = true;
+// special case, if we're buffing in preparation for the next day, don't do all the thanksgarden eating and such, just buff for minimum number of turns
+// so we can copy some embezzlers before sleep and have buffs ready to go the next day
+        boolean nightBefore = turns < 0;
+        boolean expensiveBuffs =
+            nightBefore
+            && allowExpensiveBuffs
+            && (PuttyCopiesRemaining() >= 5);
+
+        if (my_fullness() < fullness_limit())
+            AcquireFullFeast();
+
+        if (runFamiliar == orphan)
+        {
+            needWeightBuffs = false;
+            GetPirateCostume();
+        }
+        else if (runFamiliar.name == "none")
+        {
+            needWeightBuffs = false;
+        }
+        else if (runFamiliar == robort)
+        {
+            if (!nightBefore)
+                FeedRobotender();
+        }
+
+
+        AdventureEffect(summonGreed, preternatualGreed, 1);
+        AdventureEffect(concertWinklered, winklered, 1);
+        if (nightBefore)
+        {
+            turns = 1;
+            SweetSynth(1);
+            if (expensiveBuffs)
+            {
+                UseOneTotal(micks, sinuses);
+                UseOneTotal(peppermint, peppermintEffect);
+                UseOneTotal(sugar, sugarEffect);
+                UseOneTotal(pinkHeart, pinkHeartEffect);
+                if (needWeightBuffs)
+                {
+                    UseOneTotal(kinder, kinderEffect);
+                    TrySpleen(joy, joyEffect, 1, turns);
+                }
+                if (egg1.item_amount() > 0)
+                {
+                    TrySpleen(egg1, eggEffect, 1, turns);
+                }
+                else if (egg2.item_amount() > 0)
+                {
+                    TrySpleen(egg2, eggEffect, 1, turns);
+                }
+                else if (egg3.item_amount() > 0)
+                {
+                    TrySpleen(egg3, eggEffect, 1, turns);
+                }
+            }
+        }
+        if (!get_property("_defectiveTokenUsed").to_boolean()
+            && gameToken.item_amount() > 0)
+        {
+            use(1, gameToken);
+        }
+
+        // want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
+        if (bagOtricks.item_amount() > 0 && get_property("_bagOTricksUsed") == "false")
+        {
+            use(1, bagOtricks);
+        }
+        DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
+        UseItem(nasalSpray, wasabi, turns);
+        UseItem(wealthy, resolve, turns);
+        UseItem(avoidScams, scamTourist, turns);
+        CastSkill(leer, leering, turns);
+        CastSkill(polka, polkad, turns);
+        CastSkill(phatLoot, phatLooted, turns);
+        RentAHorse();
+
+        if (needWeightBuffs)
+        {
+            CastSkill(leash, leashEffect, turns);
+            CastSkill(empathy, empathyEffect, turns);
+            UseItem(petBuff, petBuffEffect, turns);
+
+            if ((get_campground() contains witchess)
+                 && !get_property("_witchessBuff").to_boolean())
+            {
+                cli_execute("witchess");
+            }
+        }
+
+        AdventureEffect(meatEnh, meatEnhanced, turns);
+        AdventureEffect(hatterDreadSack, danceTweedle, 1);
+
+        if (OutfitContains(defaultOutfit, halfPurse))
+        {
+            UseItem(flaskfull, merrySmith, turns);
+        }
+
+        if (!get_property("_glennGoldenDiceUsed").to_boolean()
+            && dice.item_amount() > 0)
+        {
+            use(1, dice);
+        }
+        if (selfEsteem.have_skill()
+            && get_property("_incredibleSelfEsteemCast") == "false"
+            && (alwaysCollecting.have_effect() > 0
+            || workForHours.have_effect() > 0))
+        {
+            use_skill(1, selfEsteem);
+        }
+
+        SweetSynth(turns);
+        KGBBuff(turns);
+
+        TryDrink(dirt, dirtEffect, 1, 1);
+        BeforeSwapOutAsdon();
+        if (nightBefore)
+        {
+            TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
+            TryEat(foodCone, foodConeEffect, 2, 0, turns, false); // thanksgetting 
+            if (expensiveBuffs || fistTurkey.have_familiar())
+            {
+                TryDrink(turkey, turkeyEffect, 1, turns);
+            }
+            if (expensiveBuffs)
+            {
+                TryDrink(gingerWine, gingerWineEffect, 2, turns);
+            }
+            item bestThanks = ChooseCheapestThanksgetting();
+            TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
+        }
+        else
+        {
+            // always 18 turns of thanksgetting to account for, eat as many horseradish as necessary first,
+            // but they should get converted to drunk unless it's feast of Boris
+            for (int remaining = 30; remaining >= 18; remaining--)
+            {
+                if (horseradish.item_amount() < 1)
+                    cli_execute("acquire 1 jumping horseradish");
+                TryEat(horseradish, kickedInSinuses, 1, remaining, turns, false);
+            }
+            TryEat(thanks1, thanksgetting, 2, 16, turns, true);
+
+            // if we don't have pantsgiving, use the distention pill early so we can mayo more intelligently
+            if (CanDistention() && !HaveEquipment(pantsGiving))
+            {
+                use(1, distention);
+            }
+            TryEat(thanks2, thanksgetting, 2, 14, turns, true);
+            TryEat(thanks3, thanksgetting, 2, 12, turns, true);
+            TryEat(thanks4, thanksgetting, 2, 10, turns, true);
+            TryEat(thanks5, thanksgetting, 2, 8, turns, true);
+            TryEat(thanks6, thanksgetting, 2, 6, turns, true);
+            TryEat(thanks7, thanksgetting, 2, 4, turns, true);
+            TryEat(thanks8, thanksgetting, 2, 2, turns, true);
+            TryEat(thanks9, thanksgetting, 2, 0, turns, true);
+            if (fistTurkey.have_familiar())
+            {
+                int turkeyturns = turns > 110 ? 110 : turns; // limit to 5 turkeys a day, since that's all that can drop per day
+                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+            }
+            if (CanDistention() // only worth doing a pantsgiving fullness run if we can get a second fullness point from distention pill
+                && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
+                && my_fullness() == fullness_limit()) // pants can't activate without being completely full
+            {
+                if (TryActivatePantsgivingFullness())
+                {
+                    use(1, distention);
+                    // eat any that haven't been eaten yet
+                }
+            }
+            TryBonusThanksgetting();
+        }
+
+        DriveObservantly(turns, true); // true == request to install the Asdon Martin
+    }
+
+
+    string runawayFilter(int round, monster mon, string page)
+    {
+        return "run away";
+    }
+    string ReadyRunaway()
+    {
+        if (stompingBoots.have_familiar())
+        {
+            SwitchToFamiliar(stompingBoots);
+            return "runawayFilter";
+        }
+        else if (bandersnatch.have_familiar())
+        {
+            SwitchToFamiliar(stompingBoots);
+            CastSkill(odeToBooze, odeToBoozeEffect, 1);
+            return "runawayFilter";
+        }
+        return "Filter_Standard";
+    }
+      
+    boolean IsPurpleLightAvailable()
+    {
+        matcher imgNum = create_matcher("purplelightdistrict(\\d+)\\.gif", visit_url("clan_hobopolis.php?place=8"));
+        return imgNum.find() && imgNum.group(1).to_int() < 10;
+    }
+
+
+    boolean HaveGingerbreadBest()
+    {
+        if (!HaveEquipment(gingerHead)) return false;
+        if (!HaveEquipment(gingerShirt)) return false;
+        if (!HaveEquipment(gingerPants)) return false;
+        if (!HaveEquipment(gingerAcc1)) return false;
+        if (!HaveEquipment(gingerAcc2)) return false;
+        if (!HaveEquipment(gingerAcc3)) return false;
+        return true;
+    }
+    void WearGingerbreadBest()
+    {
+        head.equip(gingerHead);
+        shirt.equip(gingerShirt);
+        pants.equip(gingerPants);
+        acc1.equip(gingerAcc1);
+        acc2.equip(gingerAcc2);
+        acc3.equip(gingerAcc3);
+    }
+
+    void RunawayGingerbread()
+    {
+        visit_url("place.php?whichplace=gingerbreadcity");
+        if (get_property("_gingerbreadCityToday") != "true" // not accessible
+            || get_property("_gingerbreadCityTurns").to_int() > 0 // already ran turns
+            || get_property("_gingerbreadClockAdvanced") != "false" // already advanced clock
+            || get_property("gingerAdvanceClockUnlocked") != "true") // can't advance the clock
+        {
+            return;
+        }
+        if (!stompingBoots.have_familiar() && !bandersnatch.have_familiar())
+            return;
+        if (!user_confirm("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?"))
+        {
+            return;
+        }
+        string filter = ReadyRunaway();
+        if (filter != "runawayFilter")
+            return;
+        string page = LoadChoiceAdventure(gingerCivic, false); // civic center
+        run_choice(1); // clock choice
+        for (int i = 0; i < 3; i++) // run away 3 times
+        {
+            if (GetRemainingFreeRunaways() < 1)
+            {
+                print("Out of free runaways, " + (3 - i) + " adventures left until train candy.");
+                return;
+            }
+            gingerTrain.adv1(-1, filter);
+        }
+        page = LoadChoiceAdventure(gingerTrain, false);
+        run_choice(1); // dig for candy
+        if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+            put_closet(swizzler.item_amount(), swizzler);
+
+        if (GetRemainingFReeRunaways() < 9)
+        {
+            print("Out of free runaways, 9 adventures left until midnight.");
+            return;
+        }
+        if (!HaveGingerbreadBest())
+            return;
+        for (int i = 0; i < 9; i++) // run away 9 times
+        {
+            gingerRetail.adv1(-1, filter);
+        }
+        WearGingerbreadBest();
+        page = LoadChoiceAdventure(gingerRetail, false);
+        run_choice(2); // enter party
+        if (gingerSprinkles.item_amount() >= 300)
+            run_choice(2); // buy chocolate sculpture
+        else
+        {
+            print("Out of sprinkles, taking a drink instead of chocolate sculpture.");
+            run_choice(1); // take a free drink
+        }
+    }
+
     void RunSemiRare()
     {
+        semiRareAttempted = my_turnCount();
         string lastLocation = get_property("semirareLocation");
-        if (lastLocation == treasury.to_string())
+        if (lastLocation != castleTopFloor.to_string())
         {
-            castleTopFloor.adv1(0, "standardFilter");
+            string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
+            //castleTopFloor.adv1(-1, filter);
+            visit_url("adventure.php?snarfblat=324"); // castle top floor
+            run_combat(filter);
+// if non-combat choice adventure, Melon Collie and the infinite lameness => Copper Feel
+        }
+        else if (IsPurpleLightAvailable() && nickel.item_amount() >= 5)
+        {
+            string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
+            //purpleLight.adv1(-1, filter);
+            string page = visit_url("adventure.php?snarfblat=172"); // purple light district
+            if (page.contains_text("choice.php"))
+                run_choice(1);
+            else
+                run_combat(filter);
         }
         else
         {
             PrepareEmbezzler();
-            treasury.adv1(1, "standardFilter");
+            //treasury.adv1(-1, "Filter_Standard");
+            visit_url("adventure.php?snarfblat=260"); // treasury
+            run_combat("Filter_Standard");
        }
     }
 
     boolean ActivateCopyItem(item copyItem)
     {
-	visit_url("inv_use.php?whichitem=" + copyItem.to_int());
-        run_combat("standardFilter");
+        print("Trying to activate " + copyItem.to_string() + " for embezzler");
+        visit_url("inv_use.php?whichitem=" + copyItem.to_int());
+        run_combat("Filter_Standard");
         return true;
     }
     boolean RunCopiedEmbezzler()
     {
         PrepareEmbezzler();
         if (EmbezzlerPuttied())
+        {
+            print("using spooky putty embezzler");
+            needsSpookyPutty = get_property("spookyPuttyCopiesMade").to_int() < 5;
             return ActivateCopyItem(usedSpookyPutty);
+        }
         else if (EmbezzlerRainDohed())
+        {
+            print("using rain doh embezzler");
+            needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
+        }
         else if (EmbezzlerPrintScreened())
+        {
+            print("using print screen embezzler");
+            set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string());
+
+            needsPrintScreen = true;
             return ActivateCopyItem(usedPrintScreen);
-        else if (EmbezzlerCameraed() && !get_property("_cameraUsed").to_boolean())
+        }
+        else if (EmbezzlerCameraed())
+        {
+            print("using camera embezzler");
+            needsCamera = true;
             return ActivateCopyItem(usedcamera);
+        }
+        else if (EmbezzlerChateaud())
+        {
+            print("using Chateau painting embezzler");
+            visit_url("place.php?whichplace=chateau&action=chateau_painting");
+            run_combat("Filter_Standard");
+            return true;
+        }
+        print("no embezzler found");
         return false;
     }
 
-
-    //location chooseFreeCombat()
-    //{
-    //}
-
-    //void ActivateBagOfTricksBuff()
-    //{
-    //    int usedCount = get_property("LB.BagOTricks").to_int();
-    //}
-
-    void RunBarfMountain()
+    void RunBarfMountain(boolean requireOutfit)
     {
-        PrepareBarf();
+        PrepareBarf(requireOutfit);
 
-        barfMountain.adv1(-1, "standardFilter");
+        barfMountain.adv1(-1, "Filter_Standard");
     }
 
-    void RunTurns(int turnCount, familiar fam)
+    void BeforeSwapOutMayo()
     {
+        if (get_campground() contains mayoClinic)
+        {
+            // make sure to grab the sphygmayomanometer before switching items
+            if (!HaveEquipment(sphygmayo))
+                cli_execute("buy 1 " + sphygmayo.to_string());
+            // Soak in the mayo tank
+            visit_url("shop.php?action=bacta&whichshop=mayoclinic", false);
+            ConsumeMayo(false);
+        }
+    }
+    // If we have the Asdon Martin active and are about to switch to mayo clinic, want to
+    // use the missile launcher before it becomes unavailable.  We won't get full buffs for
+    // this, but it should still be more than worth the fuel it uses
+    void BeforeSwapOutAsdon()
+    {
+        if ((get_campground() contains asdonMartin)
+            && mayoClinic.item_amount() > 0
+            && get_property("_workshedItemUsed") == "false"
+            && get_property("_missileLauncherUsed") == "false")
+        {
+            print("Using Missile Launcher while Asdon Martin is active");
+            shouldMissileLauncher = true;
+            FuelAsdon(100);
+            PrepareStandardFilter();
+            PrepareFamiliar(false);
+            RunBarfMountain(false);
+        }
+    }
+
+
+    void RunTurns(int turnCount)
+    {
+        if (turnCount > 0)
+            RunawayGingerbread();
         for (int i = 0; i < turnCount; i++)
         {
-            print("Turns remaining = " + (turnCount - i));
-            while (summonRes.have_skill() && summonRes.mp_cost() < (my_mp() - 20))
-            {
-                use_skill(1, summonRes);
-            }
+            print("LinknoidBarf Turns remaining = " + (turnCount - i));
+            SoulSauceToMana();
+            BurnManaSummoning();
+            SoulSauceToMana();
           
-            prepareStandardFilter();
-            if (get_property("semirareCounter").to_int() == 0)
+            PrepareStandardFilter();
+            if (needsDigitize)
+                TryActivateBagOTricks();
+            
+            SoulSauceToMana();
+            if (fortuneCookieCounter == my_turnCount()
+                && semiRareAttempted != my_turnCount())
             {
                 print("Running semi-rare");
                 RunSemiRare();
                 continue;
             }
-            else if (CopiedEmbezzlerAvailable())
+            if ((turnCount - i) % 10 == 1)  // only check every 10 turns
+            {
+                if (TryFightGhost())
+                {
+                    continue;
+                }
+            }
+            if (CopiedEmbezzlerAvailable())
             {
                 print("Running copied embezzler");
+                PrepareFamiliar(true);
                 if (RunCopiedEmbezzler())
                     continue;
             }
+            PrepareFamiliar(false);
             print("Running barf mountain");
-            RunBarfMountain();
+            RunBarfMountain(true);
         }
     }
 
@@ -1272,15 +2285,16 @@ boolean needsEnamorang = false;
     void main(int buffTurns, int runTurns, string familiarName)
     {
         familiar fam = familiarName.to_familiar();
-        if (fam.to_string() < 0 && familiarName != "none")
+        if (fam.to_int() < 0 && familiarName != "none")
         {
             fam = my_familiar();
         }
         print("Running with familiar " + fam.to_string());
+        runFamiliar = fam;
         
-        AcquireFullFeast();
         if (buffTurns != 0)
-            BuffTurns(buffTurns, fam);
+            BuffTurns(buffTurns);
         if (runTurns > 0)
-            RunTurns(runTurns, fam);
+            RunTurns(runTurns);
     }
+
