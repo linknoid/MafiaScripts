@@ -27,171 +27,13 @@
 // keep track so we don't semi-rare it again
 
 
-// burn mana down to 300 or so during buffing
-
-// free rests while wearing pantsgiving if giant pilgrim hat installed
-
-
-// Add mana burning and LOV tunnel running:
-// cast Milk Studs + Senior Mints for Max MP +300%
-// cast Milk Studs + Daffy Taffy for Max Myst +300%
-// buy sphygnomayomonometer
-// spacegate vaccine
-// telescope look high
-// free rests (wearing pantsgiving if available)
-// cast summon resolutions with mana reduction
-// use eternal car battery and oscus's neverending soda
-// cast summon resolutions with mana reduction
-// get broad spectrum vaccine, starry-eye (telescope)
-// wear max MP
-// run LOV tunnel
-// cast summon resolutions
-// use License to Chill
-// cast summon resolutions
-// use Yendorian Express card
-// cast summon resolutions
+// Add for mana burning:
+// add sister's massage for mana restore
+// fix LOV tunnel combat filter
 // clara's bell and hobopolis if 20 hobo glyphs and have access
 
 
-// CODE BORROWED FROM VMF:
 
-void suit_up( location loc, familiar fam, item famequip, boolean meat )
-{
-//    switch ( loc.to_string() ) {
-//    case BARF_MOUNTAIN:
-//	outfit( barf_outfit );
-//	use_familiar( fam );
-//	break;
-//    case ICY_PEAK:
-//	outfit( icy_peak_outfit );
-//	use_familiar( fam );
-//	break;
-//    case DMT:
-//	outfit( dmt_outfit );
-//	use_familiar( MACHINE_ELF );
-//	break;
-//    case TUNNEL:
-//	outfit( lov_ensemble );
-//	// LOV Engineer will not drop LOV Elixer #6 if your familiar acts
-//	use_familiar( NO_FAMILIAR );
-//	return;
-//    default:
-//	outfit( meat ? farm_outfit : item_outfit );
-//	use_familiar( fam );
-//	break;
-//    }
-//
-//    // If unspecified, use whatever the familiar is already wearing
-//    if ( fam != NO_FAMILIAR && famequip != NO_ITEM ) {
-//	equip( famequip );
-//    }
-}
-
-void suit_up( location loc, familiar fam, item famequip )
-{
-    suit_up( loc, fam, famequip, true );
-}
-
-void suit_up( location loc, familiar fam, boolean meat )
-{
-//    item famequip = default_famequip;
-//
-//    if ( fam == TOT ) {
-//	if ( meat ) {
-//	    famequip = ( available_amount( PIRATE_COSTUME ) > 0 ? PIRATE_COSTUME :
-//			 available_amount( LIBERTY_COSTUME ) > 0 ? LIBERTY_COSTUME :
-//			 default_famequip );
-//	} else {
-//	    famequip = ( available_amount( NINJA_COSTUME ) > 0 ? NINJA_COSTUME :
-//			 available_amount( LIBERTY_COSTUME ) > 0 ? LIBERTY_COSTUME :
-//			 default_famequip );
-//	}
-//    }
-//
-//    suit_up( loc, fam, famequip, meat );
-}
-
-void suit_up( location loc, familiar fam )
-{
-    suit_up( loc, fam, true );
-}
-
-void suit_up( location loc )
-{
-    //boolean meat = true;
-    //suit_up( loc, meat ? meat_familiar : item_familiar, meat );
-}
-
-boolean use_tunnel_of_love = false;
-boolean love_tunnel_available = get_property( "loveTunnelAvailable" ).to_boolean();
-static familiar NO_FAMILIAR = $familiar[ none ];
-static location TUNNEL = $location[ The Tunnel of L.O.V.E. ];
-static monster LOV_ENFORCER = $monster[ LOV Enforcer ];
-static monster LOV_ENGINEER = $monster[ LOV Engineer ];
-static monster LOV_EQUIVOCATOR = $monster[ LOV Equivocator ];
-
-void use_tunnel_of_love()
-{
-    // Adventuring in the Tunnel of L.O.V.E. is optional
-    if ( !use_tunnel_of_love ) {
-        return;
-    }
-
-    if ( !love_tunnel_available || get_property( "_loveTunnelUsed" ).to_boolean() ) {
-        return;
-    }
-
-    print( "Taking a trip through the Tunnel of L.O.V.E." );
-
-    // LOV Engineer will not drop LOV Elixer #6 if your familiar acts
-    suit_up( TUNNEL, NO_FAMILIAR );
-
-    visit_url( "place.php?whichplace=town_wrong" );
-
-    string page = visit_url( "place.php?whichplace=town_wrong&action=townwrong_tunnel" );
-    if ( !page.contains_text( "choice.php" ) ) {
-        // Already been through here. Unexpected.
-        return;
-    }
-
-    // Enter the tunnel
-    run_choice( 1 );
-
-    // Fight or sneak around the LOV Enforcer
-    {
-        run_choice( 1 );
-        run_combat();
-    }
-    visit_url( "choice.php" );
-
-
-    run_choice( 3 ); // LOV_EARRINGS
-
-    // Fight or sneak around the LOV Engineer
-    {
-        run_choice( 1 );
-        run_combat();
-    }
-    visit_url( "choice.php" );
-
-
-    run_choice( 2 ); // open heart surgery
-
-    // Fight or sneak around the LOV Equivocator
-    {
-        run_choice( 1 );
-        run_combat();
-    }
-    visit_url( "choice.php" );
-
-    // Optionally choose an endowment
-    page = run_choice( 1 ); // LOV_ENAMORANG
-
-    if ( page.contains_text( "choice.php" ) ) {
-        // If there is another choice, we went through doing nothing
-        run_choice( 1 );
-    }
-}
 
 
 // LINKNOIDBARF.ASH
@@ -270,6 +112,13 @@ void use_tunnel_of_love()
             abort("Illegal familiar " + s);
         return result;
     }
+    monster ToMonster(string s)
+    {
+        monster result = s.to_monster();
+        if (result.to_string() != s)
+            abort("Illegal monster " + s);
+        return result;
+    }
     stat ToStat(string s)
     {
         stat result = s.to_stat();
@@ -338,6 +187,7 @@ void use_tunnel_of_love()
     item ww = ToItem("bag of W&Ws");
     item milkStud = ToItem("Milk Studs");
     item seniorMint = ToItem("Senior Mints");
+    item daffyTaffy = ToItem("Daffy Taffy");
     item swizzler = ToItem("Swizzler");
 
 // orphan tot
@@ -482,11 +332,12 @@ void use_tunnel_of_love()
     effect kinderEffect = ToEffect("Kindly Resolve");
 
 // skills to activate Bag O' Tricks
-    skill BoTspell0 = ToSkill("Cannelloni Cannon"); // this one is special because it has a one turn delay
+    skill BoTspell0 = ToSkill("Stuffed Mortar Shell"); // this one is special because it has a one turn delay
     skill BoTspell1 = ToSkill("Spaghetti Spear"); // low damage
     skill BoTspell2 = ToSkill("Salsaball"); // low damage
     skill BoTspell3 = ToSkill("Saucestorm"); // likely to have skill
     skill BoTnonspell0 = ToSkill("Lunging Thrust-Smack");
+    skill BoTnonspell1 = ToSkill("Weapon of the Pastalord");
 
 // between turns skills
     skill summonRes = ToSkill("Summon Resolutions");
@@ -509,6 +360,24 @@ void use_tunnel_of_love()
     location barfMountain = ToLocation("Barf Mountain"); // main adventure location
     location snojo = ToLocation("The X-32-F Combat Training Snowman");
 
+// Maximizing mana for summoning
+    location TUNNEL = ToLocation("The Tunnel of L.O.V.E.");
+    monster LOVenforcer = ToMonster("LOV Enforcer");
+    monster LOVengineer =  ToMonster("LOV Engineer");
+    monster LOVequivocator =  ToMonster("LOV Equivocator");
+    effect synthMyst = ToEffect("Synthesis: Smart"); // from Sweet Synthesis skill
+    effect synthMP = ToEffect("Synthesis: Energy"); // from Sweet Synthesis skill
+    item licenseChill = ToItem("License to Chill"); // mana restore
+    item yexpressCard = ToItem("Platinum Yendorian Express Card"); // mana restore
+    item oscusSoda = ToItem("Oscus's neverending soda");
+    item eternalBattery = ToItem("Eternal Car Battery");
+    skill discoNap = ToSkill("Disco Nap");
+    skill leisure = ToSkill("Adventurer of Leisure");
+    skill narcolepsy = ToSkill("Executive Narcolepsy");
+    item pilgrimHat = ToItem("Giant pilgrim hat");
+    item clarasBell = ToItem("Clara's bell");
+    item hoboBinder = ToItem("hobo code binder");
+
 // makin' copies, at the copy machine
     item camera = ToItem("4-d camera");
     item usedcamera = ToItem("Shaking 4-d camera");
@@ -522,8 +391,8 @@ void use_tunnel_of_love()
     item usedRainDoh = ToItem("Rain-Doh box full of monster");
     skill digitize = ToSkill("Digitize");
 
-    monster embezzler = "Knob Goblin Embezzler".to_monster();
-    monster tourist = "garbage tourist".to_monster();
+    monster embezzler = ToMonster("Knob Goblin Embezzler");
+    monster tourist = ToMonster("garbage tourist");
     effect olfaction = "On the Trail".ToEffect();
 
 // semi-rare
@@ -580,6 +449,7 @@ void use_tunnel_of_love()
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
+    void MaxManaSummons();
 
     boolean EmbezzlerPrintScreened()
     {
@@ -659,12 +529,16 @@ void use_tunnel_of_love()
             use(1, i);
         }
     }
-    void BurnManaSummoning()
+    void BurnManaSummoning(int keepMana)
     {
-        while (summonRes.have_skill() && summonRes.mp_cost() < (my_mp() - 20))
+        while (summonRes.have_skill() && summonRes.mp_cost() < (my_mp() - keepMana))
         {
             use_skill(1, summonRes);
         }
+    }
+    void BurnManaSummoning()
+    {
+        BurnManaSummoning(20);
     }
     void SoulSauceToMana()
     {
@@ -672,6 +546,48 @@ void use_tunnel_of_love()
             || (my_mp() < 30 && my_maxmp() > 30 && my_soulsauce() > 5))
         {
             use_skill(1, soulFood);
+        }
+    }
+    boolean ShouldSummonRestore(int keep, int minRestore, int maxRestore)
+    {
+        if (maxRestore + my_mp() > my_maxmp())
+            return false;
+        if (minRestore + my_mp() < summonRes.mp_cost() + keep)
+            return false;
+        return true;
+    }
+    void BurnManaAndRestores(int keepMana, boolean burnDailyRestores)
+    {
+        if (!summonRes.have_skill())
+            return;
+        BurnManaSummoning(keepMana);
+        boolean changed = true;
+        while (changed)
+        {
+            changed = false;
+
+            int soulsauceBonus = my_soulsauce() / 5;
+            soulsauceBonus *= 3;
+            int cost = summonRes.mp_cost() + keepMana;
+            if (ShouldSummonRestore(keepMana, 200, 300) && get_property("oscusSodaUsed") == "false" && oscusSoda.item_amount() > 0)
+            {
+                use(1, oscusSoda);
+            }
+            else if (ShouldSummonRestore(keepMana, 45, 55) && get_property("_eternalCarBatteryUsed") == "false" && eternalBattery.item_amount() > 0)
+            {
+                use(1, eternalBattery);
+            }
+            else if (ShouldSummonRestore(keepMana, 15, soulsauceBonus))
+            {
+                use_skill(1, soulFood);
+                changed = true;
+            }
+            while (cost < my_mp())
+            {
+                changed = true;
+                use_skill(1, summonRes);
+                cost = summonRes.mp_cost() + keepMana;
+            }
         }
     }
     int GetRemainingFreeRunaways()
@@ -699,15 +615,19 @@ void use_tunnel_of_love()
         }
         return true;
     }
-    boolean LoadChoiceAdventure(location loc, boolean optional)
+    boolean LoadChoiceAdventure(string url, string loc, boolean optional)
     {
-        string page = visit_url(loc.to_url().to_string());
+        string page = visit_url(url);
         if (page.contains_text("choice.php"))
             return true;
 
         if (!optional)
-            abort("Unexpected adventure at " + loc.to_string());
+            abort("Unexpected adventure at " + loc);
         return false;
+    }
+    boolean LoadChoiceAdventure(location loc, boolean optional)
+    {
+        return LoadChoiceAdventure(loc.to_url().to_string(), loc.to_string(), optional);
     }
 
 
@@ -1164,6 +1084,8 @@ void use_tunnel_of_love()
     {
         if (CanCast(BoTnonspell0))
             return "skill " + BoTnonspell0.to_string();
+        if (CanCast(BoTnonspell1))
+            return "skill " + BoTnonspell1.to_string();
         return "attack";
     }
     string Filter_BagOTricks(int round, monster mon, string page)
@@ -1304,22 +1226,27 @@ void use_tunnel_of_love()
     {
         if (fistTurkey.have_familiar() && get_property("_turkeyBooze").to_int() < 5)
         {
-            SwitchToFamiliar(fistTurkey);
+            SwitchToFamiliar(fistTurkey); // drops booze
             return;
         }
         if (isElemental && jellyfish.have_familiar() && get_property("_spaceJellyfishDrops").to_int() < 3)
         {
-            SwitchToFamiliar(jellyfish);
+            SwitchToFamiliar(jellyfish); // drops jelly
             return;
         }
         if (intergnat.have_familiar())
         {
-            SwitchToFamiliar(intergnat);
+            SwitchToFamiliar(intergnat); // drops bacon
             return;
         }
         if (robin.have_familiar())
         {
-            SwitchToFamiliar(intergnat);
+            SwitchToFamiliar(intergnat); // drops eggs
+            return;
+        }
+        if (robort.have_familiar())
+        {
+            SwitchToFamiliar(robort); // drops booze
             return;
         }
     }
@@ -2013,6 +1940,7 @@ return;
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
+        MaxManaSummons();
     }
 
 
@@ -2206,6 +2134,140 @@ return;
         barfMountain.adv1(-1, "Filter_Standard");
     }
 
+    int CanMortar = 0;
+    string Filter_LOVTunnel(int round, monster mon, string page)
+    {
+        if (mon == LOVenforcer)
+        {
+            return "attack";
+        }
+        else if (mon == LOVengineer)
+        {
+            if (BoTnonspell1.have_skill() && my_mp() > BoTnonspell1.mp_cost())
+                return "skill " + BoTnonspell1.to_string();
+            if (CanMortar >= 2)
+            {
+                CanMortar = 1;
+                return "skill " + BoTspell0.to_string();
+            }
+     
+        }
+        else // equivaocator
+        {
+            if (can_still_steal())
+                return "\"pickpocket\"";
+            if (CanMortar >= 1)
+            {
+                CanMortar = 0;
+                return "skill " + BoTspell0.to_string();
+            }
+        }
+        if (BoTspell3.have_skill() && my_mp() > BoTspell3.mp_cost()) // saucestorm
+            return "skill " + BoTspell3.to_string();
+        return "";
+    }
+    void PrepareFilterLOV()
+    {
+        CanMortar = BoTspell0.have_skill() ? 3 : 0;
+    }
+    
+    void RunLOVTunnel()
+    {
+        // Adventuring in the Tunnel of L.O.V.E. is optional
+        if (!summonRes.have_skill())
+            return;
+    
+        if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
+            return;
+    
+        if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
+            cli_execute("buy 1 " + sphygmayo.to_string());
+        
+        ChooseDropsFamiliar(false);
+        print("Running LOV tunnel");
+        PrepareFilterLOV();
+    
+    
+        visit_url("place.php?whichplace=town_wrong");
+        if (!LoadChoiceAdventure("place.php?whichplace=town_wrong&action=townwrong_tunnel", "LOV Tunnel", false))
+            return;
+        run_choice(1); // Enter the tunnel
+    
+        run_choice( 1 ); // Fight LOV Enforcer
+        run_combat("Filter_LOVTunnel");
+        visit_url("choice.php");
+        run_choice(3); // LOV Earrings
+    
+        run_choice(1); // Fight LOV Engineer
+        run_combat("Filter_LOVTunnel");
+        visit_url("choice.php");
+        run_choice(2); // open heart surgery
+    
+        run_choice( 1 ); // Fight LOV Equivocator
+        run_combat("Filter_LOVTunnel");
+        visit_url("choice.php");
+        run_choice( 1 ); // LOV_ENAMORANG
+    }
+    void MaxManaSummons()
+    {
+        if (!summonRes.have_skill())
+            return;
+        if (!user_confirm("Do you wish to maximize mana to summon as many resolutions as possible?"))
+            return;
+        BurnManaAndRestores(0, true);
+        if (sweetSynth.have_skill())
+        {
+            if (synthMP.have_effect() == 0)
+                sweet_synthesis(milkStud, seniorMint);
+            if (synthMyst.have_effect() == 0)
+                sweet_synthesis(milkStud, daffyTaffy);
+        }
+        if (get_property("telescopeUpgrades").to_int() > 0 && get_property("telescopeLookedHigh") == "false")
+            cli_execute("telescope high"); // +stats
+        if (get_property("spacegateVaccine") == "true" && get_property("_spacegateToday") == "true")
+            cli_execute("spacegate vaccine 2"); // +stats
+
+        int freeRests = -get_property("timesRested").to_int();
+        if (discoNap.have_skill())
+            freeRests += 1;
+        if (leisure.have_skill())
+            freeRests += 2;
+        if (narcolepsy.have_skill())
+            freeRests += 1;
+        while (freeRests > 0)
+        {
+            if (HaveEquipment(pantsGiving))
+                pants.equip(pantsGiving);
+            if (get_campground() contains pilgrimHat)
+                visit_url("campground.php?action=rest");
+            else
+                cli_execute("rest 1");
+            freeRests -= 1;
+                
+            BurnManaAndRestores(20, true);
+        }
+        outfit("Max MP");
+        RunLOVTunnel();
+        int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 50 : 0;
+        BurnManaAndRestores(keep, true);
+        if (keep > 0)
+            use(1, licenseChill);
+        keep = (yexpressCard.item_amount() > 0 && get_property("expressCardUsed") == "false") ? 50 : 0;
+        BurnManaAndRestores(keep, true);
+        if (keep > 0)
+            use(1, yexpressCard);
+        keep = 20;
+        if (clarasBell.item_amount() > 0 && get_property("_claraBellUsed") == "false"
+            && HaveEquipment(hoboBinder))
+        {
+            // todo: maybe grab mana restore from hobopolis using clara's bell.
+            // Maybe this should go at the beginning before any other buffs have been given,
+            // because this will cost a turn.  That means we'd want to pre-buff mana as well
+            // before triggering the restore
+        }
+        BurnManaAndRestores(keep, true);
+    }
+
     void BeforeSwapOutMayo()
     {
         if (get_campground() contains mayoClinic)
@@ -2245,9 +2307,7 @@ return;
         for (int i = 0; i < turnCount; i++)
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
-            SoulSauceToMana();
-            BurnManaSummoning();
-            SoulSauceToMana();
+            BurnManaAndRestores(20, false);
           
             PrepareStandardFilter();
             if (needsDigitize)
