@@ -398,6 +398,10 @@
 // semi-rare
     item nickel = ToItem("hobo nickel");
 
+// barf mountain quest
+    item lubeShoes = ToItem("lube-shoes");
+    static string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
+
 // Gingerbread
     location gingerCivic = ToLocation("Gingerbread Civic Center");
     location gingerTrain = ToLocation("Gingerbread Train Station");
@@ -1480,9 +1484,16 @@
         {
             if (mayoClinic.item_amount() > 0 && !eatWithoutMayo)
             {
-                if (!user_confirm("Mayo clinic is not in workshed, do you wish to eat without mayo?"))
+                if (get_property("_workshedItemUsed") == "false"
+                    && user_confirm("Mayo clinic not installed, do you wish to install for eating?"))
                 {
-                    abort("Stopping wtithout eating because no mayo clinic");
+                    BeforeSwapOutAsdon();
+                    use(1, mayoClinic);
+                }
+                if (!(get_campground() contains mayoClinic)
+                    && !user_confirm("Mayo clinic is not in workshed, do you wish to eat without mayo?"))
+                {
+                    abort("Stopping without eating because no mayo clinic");
                 }
                 eatWithoutMayo = true;
             }
@@ -1677,7 +1688,7 @@
         {
             if (!promptForActivate)
                 return;
-            if (get_property("_workshedItemUsed").to_boolean())
+            if (get_property("_workshedItemUsed") != "false")
                 return;
             if (asdonMartin.item_amount() == 0)
                 return;
@@ -1736,10 +1747,14 @@
     }
     void RentAHorse()
     {
-return;
-        location horsery = ToLocation("A Horsery");
-        if (LoadChoiceAdventure(horsery, true))
+        if (get_property("horseryAvailable") != "true")
+            return;
+        if (get_property("_horsery") != "")
+            return;
+        if (LoadChoiceAdventure("place.php?whichplace=town_right&action=town_horsery", "A Horsery", true))
+        {
             run_choice(3); // Rent a Crazy horse
+        }
     }
 
     void AcquireFullFeast()
@@ -2127,11 +2142,74 @@ return;
         return false;
     }
 
+    boolean needsLube = false;
+    boolean lubeChecked = false;
+    void CheckLubeQuest()
+    {
+        if (lubeChecked)
+            return;
+
+        lubeChecked = true;
+        if (LoadChoiceAdventure("place.php?whichplace=airport_stench&action=airport3_tunnels", "Maint Misbehavin'", false))
+        {
+            run_choice(6); // Waste Disposal
+        }
+        string page = visit_url("questlog.php?which=7");
+        if (page.contains_text("rollercoaster in order to lubricate the tracks"))
+        {
+            needsLube = true;
+        }
+        if (needsLube)
+            return;
+        page = visit_url(kioskUrl);
+        int ix = page.index_of("Track Maintenance");
+print("track maintenance ix = " + ix);
+        if (ix <= 0)
+            return;
+
+         string searchFor = "<input type=hidden name=option value=";
+         ix = page.index_of(searchFor, ix);
+print("input ix = " + ix);
+         if (ix <= 0)
+             return;
+         ix += searchFor.length();
+
+         string choice = page.substring(ix, ix + 1);
+print("choice = " + choice);
+         if (choice.to_int() > 0)
+         {
+             print("Taking quest Track Maintenance option " + choice);
+             run_choice(choice.to_int());
+         }
+    }
     void RunBarfMountain(boolean requireOutfit)
     {
         PrepareBarf(requireOutfit);
+        CheckLubeQuest();
 
-        barfMountain.adv1(-1, "Filter_Standard");
+        if (needsLube)
+        {
+            if (LoadChoiceAdventure(barfMountain, true))
+            {
+                print("Skipping adventure to equip lube-shoes and come back in.");
+                run_choice(6);  // skip and come back later
+                if (!lubeShoes.have_equipped())
+                    acc3.equip(lubeShoes);
+                needsLube = false;
+                LoadChoiceAdventure(barfMountain, false);
+                run_choice(1);  // ride the rollercoaster
+		if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
+                    run_choice(3); // turn in the quest
+            }
+            else
+            {
+                run_combat("Filter_Standard");
+            }
+        }
+        else
+        {
+            barfMountain.adv1(-1, "Filter_Standard");
+        }
     }
 
     int CanMortar = 0;
@@ -2180,8 +2258,6 @@ return;
         if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
             return;
     
-        if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
-            cli_execute("buy 1 " + sphygmayo.to_string());
         
         ChooseDropsFamiliar(false);
         print("Running LOV tunnel");
@@ -2193,7 +2269,7 @@ return;
             return;
         run_choice(1); // Enter the tunnel
     
-        run_choice( 1 ); // Fight LOV Enforcer
+        run_choice(1); // Fight LOV Enforcer
         run_combat("Filter_LOVTunnel");
         visit_url("choice.php");
         run_choice(3); // LOV Earrings
@@ -2227,13 +2303,7 @@ return;
         if (get_property("spacegateVaccine") == "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
-        int freeRests = -get_property("timesRested").to_int();
-        if (discoNap.have_skill())
-            freeRests += 1;
-        if (leisure.have_skill())
-            freeRests += 2;
-        if (narcolepsy.have_skill())
-            freeRests += 1;
+        int freeRests = total_free_rests() - get_property("timesRested").to_int();
         while (freeRests > 0)
         {
             if (HaveEquipment(pantsGiving))
@@ -2246,6 +2316,8 @@ return;
                 
             BurnManaAndRestores(20, true);
         }
+        if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
+            cli_execute("buy 1 " + sphygmayo.to_string());
         outfit("Max MP");
         RunLOVTunnel();
         int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 50 : 0;
