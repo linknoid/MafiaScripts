@@ -26,6 +26,7 @@
 // once we visit a semi-rare adventure and run away or skip choice,
 // keep track so we don't semi-rare it again
 
+// get buff bot requests working
 
 // Add for mana burning:
 // add sister's massage for mana restore
@@ -438,12 +439,15 @@
     boolean shouldMissileLauncher = false;
     boolean canShatteringPunch = false;
     boolean canMobHit = false;
+    boolean hasFreeKillRemaining = false;
     int digitizeCounter = 0;
     int enamorangCounter = 0;
     int fortuneCookieCounter = 0;
     int maxItemUse = funkslinging.have_skill() ? 2 : 1;
     boolean eatWithoutMayo = false;
     int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry, 
+    string buffBotRequest = "";
+    int buffBotMeatTotal = 0;
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -727,6 +731,12 @@
         {
             canMobHit = true;
         }
+        hasFreeKillRemaining =
+            canJokesterGun
+            || canBatoomerang
+            || canMissileLauncher
+            || canShatteringPunch
+            || canMobHit;
     }
     string Filter_Standard(int round, monster mon, string page)
     {
@@ -1329,6 +1339,26 @@
             use_skill(1, skll);
         }
     }
+    void CastSkillOrBuffBot(skill skll, effect resultingEffect, int requestedTurns, int meatCostPer5Turns)
+    {
+        CastSkill(skll, resultingEffect, requestedTurns);
+        int missingTurns = requestedTurns - resultingEffect.have_effect();
+        if (missingTurns > 0)
+        {
+            buffBotRequest += missingTurns.to_string() + " " + skll.to_string() + "\n";
+            buffBotMeatTotal += meatCostPer5Turns * missingTurns / 5;
+        }
+    }
+    void SendBuffRequest()
+    {
+//        if (buffBotRequest == "")
+//            return;
+//        if (!user_confirm("Send buffbot request for " + buffBotMeatTotal + " meat of " + buffBotRequest + "?"))
+//            return;
+//        kmail("Buffy", buffBotRequest, buffBotMeatTotal);
+        buffBotRequest = "";
+        buffBotMeatTotal = 0;
+    }
     void AdventureEffect(string activator, effect resultingEffect, int requestedTurns)
     {
         int haveTurns = resultingEffect.have_effect();
@@ -1468,7 +1498,7 @@
 
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
-            CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk);
+            CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, providedDrunk, 5);
         }
         if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
             put_closet(swizzler.item_amount(), swizzler);
@@ -1770,6 +1800,14 @@
         AcquireFeast(thanks8, 3);
         AcquireFeast(thanks9, 3);
     }
+    void AcquirePrintScreen()
+    {
+        if (get_property("_internetPrintScreenButtonBought") == "false"
+            && BACON.item_amount() >= 111)
+        {
+           cli_execute("coinmaster buy bacon " + printScreen.to_string());
+        }
+    }
 
 
     void BuffTurns(int turns)
@@ -1783,6 +1821,7 @@
             && allowExpensiveBuffs
             && (PuttyCopiesRemaining() >= 5);
 
+        AcquirePrintScreen();
         if (my_fullness() < fullness_limit())
             AcquireFullFeast();
 
@@ -1849,14 +1888,14 @@
         UseItem(wealthy, resolve, turns);
         UseItem(avoidScams, scamTourist, turns);
         CastSkill(leer, leering, turns);
-        CastSkill(polka, polkad, turns);
-        CastSkill(phatLoot, phatLooted, turns);
+        CastSkillOrBuffBot(polka, polkad, turns, 1);
+        CastSkillOrBuffBot(phatLoot, phatLooted, turns, 1);
         RentAHorse();
 
         if (needWeightBuffs)
         {
             CastSkill(leash, leashEffect, turns);
-            CastSkill(empathy, empathyEffect, turns);
+            CastSkillOrBuffBot(empathy, empathyEffect, turns, 2);
             UseItem(petBuff, petBuffEffect, turns);
 
             if ((get_campground() contains witchess)
@@ -1865,6 +1904,7 @@
                 cli_execute("witchess");
             }
         }
+        SendBuffRequest();
 
         AdventureEffect(meatEnh, meatEnhanced, turns);
         AdventureEffect(hatterDreadSack, danceTweedle, 1);
@@ -1973,7 +2013,7 @@
         else if (bandersnatch.have_familiar())
         {
             SwitchToFamiliar(stompingBoots);
-            CastSkill(odeToBooze, odeToBoozeEffect, 1);
+            CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, 1, 5);
             return "runawayFilter";
         }
         return "Filter_Standard";
@@ -2374,15 +2414,17 @@ print("choice = " + choice);
 
     void RunTurns(int turnCount)
     {
-        if (turnCount > 0)
+        if (turnCount != 0)
             RunawayGingerbread();
-        for (int i = 0; i < turnCount; i++)
+        for (int i = 0; i < turnCount || (turnCount < 0); i++)
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
             BurnManaAndRestores(20, false);
           
             PrepareStandardFilter();
-            if (needsDigitize)
+            if (turnCount < 0 && !hasFreeKillRemaining)
+                return;
+            if (needsDigitize || turnCount < 0)
                 TryActivateBagOTricks();
             
             SoulSauceToMana();
@@ -2426,7 +2468,7 @@ print("choice = " + choice);
         
         if (buffTurns != 0)
             BuffTurns(buffTurns);
-        if (runTurns > 0)
+        if (runTurns != 0)
             RunTurns(runTurns);
     }
 
