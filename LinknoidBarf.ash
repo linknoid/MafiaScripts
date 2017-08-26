@@ -4,19 +4,19 @@
 // 6 cornucopia for thanksgiving feast @14,000            =    84,000
 // 1 scroll of ancient forbidden unspeakable evil @3100   =     3,100
 // 1 distention pill @????                                = turns
-// 1 drive-by shooting  @12000                            =    12,000
+// 1 drive-by shooting  @10000                            =    10,000
 // 1 hell in a bucket @2400                               =     2,400
 // 1 jumping horseradish @3333                            =     3,333
 // 1 Newark @4000                                         =     4,000
-// 1 Milk Studs @640                                      =       640
+// 2 Milk Studs @640                                      =      1280
 // 3 pie man was not meant to eat @2500                   =     7,500
 // 10 resolution: be wealthier @1300                      =    13,000
 // 1 senior mints @100                                    =       100
-// 1 single entendre @19000                               =    19,000
+// 1 single entendre @10000                               =    10,000
 // 3 thin black candles @288                              =       900
 // 24 bags of W&Ws @1300                                  =    31,200
 
-// total                                                  =   191,673 
+// total                                                  =   181,313 
 // income over 340 turns                                  = 2,412,711
 // net gain                                               = 2,221,038
 
@@ -29,11 +29,8 @@
 // get buff bot requests working
 
 // Add for mana burning:
-// add sister's massage for mana restore
 // fix LOV tunnel combat filter
 // clara's bell and hobopolis if 20 hobo glyphs and have access
-
-
 
 
 
@@ -248,6 +245,7 @@
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
     item snowglobe = ToItem("KoL Con 13 snowglobe");
+    item screege = ToItem("Mr. Screege's spectacles");
 
 
 // Skills for consumption
@@ -270,6 +268,9 @@
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
+    item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
+    item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
+    item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
     item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
     item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
     item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
@@ -556,11 +557,14 @@
             use_skill(1, soulFood);
         }
     }
-    boolean ShouldSummonRestore(int keep, int minRestore, int maxRestore)
+    void VisitNuns()
+    {
+    }
+    boolean ShouldSummonRestore(int keep, int soulsauceManaAvailable, int minRestore, int maxRestore)
     {
         if (maxRestore + my_mp() > my_maxmp())
             return false;
-        if (minRestore + my_mp() < summonRes.mp_cost() + keep)
+        if (minRestore + soulsauceManaAvailable + my_mp() < summonRes.mp_cost() + keep)
             return false;
         return true;
     }
@@ -577,15 +581,19 @@
             int soulsauceBonus = my_soulsauce() / 5;
             soulsauceBonus *= 3;
             int cost = summonRes.mp_cost() + keepMana;
-            if (ShouldSummonRestore(keepMana, 200, 300) && get_property("oscusSodaUsed") == "false" && oscusSoda.item_amount() > 0)
+            if (ShouldSummonRestore(keepMana, soulsauceBonus, 200, 300) && get_property("oscusSodaUsed") == "false" && oscusSoda.item_amount() > 0)
             {
                 use(1, oscusSoda);
             }
-            else if (ShouldSummonRestore(keepMana, 45, 55) && get_property("_eternalCarBatteryUsed") == "false" && eternalBattery.item_amount() > 0)
+            else if (ShouldSummonRestore(keepMana, soulsauceBonus, 45, 55) && get_property("_eternalCarBatteryUsed") == "false" && eternalBattery.item_amount() > 0)
             {
                 use(1, eternalBattery);
             }
-            else if (ShouldSummonRestore(keepMana, 15, soulsauceBonus))
+            else if (ShouldSummonRestore(keepMana, soulsauceBonus, 1000, 1000) && get_property("sidequestNunsCompleted") == "fratboy" && get_property("nunsVisits").to_int() < 3)
+            {
+                cli_execute("nuns");
+            }
+            else if (ShouldSummonRestore(keepMana, 0, 15, soulsauceBonus))
             {
                 use_skill(1, soulFood);
                 changed = true;
@@ -695,10 +703,6 @@
                 needsDigitize = true;
                 
         }
-        if (my_turnCount() == digitizeCounter || my_turnCount() == enamorangCounter)
-        {
-            PrepareEmbezzler();
-        }
         needsEnamorang = enamorang.item_amount() > 0
             && get_property("enamorangMonster") == "";
 
@@ -745,35 +749,17 @@
         if (round == 0)
             print("using Filter_Standard");
 
-        if (canPickpocket && can_still_steal())
-        {
-            return "\"pickpocket\"";
-        }
-        if (canPocketCrumb)
-        {
-            canPocketCrumb = false;
-            return "skill Pocket Crumbs";
-        }
-        if (mon == tourist && olfaction.have_effect() == 0 && my_mp() > 50)
-        {
-            return "skill Transcendent Olfaction";
-        }
-        if (canAccordionBash)
-        {
-            canAccordionBash = false;
-            return "skill Accordion Bash";
-        }
         if (mon == embezzler) // capture embezzler
         {
-            if (meteorShower.have_skill() && !meteorShowered)
-            {
-                meteorShowered = true;
-                return "skill Meteor Shower";
-            }
             if (needsDigitize)
             {
                 needsDigitize = false;
                 return "skill Digitize";
+            }
+            if (meteorShower.have_skill() && !meteorShowered)
+            {
+                meteorShowered = true;
+                return "skill Meteor Shower";
             }
             string s = "";
             int itemCount = 0;
@@ -838,6 +824,14 @@
                 return "item " + s;
             }
         }
+        if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
+        {
+            return "\"pickpocket\"";
+        }
+        if (mon == tourist && olfaction.have_effect() == 0 && my_mp() > 50)
+        {
+            return "skill Transcendent Olfaction";
+        }
         if (canMissileLauncher && shouldMissileLauncher)
         {
             // if "shouldMissileLauncher" is true, takes precedence over jokester's gun
@@ -863,6 +857,11 @@
         {
             canMobHit = false;
             return "skill " + gingerbreadMobHit.to_string();
+        }
+        if (canAccordionBash)
+        {
+            canAccordionBash = false;
+            return "skill Accordion Bash";
         }
         // rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
         // Only do combos when HP are over 100, don't want to get beat up
@@ -892,6 +891,11 @@
                 ravedSteal = true;
                 return "combo rave steal";
             }
+        }
+        if (canPocketCrumb)
+        {
+            canPocketCrumb = false;
+            return "skill Pocket Crumbs";
         }
         return "";
     }
@@ -984,9 +988,8 @@
         // final fallback, if no other equipment is matching, this should give +5 weight
         TryEquipFamiliarEquipment(filthyLeash, 5);
     }
-    void PrepareEmbezzler()
+    void SwapOutSunglasses()
     {
-        outfit(defaultOutfit);
         // replace cheap sunglasses because they only work in barf mountain
         slot matching;
         if (acc1.equipped_item() == sunglasses)
@@ -1014,12 +1017,50 @@
         {
             matching.equip(best);
         }
+    }
+    boolean TryScratchNSniff()
+    {
+        float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
+        float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
+        float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
+        float difference = scratchMeat - currentWeaponMeat;
+        if (difference < 300 || scratchUPC.mall_price() * 3 > difference)
+            return false;
+
+        item eq;
+        if (HaveEquipment(scratchSword))
+            eq = scratchSword;
+        else if (HaveEquipment(scratchXbow))
+            eq = scratchXbow;
+        else
+        {
+            print("Scratch and sniff ignored, you need to do it manually the first time");
+            return false;
+        }
+        if (eq.numeric_modifier("Meat Percent") == 0)
+        {
+            if (scratchUPC.item_amount() < 3)
+            {
+                buy(3 - scratchUPC.item_amount(), scratchUPC);
+            }
+            cli_execute("stickers upc, upc, upc");
+        }
+        weapon.equip(eq);
+        return true;
+    }
+    void PrepareEmbezzler()
+    {
+        outfit(defaultOutfit);
+        SwapOutSunglasses();
         if (HaveEquipment(jokesterGun)
             && jokesterGun.can_equip()
             && get_property("_firedJokestersGun") == "false")
         {
             weapon.equip(jokesterGun);
             canJokesterGun = true;
+        }
+        else if (!TryScratchNSniff())
+        {
         }
     }
     void PrepareBarf(boolean RequireOutfit)
@@ -1032,7 +1073,7 @@
             {
                 foreach ix,itm in outfit_pieces(defaultOutfit)
                 {
-                    if (itm.to_string() != "none" && HaveEquipment(itm))
+                    if (itm.to_string() != "none" && HaveEquipment(itm) && !itm.have_equipped())
                     {
                         itm.to_slot().equip(itm);
                     }
@@ -1073,6 +1114,32 @@
         if (TryRunSnojo(filter))
             return true;
         return false;
+    }
+    void EnsureSingleHandedWeapon()
+    {
+        if (weapon.equipped_item().weapon_hands() < 2)
+            return;
+        weapon.equip("none".to_item());
+    }
+    void EquipDropsItems()
+    {
+        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
+        {
+            weapon.equip("none".to_item());
+            foreach ix,itm in outfit_pieces(defaultOutfit)
+            {
+                if (itm.to_slot() == weapon)
+                {
+                    weapon.equip(itm);
+                    break;
+                }
+            }
+        }
+        EnsureSingleHandedWeapon();
+        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well get a bonus item drop
+            offhand.equip(snowglobe);
+        if (screege.item_amount() > 0 && !screege.have_equipped())
+            acc1.equip(screege);
     }
 
     boolean CanCast(skill skl)
@@ -1132,16 +1199,13 @@
         if (AvailableSpellForBagOfTricks() == "")
             return;
         item oldOffhand = offhand.equipped_item();
+        EquipDropsItems();
+        EnsureSingleHandedWeapon();
         offhand.equip(bagOtricks);
         if (!bagOtricks.have_equipped()) // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
             return;
         ChooseFreeCombat("Filter_BagOTricks");
         offhand.equip(oldOffhand);
-    }
-    void EquipDropItems()
-    {
-        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well
-            offhand.equip(snowglobe);
     }
     boolean TryActivatePantsgivingFullness()
     {
@@ -1160,7 +1224,7 @@
             }
             else
             {
-                EquipDropItems();
+                EquipDropsItems();
                 if (!TryRunSnojo(""))
                     return false;
             }
@@ -1840,9 +1904,10 @@
                 FeedRobotender();
         }
 
-
-        AdventureEffect(summonGreed, preternatualGreed, 1);
-        AdventureEffect(concertWinklered, winklered, 1);
+        if (get_property("demonSummoned") == "false")
+            AdventureEffect(summonGreed, preternatualGreed, turns);
+        if (get_property("sidequestArenaCompleted") == "fratboy" && get_property("concertVisited") == "false")
+            AdventureEffect(concertWinklered, winklered, turns);
         if (nightBefore)
         {
             turns = 1;
@@ -1906,8 +1971,10 @@
         }
         SendBuffRequest();
 
-        AdventureEffect(meatEnh, meatEnhanced, turns);
-        AdventureEffect(hatterDreadSack, danceTweedle, 1);
+        if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
+            AdventureEffect(meatEnh, meatEnhanced, turns);
+        if (get_property("_madTeaParty") == "false")
+            AdventureEffect(hatterDreadSack, danceTweedle, 1);
 
         if (OutfitContains(defaultOutfit, halfPurse))
         {
@@ -2224,7 +2291,14 @@ print("choice = " + choice);
     }
     void RunBarfMountain(boolean requireOutfit)
     {
-        PrepareBarf(requireOutfit);
+        if (my_turnCount() == digitizeCounter || my_turnCount() == enamorangCounter)
+        {
+            PrepareEmbezzler();
+        }
+        else
+        {
+            PrepareBarf(requireOutfit);
+        }
         CheckLubeQuest();
 
         if (needsLube)
@@ -2340,6 +2414,7 @@ print("choice = " + choice);
         }
         if (get_property("telescopeUpgrades").to_int() > 0 && get_property("telescopeLookedHigh") == "false")
             cli_execute("telescope high"); // +stats
+        visit_url("place.php?whichplace=spacegate");
         if (get_property("spacegateVaccine") == "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
