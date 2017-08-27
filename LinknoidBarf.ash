@@ -39,7 +39,6 @@
 
     string defaultOutfit = "barf";
 
-    int saveDigitizes = 1;
     int savePutties = 0;
     int usePrintScreens = 1;
     int useEnamorangs = 1;
@@ -293,17 +292,17 @@
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
 // effects for +meat bonus
-    effect odeToBoozeEffect = "Ode to Booze".ToEffect(); //
-    effect winklered = "Winklered".ToEffect(); // from concert if you helped orcs
-    effect sinuses = "Sinuses For Miles".ToEffect(); // from Mick's
-    effect wasabi = "Wasabi Sinuses".ToEffect(); // from Knob Goblin nasal spray
-    effect resolve = "Greedy Resolve".ToEffect(); // from resolution: be wealthy
+    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
+    effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
+    effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
+    effect wasabi = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
+    effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
-    effect scamTourist = "How to Scam Tourists".ToEffect(); // from How to Avoid Scams
+    effect scamTourist = ToEffect("How to Scam Tourists"); // from How to Avoid Scams
     effect leering = "Disco Leer".ToEffect(); // from Disco Leer (disco bandit skill)
     effect polkad = "Polka of Plenty".ToEffect(); // from Polka (accordion thief)
-    effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Polka (accordion thief)
+    effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Fat Leon's (accordion thief)
     effect meatEnhanced = "meat.enh".ToEffect(); // source terminal, 60%, 3x 100 turns a day
     effect danceTweedle = "Dances with Tweedles".ToEffect(); // from DRINK ME potion, once a day, 40%, 30 turns
     effect merrySmith = "Merry Smithsness".ToEffect(); // from Flaskfull of Hollow
@@ -460,6 +459,82 @@
     void BeforeSwapOutMayo();
     void MaxManaSummons();
 
+
+// general utility functions
+    int FindVariableChoice(string page, string match)
+    {
+        int ix = page.index_of(match);
+        if (ix <= 0)
+            return -1;
+
+        string searchFor = "<input type=hidden name=option value=";
+        ix = page.index_of(searchFor, ix);
+        if (ix <= 0)
+            return -1;
+        ix += searchFor.length();
+
+        string choice = page.substring(ix, ix + 2).replace_string(" ", ""); // allow up to 99 options
+        return choice.to_int();
+    }
+    boolean InList(string value, string list, string delimiter)
+    {
+        if (value == list)
+            return true;
+        if (list.length() <= value.length())
+            return false;
+        if (list.contains_text(delimiter + value + delimiter))
+            return true;
+        if (list.substring(0, value.length() + 1) == value + delimiter)
+            return true;
+        if (list.substring(list.length() - value.length() - 1) == delimiter + value)
+            return true;
+        return false;
+    }
+    boolean LoadChoiceAdventure(string url, string loc, boolean optional)
+    {
+        string page = visit_url(url);
+        if (page.contains_text("choice.php"))
+            return true;
+
+        if (!optional)
+            abort("Unexpected adventure at " + loc);
+        return false;
+    }
+    boolean LoadChoiceAdventure(location loc, boolean optional)
+    {
+        return LoadChoiceAdventure(loc.to_url().to_string(), loc.to_string(), optional);
+    }
+    boolean HaveEaten(item food)
+    {
+        string eatenList = get_property("_timeSpinnerFoodAvailable");
+        string itemID = food.to_int().to_string();
+        return InList(itemID, eatenList, ",");
+    }
+    void UseOneTotal(item i, effect e)
+    {
+        if (i.item_amount() > 0 && e.have_effect() == 0)
+        {
+            use(1, i);
+        }
+    }
+    boolean HaveEquipment(item itm)
+    {
+        return itm.item_amount() > 0 || itm.have_equipped();
+    }
+    boolean OutfitContains(string outfit, item eq)
+    {
+        foreach key,value in outfit_pieces(outfit)
+            if (value == eq)
+                return true;
+        return false;
+    }
+    boolean IsAccordion(item it)
+    {
+        return it.item_type() == "accordion";
+    }
+
+// more specific helper functions
+
     boolean EmbezzlerPrintScreened()
     {
         return get_property("screencappedMonster") == embezzler.to_string()
@@ -492,51 +567,9 @@
             && get_property("_chateauMonsterFought") == "false";
     }
 
-    boolean HaveEquipment(item itm)
-    {
-        return itm.item_amount() > 0 || itm.have_equipped();
-    }
-    boolean OutfitContains(string outfit, item eq)
-    {
-        foreach key,value in outfit_pieces(outfit)
-            if (value == eq)
-                return true;
-        return false;
-    }
-    boolean IsAccordion(item it)
-    {
-        return it.item_type() == "accordion";
-    }
     boolean CanDistention()
     {
         return distention.item_amount() > 0 && !get_property("_distentionPillUsed").to_boolean();
-    }
-    boolean InList(string value, string list, string delimiter)
-    {
-        if (value == list)
-            return true;
-        if (list.length() <= value.length())
-            return false;
-        if (list.contains_text(delimiter + value + delimiter))
-            return true;
-        if (list.substring(0, value.length() + 1) == value + delimiter)
-            return true;
-        if (list.substring(list.length() - value.length() - 1) == delimiter + value)
-            return true;
-        return false;
-    }
-    boolean HaveEaten(item food)
-    {
-        string eatenList = get_property("_timeSpinnerFoodAvailable");
-        string itemID = food.to_int().to_string();
-        return InList(itemID, eatenList, ",");
-    }
-    void UseOneTotal(item i, effect e)
-    {
-        if (i.item_amount() > 0 && e.have_effect() == 0)
-        {
-            use(1, i);
-        }
     }
     void BurnManaSummoning(int keepMana)
     {
@@ -556,9 +589,6 @@
         {
             use_skill(1, soulFood);
         }
-    }
-    void VisitNuns()
-    {
     }
     boolean ShouldSummonRestore(int keep, int soulsauceManaAvailable, int minRestore, int maxRestore)
     {
@@ -630,20 +660,6 @@
             hadFuel = get_fuel();
         }
         return true;
-    }
-    boolean LoadChoiceAdventure(string url, string loc, boolean optional)
-    {
-        string page = visit_url(url);
-        if (page.contains_text("choice.php"))
-            return true;
-
-        if (!optional)
-            abort("Unexpected adventure at " + loc);
-        return false;
-    }
-    boolean LoadChoiceAdventure(location loc, boolean optional)
-    {
-        return LoadChoiceAdventure(loc.to_url().to_string(), loc.to_string(), optional);
     }
 
 
@@ -2251,6 +2267,7 @@
 
     boolean needsLube = false;
     boolean lubeChecked = false;
+
     void CheckLubeQuest()
     {
         if (lubeChecked)
@@ -2269,25 +2286,12 @@
         if (needsLube)
             return;
         page = visit_url(kioskUrl);
-        int ix = page.index_of("Track Maintenance");
-print("track maintenance ix = " + ix);
-        if (ix <= 0)
-            return;
-
-         string searchFor = "<input type=hidden name=option value=";
-         ix = page.index_of(searchFor, ix);
-print("input ix = " + ix);
-         if (ix <= 0)
-             return;
-         ix += searchFor.length();
-
-         string choice = page.substring(ix, ix + 1);
-print("choice = " + choice);
-         if (choice.to_int() > 0)
-         {
-             print("Taking quest Track Maintenance option " + choice);
-             run_choice(choice.to_int());
-         }
+        int choice = FindVariableChoice(page, "Track Maintenance");
+        if (choice > 0)
+        {
+            print("Taking quest Track Maintenance option " + choice.to_string());
+            run_choice(choice);
+        }
     }
     void RunBarfMountain(boolean requireOutfit)
     {
