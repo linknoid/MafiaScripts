@@ -151,14 +151,14 @@
 
 // items for eating
     item milk = ToItem("milk of magnesium");
-    effect gotmilk = "Got Milk".ToEffect();
+    effect gotmilk = ToEffect("Got Milk");
     item mayoFullToDrunk = ToItem("Mayodiol"); // 1 full to drunk
-    item mayoIncreaseStats = ToItem("Mayozapine"); // double stats
+    item mayoIncreaseBuffs = ToItem("Mayozapine"); // double stats
     item cashew = ToItem("cashew");
     item cornucopia = ToItem("cornucopia");
     item horseradish = ToItem("jumping horseradish");
-    item foodCone = "Dinsey food-cone".ToItem();
-    item seaTruffle = "sea truffle".ToItem();
+    item foodCone = ToItem("Dinsey food-cone");
+    item seaTruffle = ToItem("sea truffle");
     item thanks1 = ToItem("green bean casserole");
     item thanks2 = ToItem("cranberry cylinder");
     item thanks3 = ToItem("mashed potatoes");
@@ -206,6 +206,18 @@
     familiar robin = ToFamiliar("Rockin' Robin");
     familiar stompingBoots = ToFamiliar("Pair of Stomping Boots");
     familiar bandersnatch = ToFamiliar("Frumious Bandersnatch");
+    familiar obtuseAngel = ToFamiliar("Obtuse Angel");
+    familiar reanimator = ToFamiliar("Reanimated Reanimator");
+
+// familiar equipment
+    item snowSuit = ToItem("Snow Suit"); // 20 pounds, but decreases over the day
+    item petSweater = ToItem("Astral pet sweater"); // 10 pounds, costs 10 karma per ascension
+    item sugarShield = ToItem("sugar shield"); // 10 pounds, breaks after 30 turns
+    item cufflinks = ToItem("recovered cufflinks"); // 6 pounds, requires 400 pound jellyfish
+    item hookah = ToItem("ittah bittah hookah"); // 5 pounds, provides buffs
+    item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
+    item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
+    item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
 
 // ghost busting
     item protonPack = ToItem("protonic accelerator pack");
@@ -215,18 +227,10 @@
     location icyPeak = ToLocation("The Icy Peak");
     skill weakenGhost = ToSkill("Shoot Ghost");
     skill trapGhost = ToSkill("Trap Ghost");
-    skill extractJelly = ToSkill("Extract Jelly");
     skill curseOfIslands = ToSkill("Curse of the Thousand Islands");
     skill soulBubble = ToSkill("Soul Bubble");
     skill entanglingNoodles = ToSkill("Entangling Noodles");
 
-// familiar equipment
-    item snowSuit = ToItem("Snow Suit");
-    item petSweater = ToItem("Astral pet sweater");
-    item sugarShield = ToItem("sugar shield");
-    item cufflinks = ToItem("recovered cufflinks");
-    item hookah = ToItem("ittah bittah hookah");
-    item filthyLeash = ToItem("filthy child leash");
 
 // Skills and items for extending buffs
     item bagOtricks = ToItem("Bag O' Tricks");
@@ -245,6 +249,10 @@
     item bakeBackpack = ToItem("bakelite backpack");
     item snowglobe = ToItem("KoL Con 13 snowglobe");
     item screege = ToItem("Mr. Screege's spectacles");
+    item cheeng = ToItem("Mr. Cheeng's spectacles");
+    skill extractJelly = ToSkill("Extract Jelly");
+    skill extract = ToSkill("Extract");
+    skill pocketCrumbs = ToSkill("Pocket Crumbs");
 
 
 // Skills for consumption
@@ -256,7 +264,7 @@
     skill phatLoot = ToSkill("Fat Leon's Phat Loot Lyric");
     skill sweetSynth = ToSkill("Sweet Synthesis");
     skill selfEsteem = ToSkill("Incredible Self-Esteem");
-// skiils for pet bonus
+// skills for pet bonus
     skill leash = ToSkill("Leash of Linguini");
     skill empathy = ToSkill("Empathy of the Newt");
     item petBuff = ToItem("Knob Goblin pet-buffing spray");
@@ -351,6 +359,17 @@
     item kgb = ToItem("Kremlin's Greatest Briefcase");
     item rubber = ToItem("orcish rubber");
     effect rubberEffect = ToEffect("Using Protection");
+// max mana increase
+    item hawkings = ToItem("Hawking's Elixir of Brilliance");
+    effect hawkingsEffect = ToEffect("On the Shoulders of Giants");
+    item occult = ToItem("ointment of the occult");
+    effect occultEffect = ToEffect("Mystically Oiled");
+    item tomatoJuice = ToItem("tomato juice of powerful power");
+    effect tomatoJuiceEffect = ToEffect("Tomato Power");
+    item muscleToMyst = ToItem("oil of stability");
+    effect muscleToMystEffect = ToEffect("Stabilizing Oiliness");
+    item moxieToMyst = ToItem("oil of slipperiness");
+    effect moxieToMystEffect = ToEffect("Slippery Oiliness");
 
 // locations for adventuring
     location garbagePirates = ToLocation("Pirates of the Garbage Barges"); // for orphan costume
@@ -375,6 +394,8 @@
     skill discoNap = ToSkill("Disco Nap");
     skill leisure = ToSkill("Adventurer of Leisure");
     skill narcolepsy = ToSkill("Executive Narcolepsy");
+    skill turbo = ToSkill("Turbo");
+    effect overheated = ToEffect("Overheated");
     item pilgrimHat = ToItem("Giant pilgrim hat");
     item clarasBell = ToItem("Clara's bell");
     item hoboBinder = ToItem("hobo code binder");
@@ -391,6 +412,8 @@
     item rainDoh = ToItem("Rain-Doh black box");
     item usedRainDoh = ToItem("Rain-Doh box full of monster");
     skill digitize = ToSkill("Digitize");
+    skill romanticArrow = ToSkill("Fire a badly romantic arrow");
+    skill winkAt = ToSkill("Wink at");
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
     monster tourist = ToMonster("garbage tourist");
@@ -432,6 +455,12 @@
     boolean needsPrintScreen = false;
     boolean needsCamera = false;
     boolean needsEnamorang = false;
+    boolean needsRomanticArrow = false;
+    boolean needsWinkAt = false;
+    boolean needsMeteorShower = false;
+    boolean canExtract = false;
+    boolean canDuplicate = false;
+    boolean canTurbo = false;
     int enamorangsUsed = 0;
     boolean canJokesterGun = false;
     boolean canBatoomerang = false;
@@ -440,6 +469,7 @@
     boolean canShatteringPunch = false;
     boolean canMobHit = false;
     boolean hasFreeKillRemaining = false;
+    boolean needBagOTricks = false;
     int digitizeCounter = 0;
     int enamorangCounter = 0;
     int fortuneCookieCounter = 0;
@@ -457,7 +487,9 @@
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
+    void TryReduceManaCost(skill skll);
     void MaxManaSummons();
+    void ChooseEducate(boolean duplicate, boolean digitize);
 
 
 // general utility functions
@@ -513,6 +545,23 @@
     void UseOneTotal(item i, effect e)
     {
         if (i.item_amount() > 0 && e.have_effect() == 0)
+        {
+            use(1, i);
+        }
+    }
+    void BuyAndUseOneTotal(item i, effect e, int maxCost)
+    {
+        if (e.have_effect() > 0)
+            return;
+        if (i.item_amount() == 0)
+        {
+            buy(1, i, maxCost);
+        }
+        else if (i.mall_price() == 100)
+        {
+            buy(1, i, 100);
+        }
+        if (i.item_amount() > 0)
         {
             use(1, i);
         }
@@ -677,14 +726,21 @@
             }
         }
         canPocketCrumb = HaveEquipment(pantsGiving);
+
         canAccordionBash = accordionBash.have_skill()
             && IsAccordion(weapon.equipped_item())
             && bakeBackpack.have_equipped();
 
+        needsMeteorShower = meteorShower.have_skill()
+            && runFamiliar != orphan
+            && get_property("_meteorShowerUses").to_int() < 5;
+
         if (!needsSpookyPutty)
         {
-            needsSpookyPutty = spookyPutty.item_amount() > 0 && get_property("spookyPuttyCopiesMade").to_int() < 5;
+            needsSpookyPutty = spookyPutty.item_amount() > 0
+                && get_property("spookyPuttyCopiesMade").to_int() < 5;
         }
+        needBagOTricks = false;
         string countersString = get_property("relayCounters");
         string[int] counters = countersString.split_string(":");
         fortuneCookieCounter = 0;
@@ -716,9 +772,13 @@
             if (digitizeRange >= 4)
                 needsDigitize = true;
             else if (my_turnCount() == digitizeCounter && digitizeRange == 3)
+            {
                 needsDigitize = true;
+                needBagOTricks = true;
+            }
                 
         }
+        ChooseEducate(false, needsDigitize);
         needsEnamorang = enamorang.item_amount() > 0
             && get_property("enamorangMonster") == "";
 
@@ -760,22 +820,30 @@
     }
     string Filter_Standard(int round, monster mon, string page)
     {
-        static boolean meteorShowered = false;
-
         if (round == 0)
             print("using Filter_Standard");
 
         if (mon == embezzler) // capture embezzler
         {
+            if (needsRomanticArrow)
+            {
+                needsRomanticArrow = false;
+                return "skill " + romanticArrow.to_string();
+            }
+            if (needsWinkAt)
+            {
+                needsWinkAt = false;
+                return "skill " + winkAt.to_string();
+            }
             if (needsDigitize)
             {
                 needsDigitize = false;
-                return "skill Digitize";
+                return "skill " + digitize.to_string();
             }
-            if (meteorShower.have_skill() && !meteorShowered)
+            if (needsMeteorShower)
             {
-                meteorShowered = true;
-                return "skill Meteor Shower";
+                needsMeteorShower = false;
+                return "skill " + meteorShower.to_string();
             }
             string s = "";
             int itemCount = 0;
@@ -908,11 +976,22 @@
                 return "combo rave steal";
             }
         }
+        if (canExtract && my_mp() > 10)
+        {
+            canExtract = false;
+            return "skill " + extract.to_string();
+        }
         if (canPocketCrumb)
         {
             canPocketCrumb = false;
-            return "skill Pocket Crumbs";
+            return "skill " + pocketCrumbs.to_string();
         }
+        if (canTurbo)
+        {
+            canTurbo = false;
+            return "skill Turbo";
+        }
+            
         return "";
     }
 
@@ -1078,6 +1157,28 @@
         else if (!TryScratchNSniff())
         {
         }
+
+        if (obtuseAngel.have_familiar())
+        {
+            if (get_property("_badlyRomanticArrows") == "0") // can only use once per day
+            {
+                obtuseAngel.use_familiar();
+                if (HaveEquipment(quakeOfArrows))
+                    famEqp.equip(quakeOfArrows);
+                needsRomanticArrow = true;
+            }
+        }
+        else if (reanimator.have_familiar())
+        {
+            //if (get_property("???") == "") // can only use once per day
+            if (false) // not sure if this uses the same property _badlyRomanticArrows
+            {
+                reanimator.use_familiar();
+                if (HaveEquipment(embalmingFlask))
+                    famEqp.equip(embalmingFlask);
+                needsWinkAt = true;
+            }
+        }
     }
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -1156,6 +1257,8 @@
             offhand.equip(snowglobe);
         if (screege.item_amount() > 0 && !screege.have_equipped())
             acc1.equip(screege);
+        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
+            acc2.equip(cheeng);
     }
 
     boolean CanCast(skill skl)
@@ -1409,6 +1512,8 @@
 
     void CastSkill(skill skll, effect resultingEffect, int requestedTurns)
     {
+        if (resultingEffect.have_effect() >= requestedTurns || !skll.have_skill())
+            return;
         TryReduceManaCost(skll);
         while (resultingEffect.have_effect() < requestedTurns && skll.have_skill())
         {
@@ -1617,7 +1722,7 @@
         }
         else
         {
-            mayo = mayoIncreaseStats;
+            mayo = mayoIncreaseBuffs;
         }
         if (mayo.item_amount() <= 0)
         {
@@ -1740,7 +1845,7 @@
             location pirates = garbagePirates;
             for (int i = 0; i < 5; i++)
             {
-                if (pirateCostume.item_amount() >= 1)
+                if (HaveEquipment(pirateCostume))
                 {
                     break;
                 }
@@ -1888,6 +1993,57 @@
            cli_execute("coinmaster buy bacon " + printScreen.to_string());
         }
     }
+    void CastEducate(boolean doDuplicate, boolean doDigitize, boolean doTurbo, boolean doExtract)
+    {
+        canExtract = doExtract;
+        canTurbo = doTurbo;
+        canDuplicate = doDuplicate;
+        string educate1 = get_property("sourceTerminalEducate1");
+        string educate2 = get_property("sourceTerminalEducate2");
+        boolean hasDuplicate = educate1 == "duplicate.edu" || educate2 == "duplicate.edu";
+        boolean hasDigitize = educate1 == "digitize.edu" || educate2 == "digitize.edu";
+        boolean hasTurbo = educate1 == "turbo.edu" || educate2 == "turbo.edu";
+        boolean hasExtract = educate1 == "extract.edu" || educate2 == "extract.edu";
+        
+        int incorrectCount = 0;
+        if (doDuplicate && !hasDuplicate) incorrectCount++;
+        if (doDigitize && !hasDigitize) incorrectCount++;
+        if (doTurbo && !hasTurbo) incorrectCount++;
+        if (doExtract && !hasExtract) incorrectCount++;
+        if (incorrectCount == 0)
+            return;
+
+        if (doDuplicate) cli_execute("terminal educate duplicate.edu");
+        if (doDigitize)  cli_execute("terminal educate digitize.edu");
+        if (doTurbo)     cli_execute("terminal educate turbo.edu");
+        if (doExtract)   cli_execute("terminal educate extract.edu");
+        
+    }
+    void ChooseEducate(boolean doduplicate, boolean dodigitize)
+    {
+        string known = get_property("sourceTerminalEducateKnown");
+        if (known == "")
+            return;
+
+        doduplicate = doduplicate
+            && (get_property("_sourceTerminalDuplicateUses") == "0")
+            && known.contains_text("duplicate.edu");
+
+        dodigitize = dodigitize
+            && get_property("_sourceTerminalDigitizeUses").to_int() < 3
+            && known.contains_text("digitize.edu");
+
+        boolean doturbo = (!doduplicate || !dodigitize)
+            && known.contains_text("turbo.edu")
+            && overheated.have_effect() <= 0
+            && (summonRes.have_skill() || my_mp() < 10)
+            && my_mp() < 300 // this will reduce by 50% afterwards, so don't use it unless we're way under capacity
+            && my_maxmp() > 4000 // don't use if max mp is too low
+            && (my_maxmp() / 2) > summonRes.mp_cost();
+
+        boolean doextract = (!doduplicate && !dodigitize) || (!doduplicate && !doturbo) || (!dodigitize && !doturbo);
+        CastEducate(doduplicate, dodigitize, doturbo, doextract);
+    }
 
 
     void BuffTurns(int turns)
@@ -1920,9 +2076,9 @@
                 FeedRobotender();
         }
 
-        if (get_property("demonSummoned") == "false")
+        if (get_property("demonSummoned") != "true")
             AdventureEffect(summonGreed, preternatualGreed, turns);
-        if (get_property("sidequestArenaCompleted") == "fratboy" && get_property("concertVisited") == "false")
+        if (get_property("sidequestArenaCompleted") == "fratboy" && get_property("concertVisited") != "true")
             AdventureEffect(concertWinklered, winklered, turns);
         if (nightBefore)
         {
@@ -1989,6 +2145,7 @@
 
         if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
             AdventureEffect(meatEnh, meatEnhanced, turns);
+
         if (get_property("_madTeaParty") == "false")
             AdventureEffect(hatterDreadSack, danceTweedle, 1);
 
@@ -2316,7 +2473,7 @@
                 needsLube = false;
                 LoadChoiceAdventure(barfMountain, false);
                 run_choice(1);  // ride the rollercoaster
-		if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
+                if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
                     run_choice(3); // turn in the quest
             }
             else
@@ -2347,6 +2504,8 @@
                 return "skill " + BoTspell0.to_string();
             }
      
+            if (BoTspell3.have_skill() && my_mp() > BoTspell3.mp_cost()) // saucestorm
+                return "skill " + BoTspell3.to_string();
         }
         else // equivaocator
         {
@@ -2358,6 +2517,8 @@
                 return "skill " + BoTspell0.to_string();
             }
         }
+        if (BoTnonspell0.have_skill() && my_mp() > BoTnonspell0.mp_cost())
+            return "skill " + BoTnonspell0.to_string();
         if (BoTspell3.have_skill() && my_mp() > BoTspell3.mp_cost()) // saucestorm
             return "skill " + BoTspell3.to_string();
         return "";
@@ -2369,18 +2530,16 @@
     
     void RunLOVTunnel()
     {
-        // Adventuring in the Tunnel of L.O.V.E. is optional
         if (!summonRes.have_skill())
             return;
     
         if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
             return;
-    
         
         ChooseDropsFamiliar(false);
         print("Running LOV tunnel");
         PrepareFilterLOV();
-    
+        restore_hp(my_maxhp() - my_mp());
     
         visit_url("place.php?whichplace=town_wrong");
         if (!LoadChoiceAdventure("place.php?whichplace=town_wrong&action=townwrong_tunnel", "LOV Tunnel", false))
@@ -2389,18 +2548,18 @@
     
         run_choice(1); // Fight LOV Enforcer
         run_combat("Filter_LOVTunnel");
-        visit_url("choice.php");
+        LoadChoiceAdventure("choice.php", "Choose LOV gear", false);
         run_choice(3); // LOV Earrings
     
         run_choice(1); // Fight LOV Engineer
         run_combat("Filter_LOVTunnel");
-        visit_url("choice.php");
+        LoadChoiceAdventure("choice.php", "Choose LOV buff", false);
         run_choice(2); // open heart surgery
     
-        run_choice( 1 ); // Fight LOV Equivocator
+        run_choice(1); // Fight LOV Equivocator
         run_combat("Filter_LOVTunnel");
-        visit_url("choice.php");
-        run_choice( 1 ); // LOV_ENAMORANG
+        LoadChoiceAdventure("choice.php", "Choose LOV gift", false);
+        run_choice(1); // LOV Enamorang
     }
     void MaxManaSummons()
     {
@@ -2409,6 +2568,8 @@
         if (!user_confirm("Do you wish to maximize mana to summon as many resolutions as possible?"))
             return;
         BurnManaAndRestores(0, true);
+
+        // increase max mana before doing the 100% restores
         if (sweetSynth.have_skill())
         {
             if (synthMP.have_effect() == 0)
@@ -2416,18 +2577,32 @@
             if (synthMyst.have_effect() == 0)
                 sweet_synthesis(milkStud, daffyTaffy);
         }
+
         if (get_property("telescopeUpgrades").to_int() > 0 && get_property("telescopeLookedHigh") == "false")
             cli_execute("telescope high"); // +stats
-        visit_url("place.php?whichplace=spacegate");
-        if (get_property("spacegateVaccine") == "true" && get_property("_spacegateToday") == "true")
+
+        visit_url("place.php?whichplace=spacegate"); // have to visit it to see if we have access
+        if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
+
+        if (muscle.my_basestat() > mysticality.my_basestat())
+        {
+            BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 2000);
+        }
+        else if (moxie.my_basestat() > mysticality.my_basestat())
+        {
+            BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 2000);
+        }
+        BuyAndUseOneTotal(hawkings, hawkingsEffect, 1000);
+        BuyAndUseOneTotal(occult, occultEffect, 400);
+        BuyAndUseOneTotal(tomatoJuice, tomatoJuiceEffect, 400);
 
         int freeRests = total_free_rests() - get_property("timesRested").to_int();
         while (freeRests > 0)
         {
             if (HaveEquipment(pantsGiving))
                 pants.equip(pantsGiving);
-            if (get_campground() contains pilgrimHat)
+            if (get_campground() contains pilgrimHat) // pilgrim hat gives explicit buffs, which may be useful
                 visit_url("campground.php?action=rest");
             else
                 cli_execute("rest 1");
@@ -2503,7 +2678,7 @@
             PrepareStandardFilter();
             if (turnCount < 0 && !hasFreeKillRemaining)
                 return;
-            if (needsDigitize || turnCount < 0)
+            if (needBagOTricks)
                 TryActivateBagOTricks();
             
             SoulSauceToMana();

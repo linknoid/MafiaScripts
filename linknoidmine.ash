@@ -315,12 +315,7 @@ void DoVolcoino()
 	DoBunker();
 	if (volcoino.item_amount() >= 3)
 	{
-		string page = visit_url(discoUrl);
-		if (page.contains_text("Check out the gift shop"))
-		{
-			run_choice(1);
-			visit_url("shop.php?whichshop=infernodisco&action=buyitem&quantity=1whichrow=754&pwd=" + my_hash());
-		}
+		cli_execute("coinmaster buy disco " + dayPass.to_string());
 	}
 }
 
