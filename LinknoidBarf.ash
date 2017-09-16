@@ -22,9 +22,6 @@
 
 // TODO:
 
-// semi-rare needs adventures skipped if it turns out to not be
-// once we visit a semi-rare adventure and run away or skip choice,
-// keep track so we don't semi-rare it again
 
 // get buff bot requests working
 
@@ -39,33 +36,10 @@
 
     string defaultOutfit = "barf";
 
-    int savePutties = 0;
     int usePrintScreens = 1;
     int useEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
 
-    // _firedJokestersGun
-    // _shatteringPunchUsed
-    // _usedReplicaBatoomerang
-    // _gingerbreadMobHitUsed
-
-    // _thanksgettingFoodsEaten
-    // _timeSpinnerMinutesUsed
-    // _witchessFights
-    // _witchessBuff
-    // _glennGoldenDiceUsed
-    // _sourceTerminalDigitizeMonsterCount
-    // _sourceTerminalDigitizeUses
-    // _sourceTerminalEnhanceUses
-    // _sourceTerminalExtrudes
-
-    // _raindohCopiesMade
-    // spookyPuttyCopiesMade
-
-    // screencappedMonster
-    // spookyPuttyMonster
-    // _cameraMonster
-    // _sourceTerminalDigitizeMonster
 
     slot ToSlot(string s)
     {
@@ -109,6 +83,13 @@
             abort("Illegal familiar " + s);
         return result;
     }
+    thrall ToThrall(string s)
+    {
+        thrall result = s.to_thrall();
+        if (result.to_int() < 0)
+            abort("Illegal thrall " + s);
+        return result;
+    }
     monster ToMonster(string s)
     {
         monster result = s.to_monster();
@@ -138,6 +119,10 @@
     slot acc2 = ToSlot("acc2");
     slot acc3 = ToSlot("acc3");
     slot famEqp = ToSlot("familiar");
+
+
+// getting access to dinsey
+    item dayPass = ToItem("one-day ticket to Dinseylandfill");
 
 // campground items
     item witchess = ToItem("Witchess Set");
@@ -219,6 +204,17 @@
     item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
     item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
 
+// pasta thralls
+    thrall lasagnaThrall = ToThrall("Lasagmbie"); // for meat
+    thrall spiceThrall = ToThrall("Spice Ghost"); // for items
+    thrall verminThrall = ToThrall("Vermincelli"); // for mana
+    thrall vampireThrall = ToThrall("Vampieroghi"); // for healing
+    skill lasagnaThrallSkill = ToSkill("Bind Lasagmbie"); 
+    skill spiceThrallSkill = ToSkill("Bind Spice Ghost");
+    skill verminThrallSkill = ToSkill("Bind Vermincelli");
+    skill vampireThrallSkill = ToSkill("Bind Vampieroghi");
+    effect lasagnaThrallEffect = ToEffect("Pasta Eyeball");
+
 // ghost busting
     item protonPack = ToItem("protonic accelerator pack");
     item talisman = ToItem("Talisman o' Namsilat");
@@ -253,6 +249,14 @@
     skill extractJelly = ToSkill("Extract Jelly");
     skill extract = ToSkill("Extract");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
+
+// monster level so it can survive longer
+    skill annoyingNoise = ToSkill("Drescher's Annoying Noise");
+    effect annoyingNoiseEffect = ToEffect("Drescher's Annoying Noise");
+    skill annoyance = ToSkill("Ur-Kel's Aria of Annoyance");
+    effect annoyanceEffect = ToEffect("Ur-Kel's Aria of Annoyance");
+    item greekFire = ToItem("Greek fire");
+    effect greekFireEffect = "Sweetbreads Flamb".to_effect(); // this has a non-ascii character in it which won't match, so effect verification in ToEffect will fail
 
 
 // Skills for consumption
@@ -366,6 +370,8 @@
     effect occultEffect = ToEffect("Mystically Oiled");
     item tomatoJuice = ToItem("tomato juice of powerful power");
     effect tomatoJuiceEffect = ToEffect("Tomato Power");
+    item mascara = ToItem("glittery mascara");
+    effect mascaraEffect = ToEffect("Glittering Eyelashes");
     item muscleToMyst = ToItem("oil of stability");
     effect muscleToMystEffect = ToEffect("Stabilizing Oiliness");
     item moxieToMyst = ToItem("oil of slipperiness");
@@ -421,6 +427,7 @@
 
 // semi-rare
     item nickel = ToItem("hobo nickel");
+    item billiardKey = ToItem("Spookyraven billiards room key");
 
 // barf mountain quest
     item lubeShoes = ToItem("lube-shoes");
@@ -490,9 +497,16 @@
     void TryReduceManaCost(skill skll);
     void MaxManaSummons();
     void ChooseEducate(boolean duplicate, boolean digitize);
+    void ChooseThrall(boolean forMeat);  //, boolean forItems)
 
 
 // general utility functions
+    boolean UserConfirmDefault(string message, boolean defaultValue)
+    {
+        if (get_property("LinknoidBarf.AutoConfirm") == "true")
+            return defaultValue;
+        return user_confirm(message);
+    }
     int FindVariableChoice(string page, string match)
     {
         int ix = page.index_of(match);
@@ -633,6 +647,8 @@
     }
     void SoulSauceToMana()
     {
+        if (!soulFood.have_skill())
+            return;
         while ((my_soulsauce() > 90 && my_mp() + 15 < my_maxmp())
             || (my_mp() < 30 && my_maxmp() > 30 && my_soulsauce() > 5))
         {
@@ -672,7 +688,8 @@
             {
                 cli_execute("nuns");
             }
-            else if (ShouldSummonRestore(keepMana, 0, 15, soulsauceBonus))
+            else if (soulFood.have_skill()
+                && ShouldSummonRestore(keepMana, 0, 15, soulsauceBonus))
             {
                 use_skill(1, soulFood);
                 changed = true;
@@ -1010,7 +1027,7 @@
             return 0;
         int puttiesUsed = get_property("spookyPuttyCopiesMade").to_int();
         int raindohsUsed = get_property("_raindohCopiesMade").to_int();
-        return puttyAvailable - (puttiesUsed + raindohsUsed + savePutties);
+        return puttyAvailable - (puttiesUsed + raindohsUsed);
     }
 
 
@@ -1136,12 +1153,30 @@
         {
             if (scratchUPC.item_amount() < 3)
             {
+                print("Buying 3 scratch and sniff stickers");
                 buy(3 - scratchUPC.item_amount(), scratchUPC);
             }
-            cli_execute("stickers upc, upc, upc");
+            if (scratchUPC.item_amount() >= 3)
+                cli_execute("stickers upc, upc, upc");
+            else
+            {
+                print("Couldn't acquire stickers, no scratch 'n' sniff for you");
+                return false;
+            }
         }
         weapon.equip(eq);
         return true;
+    }
+    void BuffNonPMThrall()
+    {
+        if (my_class().to_string() != "Pastamancer"
+            && my_mp() > 1000
+            && lasagnaThrallSkill.have_skill()
+            && lasagnaThrallEffect.have_effect() <= 0)
+        {
+            // only worthwhile if we'll have lots of mana leftover, really expensive for the payback, 100 meat per embezzler for 200 mana
+            use_skill(1, lasagnaThrallSkill);
+        }
     }
     void PrepareEmbezzler()
     {
@@ -1179,6 +1214,8 @@
                 needsWinkAt = true;
             }
         }
+        ChooseThrall(true);
+        BuffNonPMThrall();
     }
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -1197,6 +1234,7 @@
                 }
             }
         }
+        ChooseThrall(true);
     }
     boolean TryRunWitchess(string filter)
     {
@@ -1288,19 +1326,24 @@
             return "skill " + BoTnonspell1.to_string();
         return "attack";
     }
+    boolean HaveBagOTricksBuff()
+    {
+        if (bagOtricksEffect1.have_effect() > 0) // can't re-activate
+            return true;
+        if (bagOtricksEffect2.have_effect() > 0) // can't re-activate
+            return true;
+        if (bagOtricksEffect3.have_effect() > 0) // can't re-activate
+            return true;
+        return false;
+    }
     string Filter_BagOTricks(int round, monster mon, string page)
     {
-        static boolean bagOTricksReadied = false;
-        static boolean bagOTricksOpened = false;
-        if (!bagOTricksReadied)
+        if (!HaveBagOTricksBuff())
         {
-            bagOTricksReadied = true;
-            return AvailableSpellForBagOfTricks();
-        }
-        if (!bagOTricksOpened)
-        {
-            bagOTricksOpened = true;
-            return "skill Open the Bag o' Tricks";
+            if (get_property("bagOTricksCharges").to_int() > 0)
+                return "skill Open the Bag o' Tricks";
+            else
+                return AvailableSpellForBagOfTricks();
         }
         return NonSpellWhileWearingBagOfTricks(); // finish them off with non-spell skills
     }
@@ -1309,13 +1352,11 @@
     {
         if (!HaveEquipment(bagOtricks))
             return;
-        if (bagOtricksEffect1.have_effect() > 0) // can't re-activate
-            return;
-        if (bagOtricksEffect2.have_effect() > 0) // can't re-activate
-            return;
-        if (bagOtricksEffect3.have_effect() > 0) // can't re-activate
+        if (HaveBagOTricksBuff())
             return;
         if (AvailableSpellForBagOfTricks() == "")
+            return;
+        if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
             return;
         item oldOffhand = offhand.equipped_item();
         EquipDropsItems();
@@ -1329,6 +1370,8 @@
     boolean TryActivatePantsgivingFullness()
     {
         if (!HaveEquipment(pantsGiving))
+            return false;
+        if (my_fullness() != fullness_limit())
             return false;
         pants.equip(pantsGiving);
         boolean first = true;
@@ -1348,7 +1391,7 @@
                     return false;
             }
         }
-        return true;
+        return my_fullness() == fullness_limit() - 1;
     }
 
     int ghostShot = 0;
@@ -1445,6 +1488,128 @@
         {
             SwitchToFamiliar(robort); // drops booze
             return;
+        }
+    }
+    boolean EnsureOneSongSpace()
+    {
+        int songSpace = 3;
+        if (ToSkill("Mariachi Memory").have_skill())
+            songSpace++;
+
+        boolean[string] songs = // boolean whether we should shrug the buff.  Stuff that's relevant to meat farming shouldn't be shrugged
+        {
+            "The Moxious Madrigal"                   : true,
+            "The Magical Mojomuscular Melody"        : true,
+            "Cletus's Canticle of Celerity"          : true,
+            "The Power Ballad of the Arrowsmith"     : true,
+            "Polka of Plenty"                        : false, // buffs meat drops
+            "Jackasses' Symphony of Destruction"     : true,
+            "Fat Leon's Phat Loot Lyric"             : false, // buffs item drops
+            "Brawnee's Anthem of Absorption"         : true,
+            "Psalm of Pointiness"                    : true,
+            "Stevedave's Shanty of Superiority"      : true,
+            "Aloysius' Antiphon of Aptitude"         : true,
+            "Ode to Booze"                           : true,
+            "The Sonata of Sneakiness"               : true,
+            "Carlweather's Cantata of Confrontation" : true,
+            "Ur-Kel's Aria of Annoyance"             : true,
+            "The Ballad of Richie Thingfinder"       : false, // buffs item and meat drops
+            "Benetton's Medley of Diversity"         : true,
+            "Elron's Explosive Etude"                : true,
+            "Chorale of Companionship"               : false, // buffs pet weight
+            "Prelude of Precision"                   : true,
+            "Donho's Bubbly Ballad"                  : true,
+            "Cringle's Curative Carol"               : true,
+            "Inigo's Incantation of Inspiration"     : true  
+        };
+
+        int activeSongs = songSpace;
+        while (activeSongs >= songSpace)
+        {
+            activeSongs = 0;
+            string shrugBuff = "";
+            string song;
+            boolean canRemove;
+
+            foreach song, canRemove in songs
+            {
+                if (ToEffect(song).Have_effect() > 0)
+                {
+                    activeSongs++;
+                    if (canRemove)
+                        shrugBuff = song;
+                }
+            }
+    
+            if (activeSongs >= songSpace && shrugBuff != "")
+            {
+                cli_execute("uneffect " + shrugBuff);
+                activeSongs--;
+            }
+            else
+                break;
+        }
+        return activeSongs < songSpace;
+    }
+    void BuffMonsterLevel()
+    {
+        if (annoyanceEffect.have_effect() > 0)
+            return;
+        if (annoyance.have_skill())
+        {
+            if (EnsureOneSongSpace())
+            {
+                use_skill(1, annoyance);
+                if (annoyanceEffect.have_effect() > 0)
+                    return;
+            }
+        }
+        if (annoyingNoiseEffect.have_effect() <= 0)
+        {
+            if (annoyingNoise.have_skill())
+            {
+                use_skill(1, annoyingNoise);
+            }
+        }
+        BuyAndUseOneTotal(greekFire, greekFireEffect, 2000);
+    }
+    void ChooseThrall(boolean forMeat) //, boolean forItems)
+    {
+        if (my_class().to_string() != "Pastamancer")
+            return;
+        thrall choice;
+        skill toBind;
+        int mpCost = 0;
+        if (forMeat && lasagnaThrallSkill.have_skill())
+        {
+            choice = lasagnaThrall;
+            toBind = lasagnaThrallSkill;
+            mpCost = 200;
+        }
+        else if (spiceThrallSkill.have_skill())
+        {
+            choice = spiceThrall;
+            toBind = spiceThrallSkill;
+            mpCost = 250;
+        }
+        //else if (verminThrallSkill.have_skill())
+        //{
+        //    choice = verminThrall;
+        //    toBind = verminThrallSkill;
+        //    mpCost = 200;
+        //}
+        if (mpCost > 0) // have a legitimate skill
+        {
+            if (choice != my_thrall() // already have that thrall
+                && my_mp() > mpCost + 250) // make sure we have enough mana to switch, and then switch back
+            {
+                use_skill(1, toBind);
+            }
+        }
+        if (hasFreeKillRemaining && (my_thrall() == lasagnaThrall || my_thrall() == vampireThrall))
+        {
+            // don't want lasagmbie to kill before we can get a free kill
+            BuffMonsterLevel();
         }
     }
     boolean TryFightGhost()
@@ -1700,13 +1865,13 @@
             if (mayoClinic.item_amount() > 0 && !eatWithoutMayo)
             {
                 if (get_property("_workshedItemUsed") == "false"
-                    && user_confirm("Mayo clinic not installed, do you wish to install for eating?"))
+                    && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
                     BeforeSwapOutAsdon();
                     use(1, mayoClinic);
                 }
                 if (!(get_campground() contains mayoClinic)
-                    && !user_confirm("Mayo clinic is not in workshed, do you wish to eat without mayo?"))
+                    && !UserConfirmDefault("Mayo clinic is not in workshed, do you wish to eat without mayo?", true))
                 {
                     abort("Stopping without eating because no mayo clinic");
                 }
@@ -1863,7 +2028,7 @@
             return;
         if (booze.item_amount() <= 0)
         {
-            if (!user_confirm("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?"))
+            if (!UserConfirmDefault("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?", true))
                 abort("Cannot buff Robortender, no " + booze.to_string());
         }
     }
@@ -1907,7 +2072,7 @@
                 return;
             if (asdonMartin.item_amount() == 0)
                 return;
-            if (user_confirm("Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?"))
+            if (UserConfirmDefault("Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?", true))
             {
                 BeforeSwapOutMayo();
                 use(1, asdonMartin);
@@ -2298,7 +2463,9 @@
         }
         if (!stompingBoots.have_familiar() && !bandersnatch.have_familiar())
             return;
-        if (!user_confirm("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?"))
+        if (GetRemainingFreeRunaways() < 3)
+            return;
+        if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?", true))
         {
             return;
         }
@@ -2344,35 +2511,112 @@
         }
     }
 
+    void SemiRareCastle()
+    {
+        string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
+        //castleTopFloor.adv1(-1, filter);
+        string page = visit_url("adventure.php?snarfblat=324"); // castle top floor
+        if (page.contains_text("choice.php"))
+        {
+            // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
+            if (page.contains_text("Check Behind the Giant Poster")) // goto punk rock
+            {
+                page = visit_url("choice.php?option=4&pwd=" + my_hash() + "&whichchoice=676", false); // check behind the giant poster
+            }
+            if (page.contains_text("Check behind the trash can")) // goto steampunk
+            {
+                page = visit_url("choice.php?option=3&pwd=" + my_hash() + "&whichchoice=678", false); // check behind the trash can
+            }
+            else if (page.contains_text("Get the Punk's Attention")) // fight punk rock
+            {
+                page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=678", false); // get the punk's attention
+                run_combat(filter);
+                return;
+            }
+            if (page.contains_text("Gimme Steam")) // goto steampunk
+            {
+                page = visit_url("choice.php?option=4&pwd=" + my_hash() + "&whichchoice=675", false); // gimme steam
+            }
+            else if (page.contains_text("End His Suffering")) // fight goth
+            {
+                page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=675", false); // end his suffering
+                run_combat(filter);
+                return;
+            }
+            if (page.contains_text("Copper Feel"))
+                run_choice(2); // investigate whirligigs, skip adventure
+        }
+        else
+            run_combat(filter);
+    }
+    void SemiRareBilliard()
+    {
+        string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
+        string page = visit_url("adventure.php?snarfblat=391"); // spookyraven billiard room
+
+        if (page.contains_text("Get the heck out of here")) // in case of lights out
+        {
+            run_choice(2); // get the heck out of here
+            page = visit_url("adventure.php?snarfblat=391"); // try again
+        }
+        if (page.contains_text("choice.php"))
+        {
+            run_choice(1); // rack 'em up
+        }
+        else
+            run_combat(filter);
+    }
+    void SemiRarePurpleLight()
+    {
+        string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
+        //purpleLight.adv1(-1, filter);
+        string page = visit_url("adventure.php?snarfblat=172"); // purple light district
+        if (page.contains_text("choice.php"))
+            run_choice(1);
+        else
+            run_combat(filter);
+    }
+    void SemiRareEmbezzler()
+    {
+        PrepareEmbezzler();
+        //treasury.adv1(-1, "Filter_Standard");
+        visit_url("adventure.php?snarfblat=260"); // treasury
+        run_combat("Filter_Standard");
+    }
+    void BypassCounterError()
+    {
+        // This is just an invalid URL to trigger the semi-rare warning so we can get past it, without crashing this
+        // script, so it won't actually take a turn unless it happens to trigger a counter script:
+        boolean ignore = cli_execute("try; visit_url adventure.php?snarfblat=99999999");
+    }
+
     void RunSemiRare()
     {
         semiRareAttempted = my_turnCount();
+
+        BypassCounterError();
+
+        if (semiRareAttempted != my_turnCount()) // make sure we're still on the same turn in case a counter script got triggered
+            return;
+
+
         string lastLocation = get_property("semirareLocation");
         if (lastLocation != castleTopFloor.to_string())
         {
-            string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
-            //castleTopFloor.adv1(-1, filter);
-            visit_url("adventure.php?snarfblat=324"); // castle top floor
-            run_combat(filter);
-// if non-combat choice adventure, Melon Collie and the infinite lameness => Copper Feel
+            SemiRareCastle();
+        }
+        else if (billiardKey.item_amount() > 0 && get_property("poolSharkCount").to_int() < 25)
+        {
+            SemiRareBilliard();
         }
         else if (IsPurpleLightAvailable() && nickel.item_amount() >= 5)
         {
-            string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
-            //purpleLight.adv1(-1, filter);
-            string page = visit_url("adventure.php?snarfblat=172"); // purple light district
-            if (page.contains_text("choice.php"))
-                run_choice(1);
-            else
-                run_combat(filter);
+            SemiRarePurpleLight();
         }
         else
         {
-            PrepareEmbezzler();
-            //treasury.adv1(-1, "Filter_Standard");
-            visit_url("adventure.php?snarfblat=260"); // treasury
-            run_combat("Filter_Standard");
-       }
+            SemiRareEmbezzler();
+        }
     }
 
     boolean ActivateCopyItem(item copyItem)
@@ -2381,6 +2625,18 @@
         visit_url("inv_use.php?whichitem=" + copyItem.to_int());
         run_combat("Filter_Standard");
         return true;
+    }
+    boolean EmbezzlerScheduled()
+    {
+        if (my_turnCount() == digitizeCounter)
+        {
+            return get_property("_sourceTerminalDigitizeMonster") == embezzler.to_string();
+        }
+        if (my_turnCount() == enamorangCounter)
+        {
+            return get_property("enamorangMonster") == embezzler.to_string();
+        }
+        return false;
     }
     boolean RunCopiedEmbezzler()
     {
@@ -2400,7 +2656,7 @@
         else if (EmbezzlerPrintScreened())
         {
             print("using print screen embezzler");
-            set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string());
+            set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
 
             needsPrintScreen = true;
             return ActivateCopyItem(usedPrintScreen);
@@ -2452,7 +2708,7 @@
     }
     void RunBarfMountain(boolean requireOutfit)
     {
-        if (my_turnCount() == digitizeCounter || my_turnCount() == enamorangCounter)
+        if (EmbezzlerScheduled())
         {
             PrepareEmbezzler();
         }
@@ -2536,27 +2792,28 @@
         if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
             return;
         
-        ChooseDropsFamiliar(false);
+        ChooseDropsFamiliar(false); // hmm tradeoff between familiar drops, familiar assist, or non-acting to get elixir...
         print("Running LOV tunnel");
         PrepareFilterLOV();
-        restore_hp(my_maxhp() - my_mp());
+        restore_hp(my_maxhp() - my_hp());
     
         visit_url("place.php?whichplace=town_wrong");
         if (!LoadChoiceAdventure("place.php?whichplace=town_wrong&action=townwrong_tunnel", "LOV Tunnel", false))
             return;
         run_choice(1); // Enter the tunnel
-    
-        run_choice(1); // Fight LOV Enforcer
+
+        // cannot use run_choice() to start the fight, or you won't get a combat filter? 
+        visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1223&option=1"); // Fight LOV Enforcer
         run_combat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gear", false);
         run_choice(3); // LOV Earrings
     
-        run_choice(1); // Fight LOV Engineer
+        visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1225&option=1"); // Fight LOV Engineer
         run_combat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV buff", false);
         run_choice(2); // open heart surgery
     
-        run_choice(1); // Fight LOV Equivocator
+        visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1227&option=1"); // Fight LOV Equivocator
         run_combat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gift", false);
         run_choice(1); // LOV Enamorang
@@ -2565,7 +2822,7 @@
     {
         if (!summonRes.have_skill())
             return;
-        if (!user_confirm("Do you wish to maximize mana to summon as many resolutions as possible?"))
+        if (!UserConfirmDefault("Do you wish to maximize mana to summon as many resolutions as possible?", true))
             return;
         BurnManaAndRestores(0, true);
 
@@ -2596,6 +2853,7 @@
         BuyAndUseOneTotal(hawkings, hawkingsEffect, 1000);
         BuyAndUseOneTotal(occult, occultEffect, 400);
         BuyAndUseOneTotal(tomatoJuice, tomatoJuiceEffect, 400);
+        BuyAndUseOneTotal(mascara, mascaraEffect, 30);
 
         int freeRests = total_free_rests() - get_property("timesRested").to_int();
         while (freeRests > 0)
@@ -2709,6 +2967,28 @@
         }
     }
 
+    boolean HasAccess()
+    {
+        string page = visit_url("place.php?whichplace=airport");
+        return page.contains_text("plane_stinko_dinko.gif");
+    }
+    
+    void EnsureAccess()
+    {
+        if (HasAccess())
+            return;
+    
+        if (!UserConfirmDefault("No access to Dinsey, use a day pass?", true))
+            abort("No access to Dinsey");
+    
+        if (dayPass.item_amount() == 0)
+            BuyItem(dayPass);
+        if (dayPass.item_amount() == 0)
+            abort("Could not acquire " + dayPass.to_string());
+        use(1, dayPass);
+    }
+
+
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
@@ -2720,6 +3000,8 @@
         print("Running with familiar " + fam.to_string());
         runFamiliar = fam;
         
+        if (buffTurns > 0 || runTurns > 0)
+            EnsureAccess();
         if (buffTurns != 0)
             BuffTurns(buffTurns);
         if (runTurns != 0)
