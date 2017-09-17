@@ -83,6 +83,13 @@ item perfect4 = ToItem("perfect negroni");
 item perfect5 = ToItem("perfect old-fashioned");
 item perfect6 = ToItem("perfect paloma");
 
+item robodrink1 = ToItem("gunner's daughter");
+item robodrink2 = ToItem("Gnollish sangria");
+item robodrink3 = ToItem("Elemental caipiroska");
+item robodrink4 = ToItem("Bloody Nora");
+item robodrink5 = ToItem("Mysterious Island iced tea");
+item robodrink6 = ToItem("reverse Tantalus");
+
 item himein1 = ToItem("cold hi mein");
 item himein2 = ToItem("hot hi mein");
 item himein3 = ToItem("sleazy hi mein");
@@ -94,6 +101,8 @@ effect gotmilk = ToEffect("Got Milk");
 skill odeToBooze = ToSkill("The Ode to Booze");
 effect odeToBoozeEffect = ToEffect("Ode to Booze");
 
+// sleep gear
+item weirdness = ToItem("solid shifting time weirdness");
 
 
 boolean HaveItem(item i)
@@ -119,6 +128,18 @@ void ClearAccessorySlots()
 	acc1.equip("none".to_item());
 	acc2.equip("none".to_item());
 	acc3.equip("none".to_item());
+}
+void WearSleepGear()
+{
+	if (my_familiar().to_string() != "none" && HaveItem(weirdness))
+	{
+		fameqp.equip(weirdness);
+	}
+	if (have_outfit("Sleep"))
+	{
+		outfit("Sleep");
+		print("Don't forget to nightcap");
+	}
 }
 
 void WearMiningGear()
@@ -174,7 +195,7 @@ void WearVelvetGear()
 
 boolean HasAccess()
 {
-        string page = visit_url("place.php?whichplace=airport");
+	string page = visit_url("place.php?whichplace=airport");
 	return page.contains_text("airport_plane_70s.gif");
 }
 
@@ -356,7 +377,7 @@ void DoMining(int advToSpend)
 
 	string page = visit_url("mining.php?mine=6&intro=1");
 	while (my_adventures() > rem_adv)
-        {
+	{
 		totalMines++;
 		
 		if (!page.contains_text("value='Find New Cavern'") && !page.contains_text("Promising Chunk of Wall"))
@@ -462,7 +483,7 @@ void HandleEatDrinkSpleen()
 	// Non-optimal algorithm for lazy eating and drinking that won't break
 	// the bank.  You can almost certainly do better manually.
 	int remainingFull = fullness_limit() - my_fullness();
-        int remainingDrunk = inebriety_limit() - my_inebriety();
+	int remainingDrunk = inebriety_limit() - my_inebriety();
 	int remainingSpleen = spleen_limit() - my_spleen_use();
 	boolean timeBorrowed = get_property("_borrowedTimeUsed") != "false";
 	if (remainingFull < 5 && remainingDrunk < 3 && remainingSpleen < 4)
@@ -517,6 +538,24 @@ void HandleEatDrinkSpleen()
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
 	}
+	while (remainingDrunk >= 1) // drunk available is not divisible by 3, so we'll have some leftovers to fill
+	{
+		item bestDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
+		print("cheapest drink = " + bestDrink.to_string());
+		if (bestDrink == noItem)
+			break;
+		if (odeToBoozeEffect.have_effect() < 1)
+		{
+			use_skill(1, odeToBooze);
+			if (odeToBoozeEffect.have_effect() < 1)
+			{
+				print("Need to acquire OdeToBooze before drinking");
+			}
+		}
+		BuyItem(bestDrink);
+		drink(1, bestDrink);
+		remainingDrunk -= 3;
+	}
 }
 
 void main(int miningTurns)
@@ -546,5 +585,10 @@ void main(int miningTurns)
 	WearMiningGear();
 
 	DoMining(miningTurns);
+
+// I'm lazy and sometimes just log my secondary characters after the script finishes without changing gear.
+// You can always change back to something else after if you want
+	if (my_adventures() <= 0)
+		WearSleepGear();
 }
 

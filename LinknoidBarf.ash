@@ -1,3 +1,10 @@
+// Credits:
+// Bale forum posts about url handling, witchess fights
+// VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
+// Ezandora's KGB.ash script for handling briefcase so I don't have to
+// Zarqon canadv.ash for how to check for access to purple light district
+
+
 // Costs:
 // 11 bacon @300                                          =     3,000
 // 1 4-d camera @7500                                     =     7,500
@@ -20,13 +27,23 @@
 // income over 340 turns                                  = 2,412,711
 // net gain                                               = 2,221,038
 
+
+
 // TODO:
 
+// auto-choose familiar if it's blank (instead of using current)
+
+// free fight "Evoke Eldritch Horror" and tentacle for science
+// duplicate witchess knight
+
+// validate hobopolis access via get_clan_name() and settings whitelist before assuming we can use the instance
+// auto-cleesh and run away in purple light district if we get a combat
+
+// warn if wearing text-changing items or have text-changing buffs that it will confuse the KolMafia (like Papier mitre, staph of homophones, wormwood buff, etc)
 
 // get buff bot requests working
 
 // Add for mana burning:
-// fix LOV tunnel combat filter
 // clara's bell and hobopolis if 20 hobo glyphs and have access
 
 
@@ -376,6 +393,9 @@
     effect muscleToMystEffect = ToEffect("Stabilizing Oiliness");
     item moxieToMyst = ToItem("oil of slipperiness");
     effect moxieToMystEffect = ToEffect("Slippery Oiliness");
+    item circleDrum = ToItem("Circle Drum");
+    effect circleDrumEffect = ToEffect("Feelin' the Rhythm");
+
 
 // locations for adventuring
     location garbagePirates = ToLocation("Pirates of the Garbage Barges"); // for orphan costume
@@ -1145,10 +1165,7 @@
         else if (HaveEquipment(scratchXbow))
             eq = scratchXbow;
         else
-        {
-            print("Scratch and sniff ignored, you need to do it manually the first time");
-            return false;
-        }
+            eq = scratchSword;
         if (eq.numeric_modifier("Meat Percent") == 0)
         {
             if (scratchUPC.item_amount() < 3)
@@ -1501,7 +1518,7 @@
             "The Moxious Madrigal"                   : true,
             "The Magical Mojomuscular Melody"        : true,
             "Cletus's Canticle of Celerity"          : true,
-            "The Power Ballad of the Arrowsmith"     : true,
+            "Power Ballad of the Arrowsmith"         : true,
             "Polka of Plenty"                        : false, // buffs meat drops
             "Jackasses' Symphony of Destruction"     : true,
             "Fat Leon's Phat Loot Lyric"             : false, // buffs item drops
@@ -1553,9 +1570,9 @@
     }
     void BuffMonsterLevel()
     {
-        if (annoyanceEffect.have_effect() > 0)
-            return;
-        if (annoyance.have_skill())
+        if (current_mcd() < 10)
+            change_mcd(10);
+        if (annoyanceEffect.have_effect() == 0 && annoyance.have_skill())
         {
             if (EnsureOneSongSpace())
             {
@@ -2854,11 +2871,15 @@
         BuyAndUseOneTotal(occult, occultEffect, 400);
         BuyAndUseOneTotal(tomatoJuice, tomatoJuiceEffect, 400);
         BuyAndUseOneTotal(mascara, mascaraEffect, 30);
+        if (circleDrum.item_amount() > 0 && get_property("_circleDrumUsed") != "true")
+        {
+            UseOneTotal(circleDrum, circleDrumEffect);
+        }
 
         int freeRests = total_free_rests() - get_property("timesRested").to_int();
         while (freeRests > 0)
         {
-            if (HaveEquipment(pantsGiving))
+            if (HaveEquipment(pantsGiving)) // increases rest
                 pants.equip(pantsGiving);
             if (get_campground() contains pilgrimHat) // pilgrim hat gives explicit buffs, which may be useful
                 visit_url("campground.php?action=rest");
@@ -2967,6 +2988,20 @@
         }
     }
 
+    void SetRunFamiliar(string familiarName)
+    {
+        if (familiarName == "" && get_property("_roboDrinks").contains_text(roboMeat.to_string()))
+            familiarName = robort.to_string();
+
+        familiar fam = familiarName.to_familiar();
+        if (fam.to_int() < 0 && familiarName != "none")
+        {
+            fam = my_familiar();
+        }
+        print("Running with familiar " + fam.to_string());
+        runFamiliar = fam;
+    }
+
     boolean HasAccess()
     {
         string page = visit_url("place.php?whichplace=airport");
@@ -2982,7 +3017,7 @@
             abort("No access to Dinsey");
     
         if (dayPass.item_amount() == 0)
-            BuyItem(dayPass);
+            buy(1, dayPass);
         if (dayPass.item_amount() == 0)
             abort("Could not acquire " + dayPass.to_string());
         use(1, dayPass);
@@ -2992,13 +3027,7 @@
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
-        familiar fam = familiarName.to_familiar();
-        if (fam.to_int() < 0 && familiarName != "none")
-        {
-            fam = my_familiar();
-        }
-        print("Running with familiar " + fam.to_string());
-        runFamiliar = fam;
+        SetRunFamiliar(familiarName);
         
         if (buffTurns > 0 || runTurns > 0)
             EnsureAccess();
