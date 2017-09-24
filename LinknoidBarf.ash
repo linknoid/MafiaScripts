@@ -177,6 +177,8 @@
     item dirt = ToItem("dirt julep"); // booze from plants with robortender
     item gingerWine = ToItem("high-end ginger wine"); // from gingertown
     item turkey = ToItem("Ambitious Turkey"); // from hand turkey
+    item sacramento = ToItem("Sacramento wine"); // from witchess
+    effect sacramentoEffect = ToEffect("Sacré Mental");
 
 // spleen items
     item egg1 = ToItem("black paisley oyster egg");
@@ -500,6 +502,7 @@
     int digitizeCounter = 0;
     int enamorangCounter = 0;
     int fortuneCookieCounter = 0;
+    int spookyravenCounter = 0;
     int maxItemUse = funkslinging.have_skill() ? 2 : 1;
     boolean eatWithoutMayo = false;
     int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry, 
@@ -521,6 +524,18 @@
 
 
 // general utility functions
+    boolean RoomToEat(int size)
+    {
+        return size <= fullness_limit() - my_fullness();
+    }
+    boolean RoomToDrink(int size)
+    {
+        return size <= inebriety_limit() - my_inebriety();
+    }
+    boolean RoomToSpleen(int size)
+    {
+        return size <= spleen_limit() - my_spleen_use();
+    }
     boolean UserConfirmDefault(string message, boolean defaultValue)
     {
         if (get_property("LinknoidBarf.AutoConfirm") == "true")
@@ -799,6 +814,10 @@
             {
                 if (fortuneCookieCounter == 0 || turns < fortuneCookieCounter)
                     fortuneCookieCounter = turns;
+            }
+            else if (type.index_of("Spookyraven Lights Out") >= 0)
+            {
+                spookyravenCounter = turns;
             }
         }
         int digitizeCount = get_property("_sourceTerminalDigitizeUses").to_int();
@@ -1160,13 +1179,13 @@
             return false;
 
         item eq;
-        if (HaveEquipment(scratchSword))
-            eq = scratchSword;
-        else if (HaveEquipment(scratchXbow))
+        if (HaveEquipment(scratchXbow))
             eq = scratchXbow;
         else
             eq = scratchSword;
-        if (eq.numeric_modifier("Meat Percent") == 0)
+        float modifier = eq.numeric_modifier("Meat Percent");
+        print("scratch and sniff current modifier = " + modifier);
+        if (modifier == 0)
         {
             if (scratchUPC.item_amount() < 3)
             {
@@ -1647,15 +1666,25 @@
 
 
 
-    void UseItem(item itm, effect resultingEffect, int requestedTurns)
+    void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem) // turnsPerItem should be overestimated, not underestimated, if the expected count varies
     {
-        while (resultingEffect.have_effect() < requestedTurns && itm.item_amount() > 0)
+        int buffsNeeded = requestedTurns - resultingEffect.have_effect();
+        while (buffsNeeded > 0)
         {
-            int oldTurns = resultingEffect.have_effect();
-            use(1, itm);
-            int newTurns = resultingEffect.have_effect();
-            if (oldTurns == newTurns)
+            int useCount = (buffsNeeded + turnsPerItem - 1) / turnsPerItem; // round up to the nearest integer
+            if (useCount > itm.item_amount())
+                useCount = itm.item_amount();
+            if (useCount <= 0)
                 break;
+            int oldTurns = resultingEffect.have_effect();
+            use(useCount, itm);
+            int newTurns = resultingEffect.have_effect();
+            if (oldTurns == newTurns) // prevent infinite loop in case it fails
+            {
+                print("Buff failed " + itm + " => " + resultingEffect);
+                break;
+            }
+            buffsNeeded = requestedTurns - resultingEffect.have_effect();
         }
     }
 
@@ -1846,8 +1875,7 @@
         if (desiredEffect.have_effect() >= turnLimit)
             return;
 
-        int remainingSpleen = spleen_limit() - my_spleen_use();
-        if (remainingSpleen < providedSpleen)
+        if (!RoomToSpleen(providedSpleen))
             return;
 
         chew(1, spleenItem);
@@ -1859,8 +1887,7 @@
             return;
         if (desiredEffect.have_effect() >= turnLimit)
             return;
-        int remainingDrunk = inebriety_limit() - my_inebriety();
-        if (providedDrunk > remainingDrunk)
+        if (!RoomToDrink(providedDrunk))
             return;
 
         if (odeToBoozeEffect.have_effect() < providedDrunk)
@@ -1869,6 +1896,14 @@
         }
         if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
             put_closet(swizzler.item_amount(), swizzler);
+
+        if (get_property("barrelShrineUnlocked") == "true"
+            && my_class().to_string() == "Accordion Thief"
+            && get_property("_barrelPrayer") != "true"
+            && RoomToDrink(10)) // if there's not enough liver left to benefit, wait for nightcap
+        {
+            cli_execute("barrelprayer buff");
+        }
         
         drink(1, booze);
     }
@@ -1932,10 +1967,6 @@
         pageText = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1197&foodid=" + i.to_int(), true);
         return true;
     }
-    boolean RoomToEat(int size)
-    {
-        return my_fullness() + size <= fullness_limit();
-    }
     boolean TryBonusEatThanksgetting(boolean unique)
     {
         if (!RoomToEat(2))
@@ -1963,7 +1994,7 @@
         if (get_property("_timeSpinnerMinutesUsed") > 7) // no time left
             return false;
         ConsumeMayo(false);
-        UseItem(milk, gotmilk, 2);
+        UseItem(milk, gotmilk, 2, 20);
         if (HaveEaten(thanks1) && TimeSpinnerEat(thanks1)) return true;
         if (HaveEaten(thanks2) && TimeSpinnerEat(thanks2)) return true;
         if (HaveEaten(thanks3) && TimeSpinnerEat(thanks3)) return true;
@@ -2000,19 +2031,26 @@
 
         if (!RoomToEat(providedFullness))
             return false;
-        UseItem(milk, gotmilk, 2);
+        UseItem(milk, gotmilk, 2, 20);
 
-        boolean underDrunk = my_inebriety() < inebriety_limit();
-        boolean convertToDrunk = underDrunk && !RoomToEat(providedFullness + followupFullness);
+        boolean convertToDrunk = RoomToDrink(1) && !RoomToEat(providedFullness + followupFullness);
         ConsumeMayo(convertToDrunk);
+
+        if (get_property("barrelShrineUnlocked") == "true"
+            && my_class().to_string() == "Turtle Tamer"
+            && get_property("_barrelPrayer") != "true")
+        {
+            cli_execute("barrelprayer buff");
+        }
+
         eat(1, food);
         return true;
     }
-    void SweetSynth(int requestedTurns)
+    void SweetMeat(int requestedTurns)
     {
         if (sweetSynth.have_skill())
         {
-            while (synthGreed.have_effect() < requestedTurns && my_spleen_use() < spleen_limit())
+            while (synthGreed.have_effect() < requestedTurns && RoomToSpleen(1))
             {
                 sweet_synthesis(ww, ww);
             }
@@ -2265,7 +2303,7 @@
         if (nightBefore)
         {
             turns = 1;
-            SweetSynth(1);
+            SweetMeat(1);
             if (expensiveBuffs)
             {
                 UseOneTotal(micks, sinuses);
@@ -2275,19 +2313,19 @@
                 if (needWeightBuffs)
                 {
                     UseOneTotal(kinder, kinderEffect);
-                    TrySpleen(joy, joyEffect, 1, turns);
+                    TrySpleen(joy, joyEffect, 1, 1);
                 }
                 if (egg1.item_amount() > 0)
                 {
-                    TrySpleen(egg1, eggEffect, 1, turns);
+                    TrySpleen(egg1, eggEffect, 1, 1);
                 }
                 else if (egg2.item_amount() > 0)
                 {
-                    TrySpleen(egg2, eggEffect, 1, turns);
+                    TrySpleen(egg2, eggEffect, 1, 1);
                 }
                 else if (egg3.item_amount() > 0)
                 {
-                    TrySpleen(egg3, eggEffect, 1, turns);
+                    TrySpleen(egg3, eggEffect, 1, 1);
                 }
             }
         }
@@ -2303,9 +2341,9 @@
             use(1, bagOtricks);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
-        UseItem(nasalSpray, wasabi, turns);
-        UseItem(wealthy, resolve, turns);
-        UseItem(avoidScams, scamTourist, turns);
+        UseItem(nasalSpray, wasabi, turns, 10);
+        UseItem(wealthy, resolve, turns, 20);
+        UseItem(avoidScams, scamTourist, turns, 20);
         CastSkill(leer, leering, turns);
         CastSkillOrBuffBot(polka, polkad, turns, 1);
         CastSkillOrBuffBot(phatLoot, phatLooted, turns, 1);
@@ -2315,7 +2353,8 @@
         {
             CastSkill(leash, leashEffect, turns);
             CastSkillOrBuffBot(empathy, empathyEffect, turns, 2);
-            UseItem(petBuff, petBuffEffect, turns);
+            UseItem(petBuff, petBuffEffect, turns, 10);
+            TrySpleen(joy, joyEffect, 1, 1);
 
             if ((get_campground() contains witchess)
                  && !get_property("_witchessBuff").to_boolean())
@@ -2328,12 +2367,12 @@
         if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
             AdventureEffect(meatEnh, meatEnhanced, turns);
 
-        if (get_property("_madTeaParty") == "false")
+        if (get_property("_madTeaParty") != "true")
             AdventureEffect(hatterDreadSack, danceTweedle, 1);
 
         if (OutfitContains(defaultOutfit, halfPurse))
         {
-            UseItem(flaskfull, merrySmith, turns);
+            UseItem(flaskfull, merrySmith, turns, 150);
         }
 
         if (!get_property("_glennGoldenDiceUsed").to_boolean()
@@ -2348,8 +2387,15 @@
         {
             use_skill(1, selfEsteem);
         }
+        if (turns >= 50 
+            && get_property("barrelShrineUnlocked") == "true"
+            && my_class().to_string() == "Pastamancer"
+            && get_property("_barrelPrayer") != "true")
+        {
+            cli_execute("barrelprayer buff");
+        }
 
-        SweetSynth(turns);
+        SweetMeat(turns);
         KGBBuff(turns);
 
         TryDrink(dirt, dirtEffect, 1, 1);
@@ -2397,11 +2443,8 @@
             if (fistTurkey.have_familiar())
             {
                 int turkeyturns = turns > 110 ? 110 : turns; // limit to 5 turkeys a day, since that's all that can drop per day
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-                TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+                for (int i = 0; i < 5; i++)
+                    TryDrink(turkey, turkeyEffect, 1, turkeyturns);
             }
             if (CanDistention() // only worth doing a pantsgiving fullness run if we can get a second fullness point from distention pill
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
@@ -2414,6 +2457,8 @@
                 }
             }
             TryBonusThanksgetting();
+            for (int i = 0; i < 5; i++) // fill up the rest with +item buff
+                TryDrink(sacramento, sacramentoEffect, 1, turns);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
@@ -2844,11 +2889,16 @@
         BurnManaAndRestores(0, true);
 
         // increase max mana before doing the 100% restores
+        if (HaveEquipment(protonPack) && get_property("_streamsCrossed") != "true")
+        {
+            back.equip(protonPack);
+            cli_execute("crossstreams");
+        }
         if (sweetSynth.have_skill())
         {
-            if (synthMP.have_effect() == 0)
+            if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && RoomToSpleen(1))
                 sweet_synthesis(milkStud, seniorMint);
-            if (synthMyst.have_effect() == 0)
+            if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && RoomToSpleen(1))
                 sweet_synthesis(milkStud, daffyTaffy);
         }
 
@@ -2961,6 +3011,12 @@
                 TryActivateBagOTricks();
             
             SoulSauceToMana();
+            if (spookyravenCounter == my_turnCount())
+            {
+                print("Skipping Spookyraven in this script, if you don't want it to skip, add a 'counter script' in KoLMafia");
+                BypassCounterError();
+            }
+
             if (fortuneCookieCounter == my_turnCount()
                 && semiRareAttempted != my_turnCount())
             {
@@ -2990,8 +3046,11 @@
 
     void SetRunFamiliar(string familiarName)
     {
-        if (familiarName == "" && get_property("_roboDrinks").contains_text(roboMeat.to_string()))
-            familiarName = robort.to_string();
+        if (familiarName == "")
+        {
+            if (get_property("_roboDrinks").contains_text(roboMeat.to_string()))
+                familiarName = robort.to_string();
+        }
 
         familiar fam = familiarName.to_familiar();
         if (fam.to_int() < 0 && familiarName != "none")

@@ -72,9 +72,11 @@ item velvet = ToItem("unsmoothed velvet");
 
 // eating and drinking and spleening
 item borrowedTime = ToItem("borrowed time");
+item swizzler = ToItem("Swizzler");
 
 item spleen1 = ToItem("powdered gold");
 item spleen2 = ToItem("agua de vida");
+item spleen3 = ToItem("carrot juice");
 
 item perfect1 = ToItem("perfect cosmopolitan");
 item perfect2 = ToItem("perfect dark and stormy");
@@ -478,6 +480,30 @@ item ChooseCheapest(int limit, item i1, item i2, item i3, item i4, item i5, item
 	return ChooseCheapest(limit, best1, best2);
 }
 
+boolean ignoreOde = false;
+void OdeUp()
+{
+	if (odeToBoozeEffect.have_effect() < 3)
+	{
+		if (odeToBooze.have_skill())
+		{
+			use_skill(1, odeToBooze);
+			if (odeToBoozeEffect.have_effect() < 3)
+			{
+				abort("Need to acquire OdeToBooze before drinking");
+			}
+		}
+		else if (!ignoreOde)
+		{
+			ignoreOde = user_confirm("You don't have the skill Ode to Booze, do you want to drink without it?");
+			if (!ignoreOde)
+			{
+				abort("No Ode to Booze available for drinking");
+			}
+		}
+	}
+}
+
 void HandleEatDrinkSpleen()
 {
 	// Non-optimal algorithm for lazy eating and drinking that won't break
@@ -507,6 +533,23 @@ void HandleEatDrinkSpleen()
 		chew(1, bestSpleen);
 		remainingSpleen -= 4;
 	}
+	while (remainingSpleen >= 3)
+	{
+		item bestSpleen = ChooseCheapest(9000, spleen3, spleen3); // expect 3 turns at 3000 mpa
+		print("cheapest spleen = " + bestSpleen.to_string());
+		if (bestSpleen == noItem)
+			break;
+		BuyItem(bestSpleen);
+		chew(1, bestSpleen);
+		remainingSpleen -= 3;
+	}
+	if (get_property("barrelShrineUnlocked") == "true"
+		&& my_class().to_string() == "Turtle Tamer"
+		&& get_property("_barrelPrayer") != "true"
+		&& remainingFull >= 5)
+	{
+		cli_execute("barrelprayer buff");
+	}
 	while (remainingFull >= 5)
 	{
 		item bestFood = ChooseCheapest(10000, himein1, himein2, himein3, himein4, himein5, noItem);
@@ -520,20 +563,24 @@ void HandleEatDrinkSpleen()
 		eat(1, bestFood);
 		remainingFull -= 5;
 	}
+	if (remainingDrunk >= 10) // if there's not enough liver left to benefit, wait for nightcap
+	{
+		if (get_property("barrelShrineUnlocked") == "true"
+			&& my_class().to_string() == "Accordion Thief")
+			&& get_property("_barrelPrayer") != "true") 
+		{
+			cli_execute("barrelprayer buff");
+		}
+	}
+	if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+		put_closet(swizzler.item_amount(), swizzler);
 	while (remainingDrunk >= 3)
 	{
 		item bestDrink = ChooseCheapest(5000, perfect1, perfect2, perfect3, perfect4, perfect5, perfect6);
 		print("cheapest drink = " + bestDrink.to_string());
 		if (bestDrink == noItem)
 			break;
-		if (odeToBoozeEffect.have_effect() < 3)
-		{
-			use_skill(1, odeToBooze);
-			if (odeToBoozeEffect.have_effect() < 3)
-			{
-				print("Need to acquire OdeToBooze before drinking");
-			}
-		}
+		OdeUp();
 		BuyItem(bestDrink);
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
@@ -544,14 +591,7 @@ void HandleEatDrinkSpleen()
 		print("cheapest drink = " + bestDrink.to_string());
 		if (bestDrink == noItem)
 			break;
-		if (odeToBoozeEffect.have_effect() < 1)
-		{
-			use_skill(1, odeToBooze);
-			if (odeToBoozeEffect.have_effect() < 1)
-			{
-				print("Need to acquire OdeToBooze before drinking");
-			}
-		}
+		OdeUp();
 		BuyItem(bestDrink);
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
