@@ -287,6 +287,7 @@
 // skills for +meat bonus
     skill leer = ToSkill("Disco Leer");
     skill polka = ToSkill("The Polka of Plenty");
+    skill thingfinder = ToSkill("The Ballad of Richie Thingfinder");
     skill phatLoot = ToSkill("Fat Leon's Phat Loot Lyric");
     skill sweetSynth = ToSkill("Sweet Synthesis");
     skill selfEsteem = ToSkill("Incredible Self-Esteem");
@@ -337,6 +338,7 @@
     effect leering = "Disco Leer".ToEffect(); // from Disco Leer (disco bandit skill)
     effect polkad = "Polka of Plenty".ToEffect(); // from Polka (accordion thief)
     effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Fat Leon's (accordion thief)
+    effect thingfinderEffect = ToEffect("The Ballad of Richie Thingfinder"); // accordion thief only
     effect meatEnhanced = "meat.enh".ToEffect(); // source terminal, 60%, 3x 100 turns a day
     effect danceTweedle = "Dances with Tweedles".ToEffect(); // from DRINK ME potion, once a day, 40%, 30 turns
     effect merrySmith = "Merry Smithsness".ToEffect(); // from Flaskfull of Hollow
@@ -2349,7 +2351,6 @@
         UseItem(avoidScams, scamTourist, turns, 20);
         CastSkill(leer, leering, turns);
         CastSkillOrBuffBot(polka, polkad, turns, 1);
-        CastSkillOrBuffBot(phatLoot, phatLooted, turns, 1);
         RentAHorse();
 
         if (needWeightBuffs)
@@ -2462,6 +2463,21 @@
             TryBonusThanksgetting();
             for (int i = 0; i < 5; i++) // fill up the rest with +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
+        }
+
+        // don't finish with accordion buffs until after we've drunk, because we might need to shrug Ode to fit the song in our head
+        if (EnsureOneSongSpace())
+        {
+            if (my_class().to_string() == "Accordion Thief"
+                && thingfinder.have_skill()
+                && get_property("_thingfinderCasts").to_int() < 10)
+            {
+                CastSkill(thingfinder, thingfinderEffect, turns);
+            }
+        }
+        if (EnsureOneSongSpace())
+        {
+            CastSkillOrBuffBot(phatLoot, phatLooted, turns, 1);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
