@@ -136,6 +136,9 @@
     slot acc2 = ToSlot("acc2");
     slot acc3 = ToSlot("acc3");
     slot famEqp = ToSlot("familiar");
+    slot sticker1 = ToSlot("sticker1");
+    slot sticker2 = ToSlot("sticker2");
+    slot sticker3 = ToSlot("sticker3");
 
 
 // getting access to dinsey
@@ -1183,9 +1186,9 @@
             eq = scratchXbow;
         else
             eq = scratchSword;
-        float modifier = eq.numeric_modifier("Meat Percent");
-        print("scratch and sniff current modifier = " + modifier);
-        if (modifier == 0)
+        if (sticker1.equipped_item().to_string() == "none"
+            && sticker2.equipped_item().to_string() == "none"
+            && sticker3.equipped_item().to_string() == "none")
         {
             if (scratchUPC.item_amount() < 3)
             {
