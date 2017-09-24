@@ -98,8 +98,15 @@ item himein3 = ToItem("sleazy hi mein");
 item himein4 = ToItem("spooky hi mein");
 item himein5 = ToItem("stinky hi mein");
 
+item lasagna1 = ToItem("fishy fish lasagna");
+item lasagna2 = ToItem("gnat lasagna");
+item lasagna3 = ToItem("long pork lasagna");
+
 item milk = ToItem("milk of magnesium");
 effect gotmilk = ToEffect("Got Milk");
+item ruby = ToItem("Tuesday's Ruby");
+item gar = ToItem("Potion of Field Gar");
+effect garEffect = ToEffect("Garish");
 skill odeToBooze = ToSkill("The Ode to Booze");
 effect odeToBoozeEffect = ToEffect("Ode to Booze");
 
@@ -520,7 +527,7 @@ void HandleEatDrinkSpleen()
 		use(1, borrowedTime);
 	}
 
-	if (!user_confirm("Do you wish to automatically eat hi mein/drink perfect/spleen?"))
+	if (!user_confirm("Do you wish to automatically eat hi mein/lasagna/drink perfect/spleen?"))
 		return;
 
 	while (remainingSpleen >= 4)
@@ -550,23 +557,45 @@ void HandleEatDrinkSpleen()
 	{
 		cli_execute("barrelprayer buff");
 	}
-	while (remainingFull >= 5)
+        if (ruby.numeric_modifier("Muscle Percent") == 0) // can't use field gar on Monday
+        {
+		while (remainingFull >= 3)
+		{
+			item bestFood = ChooseCheapest(7500, lasagna1, lasagna2, lasagna3, noItem);
+			print("cheapest food = " + bestFood.to_string());
+			if (bestFood == noItem)
+				break;
+			BuyItem(milk);
+			BuyItem(bestFood);
+			BuyItem(gar);
+			if (gotMilk.have_effect() < 5)
+				use(1, milk);
+			if (garEffect.have_effect() <= 0)
+				use(1, gar);
+			eat(1, bestFood);
+			remainingFull -= 3;
+		}
+        }
+	if (my_level() >= 13) // must be 13 to eat hi-mein
 	{
-		item bestFood = ChooseCheapest(10000, himein1, himein2, himein3, himein4, himein5, noItem);
-		print("cheapest food = " + bestFood.to_string());
-		if (bestFood == noItem)
-			break;
-		BuyItem(milk);
-		BuyItem(bestFood);
-		if (gotMilk.have_effect() < 5)
-			use(1, milk);
-		eat(1, bestFood);
-		remainingFull -= 5;
+		while (remainingFull >= 5)
+		{
+			item bestFood = ChooseCheapest(10000, himein1, himein2, himein3, himein4, himein5, noItem);
+			print("cheapest food = " + bestFood.to_string());
+			if (bestFood == noItem)
+				break;
+			BuyItem(milk);
+			BuyItem(bestFood);
+			if (gotMilk.have_effect() < 5)
+				use(1, milk);
+			eat(1, bestFood);
+			remainingFull -= 5;
+		}
 	}
 	if (remainingDrunk >= 10) // if there's not enough liver left to benefit, wait for nightcap
 	{
 		if (get_property("barrelShrineUnlocked") == "true"
-			&& my_class().to_string() == "Accordion Thief")
+			&& my_class().to_string() == "Accordion Thief"
 			&& get_property("_barrelPrayer") != "true") 
 		{
 			cli_execute("barrelprayer buff");
