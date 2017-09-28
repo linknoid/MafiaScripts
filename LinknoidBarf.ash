@@ -182,6 +182,7 @@
     item turkey = ToItem("Ambitious Turkey"); // from hand turkey
     item sacramento = ToItem("Sacramento wine"); // from witchess
     effect sacramentoEffect = ToEffect("Sacré Mental");
+    item pinkyRing = ToItem("mafia pinky ring"); // increases adventure yield from wine
 
 // spleen items
     item egg1 = ToItem("black paisley oyster egg");
@@ -278,7 +279,7 @@
     skill annoyance = ToSkill("Ur-Kel's Aria of Annoyance");
     effect annoyanceEffect = ToEffect("Ur-Kel's Aria of Annoyance");
     item greekFire = ToItem("Greek fire");
-    effect greekFireEffect = "Sweetbreads Flamb".to_effect(); // this has a non-ascii character in it which won't match, so effect verification in ToEffect will fail
+    effect greekFireEffect = ToEffect("Sweetbreads Flambé");
 
 
 // Skills for consumption
@@ -1737,7 +1738,14 @@
             {
                 restore_mp(skll.mp_cost() - my_mp());
             }
+            int beforeTurns = resultingEffect.have_effect();
             use_skill(1, skll);
+            int afterTurns = resultingEffect.have_effect();
+            if (beforeTurns == afterTurns)
+            {
+                print("Casting " + skll + " failed, skipping");
+                break;
+            }
         }
     }
     void CastSkillOrBuffBot(skill skll, effect resultingEffect, int requestedTurns, int meatCostPer5Turns)
@@ -1886,6 +1894,7 @@
         chew(1, spleenItem);
     }
 
+    boolean ignoreOde = false;
     void TryDrink(item booze, effect desiredEffect, int providedDrunk, int turnLimit)
     {
         if (booze.item_amount() < 1)
@@ -1897,7 +1906,32 @@
 
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
-            CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, providedDrunk, 5);
+            if (odeToBooze.have_skill())
+                CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, providedDrunk, 5);
+            else
+            {
+                print("Requesting Ode to Booze buff from Buffy the buff bot");
+                cli_execute("/msg buffy ode");
+                for (int i = 0; i < 5; i++)
+                {
+                    waitq(2);
+                    refresh_status();
+                    if (odeToBoozeEffect.have_effect() >= providedDrunk)
+                    {
+                        print("Got ode to booze from buffy, sending 2000 meat as thanks");
+                        cli_execute("csend 2000 meat to buffy");
+                        break;
+                    }
+                }
+                if (!ignoreOde
+                    && odeToBoozeEffect.have_effect() < providedDrunk)
+                {
+                    if (UserConfirmDefault("Could not get Ode to Booze, do you want to abort before drinking?", false))
+                        abort("Aborting before drink because no Ode to Booze");
+                    else
+                        ignoreOde = true;
+                }
+            }
         }
         if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
             put_closet(swizzler.item_amount(), swizzler);
@@ -1908,6 +1942,10 @@
             && RoomToDrink(10)) // if there's not enough liver left to benefit, wait for nightcap
         {
             cli_execute("barrelprayer buff");
+        }
+        if (HaveEquipment(pinkyRing))
+        {
+            acc1.equip(pinkyRing);
         }
         
         drink(1, booze);

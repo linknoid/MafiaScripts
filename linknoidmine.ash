@@ -114,6 +114,12 @@ effect odeToBoozeEffect = ToEffect("Ode to Booze");
 item weirdness = ToItem("solid shifting time weirdness");
 
 
+boolean UserConfirmDefault(string message, boolean defaultValue)
+{
+	if (get_property("LinknoidMine.AutoConfirm") == "true")
+		return defaultValue;
+	return user_confirm(message);
+}
 boolean HaveItem(item i)
 {
 	return i.item_amount() > 0 || i.equipped_amount() > 0;
@@ -213,7 +219,7 @@ void EnsureAccess()
 	if (HasAccess())
 		return;
 
-	if (!user_confirm("No access to 70s Volcano, use a day pass?"))
+	if (!UserConfirmDefault("No access to 70s Volcano, use a day pass?", true))
 		abort("No access to 70s Volcano");
 
 	if (dayPass.item_amount() == 0)
@@ -230,7 +236,7 @@ void DoVelvet()
 	if (!page.contains_text("Go to the sixth floor"))
 		return;
 
-	if (!user_confirm("Equip velvet and get volcoinos?"))
+	if (!UserConfirmDefault("Equip velvet and get volcoinos?", true))
 		return;
 
 	WearVelvetGear();
@@ -332,7 +338,7 @@ void DoBunker()
 		&& !CheckForBunkerTurnin(page, bunker17, 1)
 		&& !CheckForBunkerTurnin(page, bunker18, 1))
 	{
-		if (user_confirm("Cannot turn in any quest item in WLF bunker, do you wish to abort so you can run one of these quests manually?"))
+		if (UserConfirmDefault("Cannot turn in any quest item in WLF bunker, do you wish to abort so you can run one of these quests manually?", false))
 		{
 			abort(availableItemPrompt);
 		}
@@ -488,25 +494,40 @@ item ChooseCheapest(int limit, item i1, item i2, item i3, item i4, item i5, item
 }
 
 boolean ignoreOde = false;
-void OdeUp()
+void OdeUp(int size)
 {
-	if (odeToBoozeEffect.have_effect() < 3)
+	if (odeToBoozeEffect.have_effect() >= size)
+		return;
+	if (odeToBooze.have_skill())
 	{
-		if (odeToBooze.have_skill())
+		use_skill(1, odeToBooze);
+		if (odeToBoozeEffect.have_effect() < size)
 		{
-			use_skill(1, odeToBooze);
-			if (odeToBoozeEffect.have_effect() < 3)
-			{
-				abort("Need to acquire OdeToBooze before drinking");
-			}
+			abort("Need to acquire OdeToBooze before drinking");
 		}
-		else if (!ignoreOde)
+	}
+	else if (!ignoreOde)
+	{
+                print("Requesting Ode to Booze buff from Buffy the buff bot");
+                cli_execute("/msg buffy ode");
+                for (int i = 0; i < 5; i++)
+                {
+                    waitq(2);
+                    refresh_status();
+                    if (odeToBoozeEffect.have_effect() >= size)
+                    {
+                        print("Got ode to booze from buffy, sending 2000 meat as thanks");
+                        cli_execute("csend 2000 meat to buffy");
+                        break;
+                    }
+                }
+		if (!ignoreOde
+			&& odeToBoozeEffect.have_effect() < size)
 		{
-			ignoreOde = user_confirm("You don't have the skill Ode to Booze, do you want to drink without it?");
-			if (!ignoreOde)
-			{
-				abort("No Ode to Booze available for drinking");
-			}
+			if (UserConfirmDefault("Could not get Ode to Booze, do you want to abort before drinking?", false))
+				abort("Aborting before drink because no Ode to Booze");
+			else
+				ignoreOde = true;
 		}
 	}
 }
@@ -609,7 +630,7 @@ void HandleEatDrinkSpleen()
 		print("cheapest drink = " + bestDrink.to_string());
 		if (bestDrink == noItem)
 			break;
-		OdeUp();
+		OdeUp(3);
 		BuyItem(bestDrink);
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
@@ -620,7 +641,7 @@ void HandleEatDrinkSpleen()
 		print("cheapest drink = " + bestDrink.to_string());
 		if (bestDrink == noItem)
 			break;
-		OdeUp();
+		OdeUp(1);
 		BuyItem(bestDrink);
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
