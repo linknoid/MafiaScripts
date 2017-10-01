@@ -36,12 +36,8 @@
 // free fight "Evoke Eldritch Horror" and tentacle for science
 // duplicate witchess knight
 
-// validate hobopolis access via get_clan_name() and settings whitelist before assuming we can use the instance
-// auto-cleesh and run away in purple light district if we get a combat
 
-// warn if wearing text-changing items or have text-changing buffs that it will confuse the KolMafia (like Papier mitre, staph of homophones, wormwood buff, etc)
-
-// get buff bot requests working
+// auto-craft 
 
 // Add for mana burning:
 // clara's bell and hobopolis if 20 hobo glyphs and have access
@@ -269,6 +265,7 @@
     item snowglobe = ToItem("KoL Con 13 snowglobe");
     item screege = ToItem("Mr. Screege's spectacles");
     item cheeng = ToItem("Mr. Cheeng's spectacles");
+    item mayfly = ToItem("mayfly bait necklace");
     skill extractJelly = ToSkill("Extract Jelly");
     skill extract = ToSkill("Extract");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
@@ -280,6 +277,11 @@
     effect annoyanceEffect = ToEffect("Ur-Kel's Aria of Annoyance");
     item greekFire = ToItem("Greek fire");
     effect greekFireEffect = ToEffect("Sweetbreads Flambé");
+
+// running away
+    skill cleesh = ToSkill("Cleesh");
+    item fishermansack = ToItem("fisherman's sack"); // quest item after completing nemesis quest as AT
+    item smokebomb = ToItem("fish-oil smoke bomb"); // quest item receive 3 from each fisherman's sack, use 'em or lose 'em on ascending
 
 
 // Skills for consumption
@@ -473,6 +475,15 @@
     item gingerAcc3 = ToItem("chocolate pocketwatch");
     item gingerSprinkles = ToItem("sprinkles");
 
+// effect which will confuse KoLmafia
+    item greendrops = ToItem("soft green echo eyedrop antidote"); // remove undesirable effects
+    item homophones = ToItem("staph of homophones"); // changes words to their homophones
+    item prepositions = ToItem("sword behind inappropriate prepositions"); // restructures sentences
+    item papier1 = ToItem("Papier mitre"); // inserts random words into sentences
+    item papier2 = ToItem("Papier-mâchuridars"); // inserts random words into sentences
+    item papier3 = ToItem("papier-masque"); // inserts random words into sentences
+    effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
+
 
 // script state variables
     familiar runFamiliar;
@@ -493,6 +504,9 @@
     boolean needsRomanticArrow = false;
     boolean needsWinkAt = false;
     boolean needsMeteorShower = false;
+    boolean needsMayfly = false;
+    boolean needsCleesh = false;
+    boolean needsSmokeBomb = false;
     boolean canExtract = false;
     boolean canDuplicate = false;
     boolean canTurbo = false;
@@ -511,9 +525,7 @@
     int spookyravenCounter = 0;
     int maxItemUse = funkslinging.have_skill() ? 2 : 1;
     boolean eatWithoutMayo = false;
-    int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry, 
-    string buffBotRequest = "";
-    int buffBotMeatTotal = 0;
+    int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry.  This is the turn number it was attempted 
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -523,7 +535,7 @@
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
-    void TryReduceManaCost(skill skll);
+    void TryReduceManaCost(skill sk);
     void MaxManaSummons();
     void ChooseEducate(boolean duplicate, boolean digitize);
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
@@ -743,11 +755,15 @@
             }
         }
     }
-    int GetRemainingFreeRunaways()
+    int GetFamiliarRunaways()
     {
         int result = (my_familiar().familiar_weight() + weight_adjustment()) / 5;
         result -= get_property("_banderRunaways").to_int();
         return result;
+    }
+    int GetFreeRunaways()
+    {
+        return GetFamiliarRunaways() + smokebomb.item_amount() + fishermansack.item_amount() * 3;
     }
     boolean FuelAsdon(int requestedFuel)
     {
@@ -769,10 +785,35 @@
         return true;
     }
 
+    void RemoveConfusionEffects(item i, boolean firstCheck)
+    {
+        if (i.have_equipped())
+        {
+            i.to_slot().equip("none".to_item());
+            if (!firstCheck)
+                abort("Wearing " + i + " confuses KoLMafia, and therefore, this script, please remove that from your standard outfit");
+        }
+    }
+    void RemoveConfusionEffects(effect e)
+    {
+        if (e.have_effect() > 0 && greendrops.item_amount() > 0)
+            cli_execute("uneffect " + e);
+    }
+    void RemoveConfusionEffects(boolean firstCheck)
+    {
+        RemoveConfusionEffects(homophones, firstCheck);
+        RemoveConfusionEffects(prepositions, firstCheck);
+        RemoveConfusionEffects(papier1, firstCheck);
+        RemoveConfusionEffects(papier2, firstCheck);
+        RemoveConfusionEffects(papier3, firstCheck);
+        RemoveConfusionEffects(disAbled);
+    }
+
 
 
     void PrepareStandardFilter()
     {
+        needsCleesh = false; // always reset this, don't want to cleesh on accident
         if (!canPickpocket)
         {
             canPickpocket = my_class().to_string() == "Disco Bandit" || my_class().to_string() == "Accordion Thief";
@@ -879,11 +920,19 @@
             || canMissileLauncher
             || canShatteringPunch
             || canMobHit;
+
+        RemoveConfusionEffects(false);
     }
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
             print("using Filter_Standard");
+
+        if (needsCleesh)
+        {
+            needsCleesh = false;
+            return "skill Cleesh";
+        }
 
         if (mon == embezzler) // capture embezzler
         {
@@ -1008,6 +1057,11 @@
         {
             canAccordionBash = false;
             return "skill Accordion Bash";
+        }
+        if (needsMayfly)
+        {
+            needsMayfly = false;
+            return "skill Summon Mayfly Swarm";
         }
         // rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
         // Only do combos when HP are over 100, don't want to get beat up
@@ -1258,6 +1312,7 @@
         }
         ChooseThrall(true);
         BuffNonPMThrall();
+        RemoveConfusionEffects(false);
     }
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -1277,6 +1332,7 @@
             }
         }
         ChooseThrall(true);
+        RemoveConfusionEffects(false);
     }
     boolean TryRunWitchess(string filter)
     {
@@ -1341,11 +1397,11 @@
             acc2.equip(cheeng);
     }
 
-    boolean CanCast(skill skl)
+    boolean CanCast(skill sk)
     {
-        if (!skl.have_skill())
+        if (!sk.have_skill())
             return false;
-        return skl.mp_cost() <= my_mp();
+        return sk.mp_cost() <= my_mp();
     }
 
     string AvailableSpellForBagOfTricks()
@@ -1694,7 +1750,7 @@
         }
     }
 
-    void TryReduceManaCost(skill skll)
+    void TryReduceManaCost(skill sk)
     {
         if (mysticality.my_basestat() >= 200
             && HaveEquipment(oscusWeapon)
@@ -1714,7 +1770,7 @@
             print("kgb mana cost modifier = " + modifier);
             acc2.equip(kgb);
         }
-        else if (skll.mp_cost() > 2 && skll.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
+        else if (sk.mp_cost() > 2 && sk.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
             && rubberEffect.have_effect() <= 0
             && rubber.item_amount() > 0)
         {
@@ -1727,46 +1783,33 @@
         }
     }
 
-    void CastSkill(skill skll, effect resultingEffect, int requestedTurns)
+    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast)
     {
-        if (resultingEffect.have_effect() >= requestedTurns || !skll.have_skill())
+        if (resultingEffect.have_effect() >= requestedTurns || !sk.have_skill())
             return;
-        TryReduceManaCost(skll);
-        while (resultingEffect.have_effect() < requestedTurns && skll.have_skill())
+        TryReduceManaCost(sk);
+        while (resultingEffect.have_effect() < requestedTurns && sk.have_skill())
         {
-            if (skll.mp_cost() > my_mp())
+            if (sk.mp_cost() > my_mp())
             {
-                restore_mp(skll.mp_cost() - my_mp());
+                restore_mp(sk.mp_cost() - my_mp());
             }
             int beforeTurns = resultingEffect.have_effect();
-            use_skill(1, skll);
+            int timesCast = (requestedTurns + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
+            if (sk.mp_cost() * timesCast > my_mp())
+            {
+                timesCast = my_mp() / sk.mp_cost();
+            }
+            if (timesCast <= 0) // sanity check, should not hit this unless we don't have enough mp
+                timesCast = 1;
+            use_skill(timesCast, sk);
             int afterTurns = resultingEffect.have_effect();
             if (beforeTurns == afterTurns)
             {
-                print("Casting " + skll + " failed, skipping");
+                print("Casting " + sk + " failed, skipping");
                 break;
             }
         }
-    }
-    void CastSkillOrBuffBot(skill skll, effect resultingEffect, int requestedTurns, int meatCostPer5Turns)
-    {
-        CastSkill(skll, resultingEffect, requestedTurns);
-        int missingTurns = requestedTurns - resultingEffect.have_effect();
-        if (missingTurns > 0)
-        {
-            buffBotRequest += missingTurns.to_string() + " " + skll.to_string() + "\n";
-            buffBotMeatTotal += meatCostPer5Turns * missingTurns / 5;
-        }
-    }
-    void SendBuffRequest()
-    {
-//        if (buffBotRequest == "")
-//            return;
-//        if (!user_confirm("Send buffbot request for " + buffBotMeatTotal + " meat of " + buffBotRequest + "?"))
-//            return;
-//        kmail("Buffy", buffBotRequest, buffBotMeatTotal);
-        buffBotRequest = "";
-        buffBotMeatTotal = 0;
     }
     void AdventureEffect(string activator, effect resultingEffect, int requestedTurns)
     {
@@ -1907,7 +1950,7 @@
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
             if (odeToBooze.have_skill())
-                CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, providedDrunk, 5);
+                CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25);
             else
             {
                 print("Requesting Ode to Booze buff from Buffy the buff bot");
@@ -1986,7 +2029,7 @@
         }
         if (mayo.item_amount() <= 0)
         {
-            cli_execute("buy 1 " + mayo.to_string());
+            cli_execute("buy 10 " + mayo.to_string());
         }
         if (mayo.item_amount() <= 0)
         {
@@ -2385,16 +2428,19 @@
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
         UseItem(nasalSpray, wasabi, turns, 10);
-        UseItem(wealthy, resolve, turns, 20);
+        if (summonRes.have_skill())
+            UseItem(wealthy, resolve, turns, 20);
+        else
+            UseItem(wealthy, resolve, 1, 20);
         UseItem(avoidScams, scamTourist, turns, 20);
-        CastSkill(leer, leering, turns);
-        CastSkillOrBuffBot(polka, polkad, turns, 1);
+        CastSkill(leer, leering, turns, 10);
+        CastSkill(polka, polkad, turns, 25);
         RentAHorse();
 
         if (needWeightBuffs)
         {
-            CastSkill(leash, leashEffect, turns);
-            CastSkillOrBuffBot(empathy, empathyEffect, turns, 2);
+            CastSkill(leash, leashEffect, turns, 10);
+            CastSkill(empathy, empathyEffect, turns, 35);
             UseItem(petBuff, petBuffEffect, turns, 10);
             TrySpleen(joy, joyEffect, 1, 1);
 
@@ -2404,7 +2450,6 @@
                 cli_execute("witchess");
             }
         }
-        SendBuffRequest();
 
         if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
             AdventureEffect(meatEnh, meatEnhanced, turns);
@@ -2510,12 +2555,12 @@
                 && thingfinder.have_skill()
                 && get_property("_thingfinderCasts").to_int() < 10)
             {
-                CastSkill(thingfinder, thingfinderEffect, turns);
+                CastSkill(thingfinder, thingfinderEffect, turns, 25);
             }
         }
         if (EnsureOneSongSpace())
         {
-            CastSkillOrBuffBot(phatLoot, phatLooted, turns, 1);
+            CastSkill(phatLoot, phatLooted, turns, 25);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
@@ -2525,26 +2570,56 @@
 
     string runawayFilter(int round, monster mon, string page)
     {
+        if (needsCleesh)
+        {
+            needsCleesh = false;
+            return "skill Cleesh";
+        }
+        if (needsSmokeBomb)
+        {
+            needsSmokeBomb = false;
+            return "item " + smokebomb.to_string() + ",none";
+        }
         return "run away";
+    }
+    void PrepareSmokeBomb()
+    {
+        if (GetFamiliarRunaways() > 0)
+        {
+            needsSmokeBomb = false;
+            return;
+        }
+        if (smokebomb.item_amount() == 0 && fishermansack.item_amount() > 0)
+        {
+            use(1, fishermansack); // convert to fish-oil smoke bomb X3
+        }
+        needsSmokeBomb = true;
     }
     string ReadyRunaway()
     {
         if (stompingBoots.have_familiar())
         {
             SwitchToFamiliar(stompingBoots);
-            return "runawayFilter";
         }
         else if (bandersnatch.have_familiar())
         {
             SwitchToFamiliar(stompingBoots);
-            CastSkillOrBuffBot(odeToBooze, odeToBoozeEffect, 1, 5);
+            CastSkill(odeToBooze, odeToBoozeEffect, 1, 25); // only need 1 turn of it
+        }
+        if (GetFreeRunaways() > 0)
+        {
+            PrepareSmokeBomb();
             return "runawayFilter";
         }
-        return "Filter_Standard";
+        else
+            return "Filter_Standard";
     }
       
     boolean IsPurpleLightAvailable()
     {
+        if (!get_property("LinknoidBarf.HobopolisWhitelist").contains_text(get_clan_name()))
+            return false;
+        
         matcher imgNum = create_matcher("purplelightdistrict(\\d+)\\.gif", visit_url("clan_hobopolis.php?place=8"));
         return imgNum.find() && imgNum.group(1).to_int() < 10;
     }
@@ -2562,13 +2637,15 @@
     }
     void WearGingerbreadBest()
     {
-        head.equip(gingerHead);
-        shirt.equip(gingerShirt);
-        pants.equip(gingerPants);
-        acc1.equip(gingerAcc1);
-        acc2.equip(gingerAcc2);
-        acc3.equip(gingerAcc3);
+        outfit("Gingerbread Best");
+        //head.equip(gingerHead);
+        //shirt.equip(gingerShirt);
+        //pants.equip(gingerPants);
+        //acc1.equip(gingerAcc1);
+        //acc2.equip(gingerAcc2);
+        //acc3.equip(gingerAcc3);
     }
+
 
     void RunawayGingerbread()
     {
@@ -2582,7 +2659,7 @@
         }
         if (!stompingBoots.have_familiar() && !bandersnatch.have_familiar())
             return;
-        if (GetRemainingFreeRunaways() < 3)
+        if (GetFreeRunaways() < 3)
             return;
         if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?", true))
         {
@@ -2595,11 +2672,12 @@
         run_choice(1); // clock choice
         for (int i = 0; i < 3; i++) // run away 3 times
         {
-            if (GetRemainingFreeRunaways() < 1)
+            if (GetFreeRunaways() < 1)
             {
                 print("Out of free runaways, " + (3 - i) + " adventures left until train candy.");
                 return;
             }
+            PrepareSmokeBomb();
             gingerTrain.adv1(-1, filter);
         }
         page = LoadChoiceAdventure(gingerTrain, false);
@@ -2607,15 +2685,16 @@
         if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
             put_closet(swizzler.item_amount(), swizzler);
 
-        if (GetRemainingFReeRunaways() < 9)
+        if (GetFreeRunaways() < 9)
         {
-            print("Out of free runaways, 9 adventures left until midnight.");
+            print("9 adventures left until midnight, not enough free runaways.");
             return;
         }
         if (!HaveGingerbreadBest())
             return;
         for (int i = 0; i < 9; i++) // run away 9 times
         {
+            PrepareSmokeBomb();
             gingerRetail.adv1(-1, filter);
         }
         WearGingerbreadBest();
@@ -2687,6 +2766,7 @@
     }
     void SemiRarePurpleLight()
     {
+        needsCleesh = cleesh.have_skill();
         string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
         //purpleLight.adv1(-1, filter);
         string page = visit_url("adventure.php?snarfblat=172"); // purple light district
@@ -2858,6 +2938,12 @@
         }
         else
         {
+            if (!hasFreeKillRemaining && HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
+            {
+                if (!mayfly.have_equipped())
+                    acc1.equip(mayfly);
+                needsMayfly = true;
+            }
             barfMountain.adv1(-1, "Filter_Standard");
         }
     }
@@ -3144,6 +3230,8 @@
     void main(int buffTurns, int runTurns, string familiarName)
     {
         SetRunFamiliar(familiarName);
+
+        RemoveConfusionEffects(true);
         
         if (buffTurns > 0 || runTurns > 0)
             EnsureAccess();
