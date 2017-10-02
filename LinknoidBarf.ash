@@ -48,6 +48,7 @@
 
 
     string defaultOutfit = "barf";
+    string manaOutfit = "Max MP";
 
     int usePrintScreens = 1;
     int useEnamorangs = 1;
@@ -3084,7 +3085,7 @@
         }
         if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
             cli_execute("buy 1 " + sphygmayo.to_string());
-        outfit("Max MP");
+        outfit(manaOutfit);
         RunLOVTunnel();
         int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 50 : 0;
         BurnManaAndRestores(keep, true);
