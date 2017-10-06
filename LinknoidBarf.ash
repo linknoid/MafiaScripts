@@ -406,6 +406,7 @@
     effect moxieToMystEffect = ToEffect("Slippery Oiliness");
     item circleDrum = ToItem("Circle Drum");
     effect circleDrumEffect = ToEffect("Feelin' the Rhythm");
+    item sugarShorts = ToItem("sugar shorts");
 
 
 // locations for adventuring
@@ -3105,6 +3106,8 @@
             // before triggering the restore
         }
         BurnManaAndRestores(keep, true);
+        if (pants.equipped_item() == sugarShorts)
+            pants.equip("none".to_item());
     }
 
     void BeforeSwapOutMayo()
