@@ -36,6 +36,10 @@
 // free fight "Evoke Eldritch Horror" and tentacle for science
 // duplicate witchess knight
 
+// bjorn orphan after 100 turns until 3 wads of candy dropped
+// bjorn hobo monkey for barf, obtuse or leprechaun for embezzlers
+// proton pack every 25 turns if available and not part of outfit
+// track candle/scroll drops from intergnat
 
 // auto-craft 
 
@@ -214,6 +218,13 @@
     familiar obtuseAngel = ToFamiliar("Obtuse Angel");
     familiar reanimator = ToFamiliar("Reanimated Reanimator");
 
+// Bjorn/crown familiars:
+    item bjorn = ToItem("Buddy Bjorn");
+    item crown = ToItem("Crown of Thrones");
+    familiar leprechaun = ToFamiliar("Leprechaun");
+    familiar hoboMonkey = ToFamiliar("Hobo Monkey");
+    familiar goldenMonkey = ToFamiliar("Golden Monkey");
+
 // familiar equipment
     item snowSuit = ToItem("Snow Suit"); // 20 pounds, but decreases over the day
     item petSweater = ToItem("Astral pet sweater"); // 10 pounds, costs 10 karma per ascension
@@ -292,6 +303,7 @@
     skill leer = ToSkill("Disco Leer");
     skill polka = ToSkill("The Polka of Plenty");
     skill thingfinder = ToSkill("The Ballad of Richie Thingfinder");
+    skill companionship = ToSkill("Chorale of Companionship");
     skill phatLoot = ToSkill("Fat Leon's Phat Loot Lyric");
     skill sweetSynth = ToSkill("Sweet Synthesis");
     skill selfEsteem = ToSkill("Incredible Self-Esteem");
@@ -343,6 +355,7 @@
     effect polkad = "Polka of Plenty".ToEffect(); // from Polka (accordion thief)
     effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Fat Leon's (accordion thief)
     effect thingfinderEffect = ToEffect("The Ballad of Richie Thingfinder"); // accordion thief only
+    effect companionshipEffect = ToEffect("Chorale of Companionship"); // accordion thief only
     effect meatEnhanced = "meat.enh".ToEffect(); // source terminal, 60%, 3x 100 turns a day
     effect danceTweedle = "Dances with Tweedles".ToEffect(); // from DRINK ME potion, once a day, 40%, 30 turns
     effect merrySmith = "Merry Smithsness".ToEffect(); // from Flaskfull of Hollow
@@ -541,6 +554,7 @@
     void MaxManaSummons();
     void ChooseEducate(boolean duplicate, boolean digitize);
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
+    void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops);
 
 
 // general utility functions
@@ -685,15 +699,69 @@
             && get_property("_chateauMonsterFought") == "false";
     }
 
+    void RunCombat(string filter)
+    {
+        string result = run_combat(filter);
+        int[item] itemsGained = extract_items(result);
+        if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
+        {
+            int wadCount = itemsGained[ToItem("hoarded candy wad")];
+            //if (wadCount > 0)
+        }
+    }
+
     boolean CanDistention()
     {
         return distention.item_amount() > 0 && !get_property("_distentionPillUsed").to_boolean();
     }
     void BurnManaSummoning(int keepMana)
     {
-        while (summonRes.have_skill() && summonRes.mp_cost() < (my_mp() - keepMana))
+        if (!summonRes.have_skill())
+            return;
+        while (true)
         {
-            use_skill(1, summonRes);
+            int availableMana = my_mp() - keepMana;
+            int castCount = 0;
+            int baseManaCost = summonRes.mp_cost();
+            //if (keepMana == 0)
+            //{
+            //    // if not saving any mana back, we don't have to take into account the growing costs, the
+            //    // server will do that for us
+            //    castCount = availableMana / baseManaCost;
+            //}
+            //else
+            {
+                // Just make a very rough estimate because we don't know how many casts already made, mana adjustment
+                // makes the calculation more complex.  Don't want to overshoot on mana usage, but reducing the number
+                // of casts required from dozens to 3 or 4
+                int totalManaCost = baseManaCost;
+                while (totalManaCost < availableMana)
+                {
+                    castCount++;
+                    if (baseManaCost < 10)
+                    {
+                        baseManaCost *= 2;
+                    }
+                    else if (baseManaCost < 100)
+                    {
+                        baseManaCost += baseManaCost / 2;
+                    }
+                    else if (baseManaCost < 1000)
+                    {
+                        baseManaCost += baseManaCost / 5;
+                    }
+                    else
+                    {
+                        baseManaCost += baseManaCost / 20;
+                    }
+                    totalManaCost += baseManaCost;
+                }
+            }
+            if (castCount == 0)
+                break;
+print( "casting summon resolutions " + castCount + " times", "orange" );
+waitq(5);
+            use_skill(castCount, summonRes);
         }
     }
     void BurnManaSummoning()
@@ -749,12 +817,7 @@
                 use_skill(1, soulFood);
                 changed = true;
             }
-            while (cost < my_mp())
-            {
-                changed = true;
-                use_skill(1, summonRes);
-                cost = summonRes.mp_cost() + keepMana;
-            }
+            BurnManaSummoning(keepMana);
         }
     }
     int GetFamiliarRunaways()
@@ -1173,10 +1236,45 @@
             famEqp.equip("none".to_item()); // remove the equipment so someone else can wear it
         fam.use_familiar();
     }
+    familiar ChooseBjornCrownFamiliar(familiar currentChoice, familiar newOption)
+    {
+        if (my_familiar() == newOption)
+            return currentChoice;
+        if (!newOption.have_familiar())
+            return currentChoice;
+        return newOption;
+    }
+    void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops)
+    {
+        if (!bjorn.have_equipped() && !crown.have_equipped())
+            return;
+
+        familiar choice;
+        choice = ChooseBjornCrownFamiliar(choice, leprechaun);
+        choice = ChooseBjornCrownFamiliar(choice, obtuseAngel);
+        if (!forEmbezzler) // can't choose one that does damage
+            choice = ChooseBjornCrownFamiliar(choice, hoboMonkey);
+        choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
+        if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
+            choice = ChooseBjornCrownFamiliar(choice, orphan);
+// if robortender, maybe do weight buff instead
+
+        if (bjorn.have_equipped())
+        {
+            if (my_bjorned_familiar() != choice)
+                choice.bjornify_familiar();
+        }
+        else if (crown.have_equipped())
+        {
+            if (my_enthroned_familiar() != choice)
+                choice.enthrone_familiar();
+        }
+    }
     void PrepareFamiliar(boolean forEmbezzler)
     {
         if (my_familiar() != runFamiliar)
             SwitchToFamiliar(runFamiliar);
+        ChooseBjornCrownFamiliars(forEmbezzler, false);
         if (my_familiar() == orphan)
         {
             // counts as an 80+ pound leprechaun, but just chose some arbitrary number larger
@@ -1345,7 +1443,7 @@
             run_choice(1);
             // fight the knight, because we eat a lot of horseradish
             visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1936", false);
-            run_combat(filter);
+            RunCombat(filter);
             return true;
         }
         return false;
@@ -1397,6 +1495,7 @@
             acc1.equip(screege);
         if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
             acc2.equip(cheeng);
+        ChooseBjornCrownFamiliars(false, true); // drops familiar
     }
 
     boolean CanCast(skill sk)
@@ -2562,6 +2661,15 @@
         }
         if (EnsureOneSongSpace())
         {
+            if (my_class().to_string() == "Accordion Thief"
+                && companionship.have_skill()
+                && get_property("_companionshipCasts").to_int() < 10)
+            {
+                CastSkill(companionship, companionshipEffect, turns, 25);
+            }
+        }
+        if (EnsureOneSongSpace())
+        {
             CastSkill(phatLoot, phatLooted, turns, 25);
         }
 
@@ -2730,7 +2838,7 @@
             else if (page.contains_text("Get the Punk's Attention")) // fight punk rock
             {
                 page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=678", false); // get the punk's attention
-                run_combat(filter);
+                RunCombat(filter);
                 return;
             }
             if (page.contains_text("Gimme Steam")) // goto steampunk
@@ -2740,14 +2848,14 @@
             else if (page.contains_text("End His Suffering")) // fight goth
             {
                 page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=675", false); // end his suffering
-                run_combat(filter);
+                RunCombat(filter);
                 return;
             }
             if (page.contains_text("Copper Feel"))
                 run_choice(2); // investigate whirligigs, skip adventure
         }
         else
-            run_combat(filter);
+            RunCombat(filter);
     }
     void SemiRareBilliard()
     {
@@ -2764,7 +2872,7 @@
             run_choice(1); // rack 'em up
         }
         else
-            run_combat(filter);
+            RunCombat(filter);
     }
     void SemiRarePurpleLight()
     {
@@ -2775,14 +2883,14 @@
         if (page.contains_text("choice.php"))
             run_choice(1);
         else
-            run_combat(filter);
+            RunCombat(filter);
     }
     void SemiRareEmbezzler()
     {
         PrepareEmbezzler();
         //treasury.adv1(-1, "Filter_Standard");
         visit_url("adventure.php?snarfblat=260"); // treasury
-        run_combat("Filter_Standard");
+        RunCombat("Filter_Standard");
     }
     void BypassCounterError()
     {
@@ -2824,7 +2932,7 @@
     {
         print("Trying to activate " + copyItem.to_string() + " for embezzler");
         visit_url("inv_use.php?whichitem=" + copyItem.to_int());
-        run_combat("Filter_Standard");
+        RunCombat("Filter_Standard");
         return true;
     }
     boolean EmbezzlerScheduled()
@@ -2872,7 +2980,7 @@
         {
             print("using Chateau painting embezzler");
             visit_url("place.php?whichplace=chateau&action=chateau_painting");
-            run_combat("Filter_Standard");
+            RunCombat("Filter_Standard");
             return true;
         }
         print("no embezzler found");
@@ -2935,7 +3043,7 @@
             }
             else
             {
-                run_combat("Filter_Standard");
+                RunCombat("Filter_Standard");
             }
         }
         else
@@ -2945,6 +3053,13 @@
                 if (!mayfly.have_equipped())
                     acc1.equip(mayfly);
                 needsMayfly = true;
+            }
+            if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
+            {
+                if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
+                {
+                    back.equip(protonPack);
+                }
             }
             barfMountain.adv1(-1, "Filter_Standard");
         }
@@ -3011,17 +3126,17 @@
 
         // cannot use run_choice() to start the fight, or you won't get a combat filter? 
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1223&option=1"); // Fight LOV Enforcer
-        run_combat("Filter_LOVTunnel");
+        RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gear", false);
         run_choice(3); // LOV Earrings
     
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1225&option=1"); // Fight LOV Engineer
-        run_combat("Filter_LOVTunnel");
+        RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV buff", false);
         run_choice(2); // open heart surgery
     
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1227&option=1"); // Fight LOV Equivocator
-        run_combat("Filter_LOVTunnel");
+        RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gift", false);
         run_choice(1); // LOV Enamorang
     }
@@ -3069,6 +3184,10 @@
         if (circleDrum.item_amount() > 0 && get_property("_circleDrumUsed") != "true")
         {
             UseOneTotal(circleDrum, circleDrumEffect);
+        }
+        if (get_property("_ballpit") != "true" && get_property("ballpitBonus").to_int() >= 1)
+        {
+            cli_execute("ballpit");
         }
 
         int freeRests = total_free_rests() - get_property("timesRested").to_int();
