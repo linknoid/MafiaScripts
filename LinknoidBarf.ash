@@ -1896,7 +1896,10 @@ waitq(5);
                 restore_mp(sk.mp_cost() - my_mp());
             }
             int beforeTurns = resultingEffect.have_effect();
-            int timesCast = (requestedTurns + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
+            int timesCast = (requestedTurns - resultingEffect.have_effect() + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
+            if (timesCast <= 0)
+            {
+            }
             if (sk.mp_cost() * timesCast > my_mp())
             {
                 timesCast = my_mp() / sk.mp_cost();
