@@ -468,7 +468,8 @@
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
     monster tourist = ToMonster("garbage tourist");
-    effect olfaction = "On the Trail".ToEffect();
+    skill olfaction = ToSkill("Transcendent Olfaction");
+    effect olfactionEffect = ToEffect("On the Trail");
 
 // semi-rare
     item nickel = ToItem("hobo nickel");
@@ -1088,9 +1089,9 @@ waitq(5);
         {
             return "\"pickpocket\"";
         }
-        if (mon == tourist && olfaction.have_effect() == 0 && my_mp() > 50)
+        if (mon == tourist && olfaction.have_skill() && olfactionEffect.have_effect() == 0 && my_mp() > 50)
         {
-            return "skill Transcendent Olfaction";
+            return "skill " + olfaction.to_string();
         }
         if (canMissileLauncher && shouldMissileLauncher)
         {
@@ -2037,6 +2038,11 @@ waitq(5);
 
         if (!RoomToSpleen(providedSpleen))
             return;
+        if (spleenItem.item_amount() == 0)
+        {
+            print("Cannot spleen with " + spleenItem + ", buy in mall if you want me to use it.", "red");
+            return;
+        }
 
         chew(1, spleenItem);
     }
@@ -2104,9 +2110,10 @@ waitq(5);
     {
         if (!(get_campground() contains mayoClinic))
         {
-            if (mayoClinic.item_amount() > 0 && !eatWithoutMayo)
+            if (!eatWithoutMayo)
             {
                 if (get_property("_workshedItemUsed") == "false"
+                    && mayoClinic.item_amount() > 0
                     && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
                     BeforeSwapOutAsdon();
@@ -2120,6 +2127,8 @@ waitq(5);
                 eatWithoutMayo = true;
             }
         }
+        if (eatWithoutMayo && !(get_campground() contains mayoClinic))
+            return;
 
 
         item mayo;
@@ -2647,7 +2656,12 @@ waitq(5);
                     // eat any that haven't been eaten yet
                 }
             }
-            TryBonusThanksgetting();
+            while (thanksgetting.have_effect() < turns)
+            {
+                if (!TryBonusThanksgetting())
+                    break;
+            }
+
             for (int i = 0; i < 5; i++) // fill up the rest with +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
         }
