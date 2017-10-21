@@ -110,6 +110,10 @@ effect garEffect = ToEffect("Garish");
 skill odeToBooze = ToSkill("The Ode to Booze");
 effect odeToBoozeEffect = ToEffect("Ode to Booze");
 
+item Xtattoo = ToItem("temporary X tattoos");
+effect straightEdge = ToEffect("Straight-Edgy");
+item skeletonX = ToItem("X");
+
 // sleep gear
 item weirdness = ToItem("solid shifting time weirdness");
 
@@ -532,6 +536,25 @@ void OdeUp(int size)
 	}
 }
 
+void PrepareEat(int size)
+{
+	int remainingFull = fullness_limit() - my_fullness();
+	if (get_property("barrelShrineUnlocked") == "true"
+		&& my_class().to_string() == "Turtle Tamer"
+		&& get_property("_barrelPrayer") != "true"
+		&& remainingFull >= 5)
+	{
+		cli_execute("barrelprayer buff");
+	}
+	while (gotMilk.have_effect() < size)
+	{
+		BuyItem(milk);
+		if (milk.item_amount() == 0)
+			return;
+		use(1, milk);
+	}
+}
+
 void HandleEatDrinkSpleen()
 {
 	// Non-optimal algorithm for lazy eating and drinking that won't break
@@ -571,13 +594,6 @@ void HandleEatDrinkSpleen()
 		chew(1, bestSpleen);
 		remainingSpleen -= 3;
 	}
-	if (get_property("barrelShrineUnlocked") == "true"
-		&& my_class().to_string() == "Turtle Tamer"
-		&& get_property("_barrelPrayer") != "true"
-		&& remainingFull >= 5)
-	{
-		cli_execute("barrelprayer buff");
-	}
         if (ruby.numeric_modifier("Muscle Percent") == 0) // can't use field gar on Monday
         {
 		while (remainingFull >= 3)
@@ -586,11 +602,9 @@ void HandleEatDrinkSpleen()
 			print("cheapest food = " + bestFood.to_string());
 			if (bestFood == noItem)
 				break;
-			BuyItem(milk);
 			BuyItem(bestFood);
 			BuyItem(gar);
-			if (gotMilk.have_effect() < 5)
-				use(1, milk);
+			PrepareEat(3);
 			if (garEffect.have_effect() <= 0)
 				use(1, gar);
 			eat(1, bestFood);
@@ -605,10 +619,8 @@ void HandleEatDrinkSpleen()
 			print("cheapest food = " + bestFood.to_string());
 			if (bestFood == noItem)
 				break;
-			BuyItem(milk);
 			BuyItem(bestFood);
-			if (gotMilk.have_effect() < 5)
-				use(1, milk);
+			PrepareEat(5);
 			eat(1, bestFood);
 			remainingFull -= 5;
 		}
@@ -648,10 +660,51 @@ void HandleEatDrinkSpleen()
 	}
 }
 
+void PrepTomorrow()
+{
+	int remainingDrunk = inebriety_limit() - my_inebriety();
+	WearSleepGear();
+	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40;
+        while (my_adventures() + overnightAdventureGain < 200
+		&& fullness_limit() - my_fullness() > 0)
+	{
+		PrepareEat(15);
+		// TODO: actual eating here
+	}
+	if (remainingDrunk >= 5 // hmm, what should this limit be?
+		&& straightEdge.have_effect() == 0)
+	{
+		if (Xtattoo.item_amount() == 0)
+		{
+			if (skeletonX.mall_price() * 2 < Xtattoo.mall_price())
+			{
+				// make our own
+			}
+			else
+			{
+				BuyItem(Xtattoo);
+			}
+		}
+		if (Xtattoo.item_amount() > 0)
+			use(1, XTattoo);
+		else
+			print("Could not acquire " + XTattoo, "red");
+	}
+}
+
 void main(int miningTurns)
 {
 	if (my_inebriety() > inebriety_limit())
 		abort("You are too drunk to continue.");
+
+	if (miningTurns < 0 && my_adventures() < 100 && !HasAccess())
+	{
+		if (UserConfirmDefault("You are starting with less than 100 turns, do you instead want to prep for max adventures tomorrow?", true))
+		{
+			PrepTomorrow();
+			return;
+		}
+	}
 
 	boolean volcoinosChecked = false;
 	if (miningTurns < 0)

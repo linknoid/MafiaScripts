@@ -318,6 +318,8 @@
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
+    item deck = ToItem("Deck of Every Card"); // required for knife if part of outfit
+    item knife = ToItem("knife"); // from deck of every card
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
@@ -351,33 +353,33 @@
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
     effect scamTourist = ToEffect("How to Scam Tourists"); // from How to Avoid Scams
-    effect leering = "Disco Leer".ToEffect(); // from Disco Leer (disco bandit skill)
-    effect polkad = "Polka of Plenty".ToEffect(); // from Polka (accordion thief)
-    effect phatLooted = "Fat Leon's Phat Loot Lyric".ToEffect(); // from Fat Leon's (accordion thief)
+    effect leering = ToEffect("Disco Leer"); // from Disco Leer (disco bandit skill)
+    effect polkad = ToEffect("Polka of Plenty"); // from Polka (accordion thief)
+    effect phatLooted = ToEffect("Fat Leon's Phat Loot Lyric"); // from Fat Leon's (accordion thief)
     effect thingfinderEffect = ToEffect("The Ballad of Richie Thingfinder"); // accordion thief only
     effect companionshipEffect = ToEffect("Chorale of Companionship"); // accordion thief only
-    effect meatEnhanced = "meat.enh".ToEffect(); // source terminal, 60%, 3x 100 turns a day
-    effect danceTweedle = "Dances with Tweedles".ToEffect(); // from DRINK ME potion, once a day, 40%, 30 turns
-    effect merrySmith = "Merry Smithsness".ToEffect(); // from Flaskfull of Hollow
-    effect kickedInSinuses = "Kicked in the Sinuses".ToEffect(); // from horseradish
-    effect foodConeEffect = "The Dinsey Way".ToEffect(); // from Dinsey Food Cone
-    effect seaTruffleEffect = "Trufflin'".ToEffect(); // from the sea truffle
-    effect thanksgetting = "Thanksgetting".ToEffect(); // from thanksgetting feast items
-    effect synthGreed = "Synthesis: Greed".ToEffect(); // from Sweet Synthesis skill
-    effect preternatualGreed = "Preternatural Greed".ToEffect();
-    effect eggEffect = "Egg-stortionary Tactics".ToEffect();
-    effect gingerWineEffect = "High-Falutin'".ToEffect();
-    effect dirtEffect = "Here's Some More Mud in Your Eye".ToEffect();
-    effect turkeyEffect = "Turkey-Ambitious".ToEffect();
-    effect joyEffect = "Joy".ToEffect();
-    effect pinkHeartEffect = "Heart of Pink".ToEffect();
-    effect peppermintEffect = "Peppermint Twisted".ToEffect();
-    effect sugarEffect = "So You Can Work More...".ToEffect();
-    effect kgbMeat = "A View to Some Meat".ToEffect();
-    effect kgbItems = "Items Are Forever".ToEffect();
-    effect bagOTricksEffect1 = "Badger Underfoot".ToEffect();
-    effect bagOTricksEffect2 = "Weasels Underfoot".ToEffect();
-    effect bagOTricksEffect3 = "Chihuahua Underfoot".ToEffect();
+    effect meatEnhanced = ToEffect("meat.enh"); // source terminal, 60%, 3x 100 turns a day
+    effect danceTweedle = ToEffect("Dances with Tweedles"); // from DRINK ME potion, once a day, 40%, 30 turns
+    effect merrySmith = ToEffect("Merry Smithsness"); // from Flaskfull of Hollow
+    effect kickedInSinuses = ToEffect("Kicked in the Sinuses"); // from horseradish
+    effect foodConeEffect = ToEffect("The Dinsey Way"); // from Dinsey Food Cone
+    effect seaTruffleEffect = ToEffect("Trufflin'"); // from the sea truffle
+    effect thanksgetting = ToEffect("Thanksgetting"); // from thanksgetting feast items
+    effect synthGreed = ToEffect("Synthesis: Greed"); // from Sweet Synthesis skill
+    effect preternatualGreed = ToEffect("Preternatural Greed");
+    effect eggEffect = ToEffect("Egg-stortionary Tactics");
+    effect gingerWineEffect = ToEffect("High-Falutin'");
+    effect dirtEffect = ToEffect("Here's Some More Mud in Your Eye");
+    effect turkeyEffect = ToEffect("Turkey-Ambitious");
+    effect joyEffect = ToEffect("Joy");
+    effect pinkHeartEffect = ToEffect("Heart of Pink");
+    effect peppermintEffect = ToEffect("Peppermint Twisted");
+    effect sugarEffect = ToEffect("So You Can Work More...");
+    effect kgbMeat = ToEffect("A View to Some Meat");
+    effect kgbItems = ToEffect("Items Are Forever");
+    effect bagOTricksEffect1 = ToEffect("Badger Underfoot");
+    effect bagOTricksEffect2 = ToEffect("Weasels Underfoot");
+    effect bagOTricksEffect3 = ToEffect("Chihuahua Underfoot");
 
 // effects for pet weight bonus
     effect leashEffect = ToEffect("Leash of Linguini");
@@ -448,6 +450,7 @@
     skill turbo = ToSkill("Turbo");
     effect overheated = ToEffect("Overheated");
     item pilgrimHat = ToItem("Giant pilgrim hat");
+    item snowFort = ToItem("Snow Fort");
     item clarasBell = ToItem("Clara's bell");
     item hoboBinder = ToItem("hobo code binder");
 
@@ -1419,8 +1422,17 @@ waitq(5);
     {
         if (!is_wearing_outfit(defaultOutfit))
         {
+            if (OutfitContains(defaultOutfit, knife)
+                && !HaveEquipment(knife)
+                && deck.item_amount() > 0
+                && get_property("_deckCardsDrawn").to_int() <= 10)
+            {
+                cli_execute("cheat knife");
+            }
             if (RequireOutfit)
+            {
                 outfit(defaultOutfit);
+            }
             else
             {
                 foreach ix,itm in outfit_pieces(defaultOutfit)
@@ -3212,8 +3224,11 @@ waitq(5);
         {
             if (HaveEquipment(pantsGiving)) // increases rest
                 pants.equip(pantsGiving);
-            if (get_campground() contains pilgrimHat) // pilgrim hat gives explicit buffs, which may be useful
+            if (get_campground() contains pilgrimHat // pilgrim hat gives random buffs, which may be useful
+               || get_campground() contains snowFort) // snow fort gives +meat buff and +item buff
+            {
                 visit_url("campground.php?action=rest");
+            }
             else
                 cli_execute("rest 1");
             freeRests -= 1;
