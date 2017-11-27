@@ -451,8 +451,14 @@
     effect overheated = ToEffect("Overheated");
     item pilgrimHat = ToItem("Giant pilgrim hat");
     item snowFort = ToItem("Snow Fort");
+    effect snowFortified = ToEffect("Snow Fortified");
     item clarasBell = ToItem("Clara's bell");
     item hoboBinder = ToItem("hobo code binder");
+
+// healing between turns
+    effect beatenUp = ToEffect("Beaten Up");
+    skill walrus = ToSkill("Tongue of the Walrus");
+    skill cocoon = ToSkill("Cannelloni Cocoon");
 
 // makin' copies, at the copy machine
     item camera = ToItem("4-d camera");
@@ -545,6 +551,10 @@
     int maxItemUse = funkslinging.have_skill() ? 2 : 1;
     boolean eatWithoutMayo = false;
     int semiRareAttempted = 0; // once we attempt a semi-rare on a turn, don't retry.  This is the turn number it was attempted 
+
+    boolean ravedNirvana = false;
+    boolean ravedSteal = false;
+    boolean ravedConcentration = false;
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -763,8 +773,7 @@
             }
             if (castCount == 0)
                 break;
-print( "casting summon resolutions " + castCount + " times", "orange" );
-waitq(5);
+            print( "casting summon resolutions " + castCount + " times", "orange" );
             use_skill(castCount, summonRes);
         }
     }
@@ -822,6 +831,41 @@ waitq(5);
                 changed = true;
             }
             BurnManaSummoning(keepMana);
+        }
+    }
+    void HealUp()
+    {
+        int freeRests = total_free_rests() - get_property("timesRested").to_int();
+        if (freeRests > 0)
+        {
+            if (get_campground() contains snowFort && snowFortified.have_effect() == 0)
+            {
+                if (HaveEquipment(pantsGiving)) // increases rest mana
+                    pants.equip(pantsGiving);
+                visit_url("campground.php?action=rest");
+            }
+        }
+        if (beatenUp.have_effect() > 0)
+        {
+            if (walrus.have_skill() && my_mp() > 8)
+            {
+                use_skill(1, walrus);
+            }
+        }
+        if (my_hp() / (my_maxhp() + 0.5) < .75 && my_maxhp() > 200)
+        {
+            if (cocoon.have_skill() && my_mp() > 20)
+            {
+                use_skill(1, cocoon);
+            }
+        }
+        if (my_hp() / (my_maxhp() + 0.5) < .75)
+        {
+            restore_hp(my_maxhp() - my_hp());
+        }
+        if (my_mp() < 20)
+        {
+            restore_mp(20);
         }
     }
     int GetFamiliarRunaways()
@@ -883,6 +927,9 @@ waitq(5);
     void PrepareStandardFilter()
     {
         needsCleesh = false; // always reset this, don't want to cleesh on accident
+        ravedNirvana = false;
+        ravedSteal = false;
+        ravedConcentration = false;
         if (!canPickpocket)
         {
             canPickpocket = my_class().to_string() == "Disco Bandit" || my_class().to_string() == "Accordion Thief";
@@ -890,7 +937,7 @@ waitq(5);
             {
                 canRaveNirvana = get_property("raveCombo5") != "";
                 canRaveConcentration = get_property("raveCombo3") != "";
-                canRaveSteal = get_property("raveCombo4") != "";
+                canRaveSteal = get_property("raveCombo4") != "" && get_property("_raveStealCount").to_int() < 30;
             }
         }
         canPocketCrumb = HaveEquipment(pantsGiving);
@@ -991,11 +1038,12 @@ waitq(5);
             || canMobHit;
 
         RemoveConfusionEffects(false);
+        HealUp();
     }
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
-            print("using Filter_Standard");
+            print("using Filter_Standard", "orange");
 
         if (needsCleesh)
         {
@@ -1136,7 +1184,6 @@ waitq(5);
         // Only do combos when HP are over 100, don't want to get beat up
         if (canRaveNirvana && my_hp() > 100) // increase meat drops
         {
-            static boolean ravedNirvana = false;
             if (!ravedNirvana)
             {
                 ravedNirvana = true;
@@ -1145,16 +1192,14 @@ waitq(5);
         }
         if (canRaveConcentration && my_hp() > 100) // increase item drops
         {
-            static boolean ravedConcentration = false;
             if (!ravedConcentration)
             {
                 ravedConcentration = true;
-                return "combo rave nirvana";
+                return "combo rave concentration";
             }
         }
         if (canRaveSteal && my_hp() > 100) // sometimes steals an item
         {
-            static boolean ravedSteal = false;
             if (!ravedSteal)
             {
                 ravedSteal = true;
@@ -1353,14 +1398,14 @@ waitq(5);
         {
             if (scratchUPC.item_amount() < 3)
             {
-                print("Buying 3 scratch and sniff stickers");
+                print("Buying 3 scratch and sniff stickers", "orange");
                 buy(3 - scratchUPC.item_amount(), scratchUPC);
             }
             if (scratchUPC.item_amount() >= 3)
                 cli_execute("stickers upc, upc, upc");
             else
             {
-                print("Couldn't acquire stickers, no scratch 'n' sniff for you");
+                print("Couldn't acquire stickers, no scratch 'n' sniff for you", "red");
                 return false;
             }
         }
@@ -1842,12 +1887,23 @@ waitq(5);
 
 
 
-    void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem) // turnsPerItem should be overestimated, not underestimated, if the expected count varies
+    void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem, int maxPrice) // turnsPerItem should be overestimated, not underestimated, if the expected count varies
     {
         int buffsNeeded = requestedTurns - resultingEffect.have_effect();
         while (buffsNeeded > 0)
         {
             int useCount = (buffsNeeded + turnsPerItem - 1) / turnsPerItem; // round up to the nearest integer
+            if (maxPrice > 0)
+            {
+                int mallPrice = itm.mall_price();
+                if (mallPrice <= maxPrice && (itm.item_amount() < useCount || mallPrice < 500))
+                {
+                    int buyCount = useCount - itm.item_amount();
+                    if (buyCount < 1)
+                        buyCount = 1;
+                    buy(buyCount, itm);
+                }
+            }
             if (useCount > itm.item_amount())
                 useCount = itm.item_amount();
             if (useCount <= 0)
@@ -1857,11 +1913,15 @@ waitq(5);
             int newTurns = resultingEffect.have_effect();
             if (oldTurns == newTurns) // prevent infinite loop in case it fails
             {
-                print("Buff failed " + itm + " => " + resultingEffect);
+                print("Buff failed " + itm + " => " + resultingEffect, "red");
                 break;
             }
             buffsNeeded = requestedTurns - resultingEffect.have_effect();
         }
+    }
+    void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem)
+    {
+        UseItem(itm, resultingEffect, requestedTurns, turnsPerItem, 0);
     }
 
     void TryReduceManaCost(skill sk)
@@ -1881,7 +1941,7 @@ waitq(5);
         {
             // todo: verify whether this actually has the proper -3 MP bonus on it
             float modifier = kgb.numeric_modifier("Mana Cost");
-            print("kgb mana cost modifier = " + modifier);
+            print("kgb mana cost modifier = " + modifier, "orange");
             acc2.equip(kgb);
         }
         else if (sk.mp_cost() > 2 && sk.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
@@ -1923,7 +1983,7 @@ waitq(5);
             int afterTurns = resultingEffect.have_effect();
             if (beforeTurns == afterTurns)
             {
-                print("Casting " + sk + " failed, skipping");
+                print("Casting " + sk + " failed, skipping", "orange");
                 break;
             }
         }
@@ -2075,7 +2135,7 @@ waitq(5);
                 CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25);
             else
             {
-                print("Requesting Ode to Booze buff from Buffy the buff bot");
+                print("Requesting Ode to Booze buff from Buffy the buff bot", "orange");
                 cli_execute("/msg buffy ode");
                 for (int i = 0; i < 5; i++)
                 {
@@ -2083,7 +2143,7 @@ waitq(5);
                     refresh_status();
                     if (odeToBoozeEffect.have_effect() >= providedDrunk)
                     {
-                        print("Got ode to booze from buffy, sending 2000 meat as thanks");
+                        print("Got ode to booze from buffy, sending 2000 meat as thanks", "orange");
                         cli_execute("csend 2000 meat to buffy");
                         break;
                     }
@@ -2205,7 +2265,7 @@ waitq(5);
         if (get_property("_timeSpinnerMinutesUsed") > 7) // no time left
             return false;
         ConsumeMayo(false);
-        UseItem(milk, gotmilk, 2, 20);
+        UseItem(milk, gotmilk, 2, 20, 2000);
         if (HaveEaten(thanks1) && TimeSpinnerEat(thanks1)) return true;
         if (HaveEaten(thanks2) && TimeSpinnerEat(thanks2)) return true;
         if (HaveEaten(thanks3) && TimeSpinnerEat(thanks3)) return true;
@@ -2219,7 +2279,7 @@ waitq(5);
     }
     boolean TryBonusThanksgetting()
     {
-        print("Attempting bonus eating, fullness at " + my_fullness() + " / " + fullness_limit());
+        print("Attempting bonus eating, fullness at " + my_fullness() + " / " + fullness_limit(), "orange");
         if (!RoomToEat(2))
         {
             return false;
@@ -2242,7 +2302,7 @@ waitq(5);
 
         if (!RoomToEat(providedFullness))
             return false;
-        UseItem(milk, gotmilk, 2, 20);
+        UseItem(milk, gotmilk, 2, 20, 2000);
 
         boolean convertToDrunk = RoomToDrink(1) && !RoomToEat(providedFullness + followupFullness);
         ConsumeMayo(convertToDrunk);
@@ -2294,7 +2354,7 @@ waitq(5);
             return;
         if (booze.item_amount() <= 0)
         {
-            if (!UserConfirmDefault("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?", true))
+            if (!UserConfirmDefault("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?", purpose != "meat"))
                 abort("Cannot buff Robortender, no " + booze.to_string());
         }
     }
@@ -2351,13 +2411,13 @@ waitq(5);
         while (effectTurns < turns)
         {
             FuelAsdon(37);
-            print("Trying to drive observantly, fuel = " + get_fuel().to_string() + ", existing turns = " + observantly.have_effect());
+            print("Trying to drive observantly, fuel = " + get_fuel().to_string() + ", existing turns = " + observantly.have_effect(), "orange");
             cli_execute("asdonmartin drive observantly");
             //visit_url("campground.php?pwd="+my_hash()+"&preaction=drive&whichdrive=7");  // apparently this works even while already driving
 
             if (effectTurns == observantly.have_effect()) // number of effect turns should have increased
             {
-                print("drive observantly failed to buff");
+                print("drive observantly failed to buff", "red");
                 return;
             }
             effectTurns = observantly.have_effect();
@@ -2374,7 +2434,7 @@ waitq(5);
             cli_execute("briefcase b " + keyword);
             if (effectTurns == kgbBuff.have_effect())
             {
-                print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?");
+                print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?", "red");
                 return;
             }
             effectTurns = kgbBuff.have_effect();
@@ -2476,6 +2536,15 @@ waitq(5);
         CastEducate(doduplicate, dodigitize, doturbo, doextract);
     }
 
+    void TryDistentionForThanksgetting(int turns)
+    {
+        if (CanDistention()
+            && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
+            && my_fullness() == fullness_limit() - 1) // in case we're at 14/15
+        {
+            use(1, distention);
+        }
+    }
 
     void BuffTurns(int turns)
     {
@@ -2556,8 +2625,8 @@ waitq(5);
         if (summonRes.have_skill())
             UseItem(wealthy, resolve, turns, 20);
         else
-            UseItem(wealthy, resolve, 1, 20);
-        UseItem(avoidScams, scamTourist, turns, 20);
+            UseItem(wealthy, resolve, 1, 20, 1000);
+        UseItem(avoidScams, scamTourist, turns, 20, 500);
         CastSkill(leer, leering, turns, 10);
         CastSkill(polka, polkad, turns, 25);
         RentAHorse();
@@ -2584,7 +2653,7 @@ waitq(5);
 
         if (OutfitContains(defaultOutfit, halfPurse))
         {
-            UseItem(flaskfull, merrySmith, turns, 150);
+            UseItem(flaskfull, merrySmith, turns, 150, 1000);
         }
 
         if (!get_property("_glennGoldenDiceUsed").to_boolean()
@@ -2651,6 +2720,7 @@ waitq(5);
             TryEat(thanks6, thanksgetting, 2, 6, turns, true);
             TryEat(thanks7, thanksgetting, 2, 4, turns, true);
             TryEat(thanks8, thanksgetting, 2, 2, turns, true);
+            TryDistentionForThanksgetting(turns);
             TryEat(thanks9, thanksgetting, 2, 0, turns, true);
             if (fistTurkey.have_familiar())
             {
@@ -2662,14 +2732,11 @@ waitq(5);
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
                 && my_fullness() == fullness_limit()) // pants can't activate without being completely full
             {
-                if (TryActivatePantsgivingFullness())
-                {
-                    use(1, distention);
-                    // eat any that haven't been eaten yet
-                }
+                TryActivatePantsgivingFullness(); // open up 1 more fullness
             }
             while (thanksgetting.have_effect() < turns)
             {
+                TryDistentionForThanksgetting(turns);
                 if (!TryBonusThanksgetting())
                     break;
             }
@@ -2813,7 +2880,7 @@ waitq(5);
         {
             if (GetFreeRunaways() < 1)
             {
-                print("Out of free runaways, " + (3 - i) + " adventures left until train candy.");
+                print("Out of free runaways, " + (3 - i) + " adventures left until train candy.", "red");
                 return;
             }
             PrepareSmokeBomb();
@@ -2826,7 +2893,7 @@ waitq(5);
 
         if (GetFreeRunaways() < 9)
         {
-            print("9 adventures left until midnight, not enough free runaways.");
+            print("9 adventures left until midnight, not enough free runaways.", "red");
             return;
         }
         if (!HaveGingerbreadBest())
@@ -2843,7 +2910,7 @@ waitq(5);
             run_choice(2); // buy chocolate sculpture
         else
         {
-            print("Out of sprinkles, taking a drink instead of chocolate sculpture.");
+            print("Out of sprinkles, taking a drink instead of chocolate sculpture.", "orange");
             run_choice(1); // take a free drink
         }
     }
@@ -2959,7 +3026,7 @@ waitq(5);
 
     boolean ActivateCopyItem(item copyItem)
     {
-        print("Trying to activate " + copyItem.to_string() + " for embezzler");
+        print("Trying to activate " + copyItem.to_string() + " for embezzler", "orange");
         visit_url("inv_use.php?whichitem=" + copyItem.to_int());
         RunCombat("Filter_Standard");
         return true;
@@ -3042,6 +3109,7 @@ waitq(5);
         {
             print("Taking quest Track Maintenance option " + choice.to_string());
             run_choice(choice);
+            needsLube = true;
         }
     }
     void RunBarfMountain(boolean requireOutfit)
@@ -3067,6 +3135,7 @@ waitq(5);
                 needsLube = false;
                 LoadChoiceAdventure(barfMountain, false);
                 run_choice(1);  // ride the rollercoaster
+                print("Lubed the tracks, now turning in adventure");
                 if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
                     run_choice(3); // turn in the quest
             }
@@ -3146,7 +3215,7 @@ waitq(5);
         ChooseDropsFamiliar(false); // hmm tradeoff between familiar drops, familiar assist, or non-acting to get elixir...
         print("Running LOV tunnel");
         PrepareFilterLOV();
-        restore_hp(my_maxhp() - my_hp());
+        HealUp();
     
         visit_url("place.php?whichplace=town_wrong");
         if (!LoadChoiceAdventure("place.php?whichplace=town_wrong&action=townwrong_tunnel", "LOV Tunnel", false))
@@ -3225,12 +3294,12 @@ waitq(5);
             if (HaveEquipment(pantsGiving)) // increases rest
                 pants.equip(pantsGiving);
             if (get_campground() contains pilgrimHat // pilgrim hat gives random buffs, which may be useful
-               || get_campground() contains snowFort) // snow fort gives +meat buff and +item buff
+               || (get_campground() contains snowFort && snowFortified.have_effect() == 0)) // snow fort gives +meat buff and +item buff on first use
             {
                 visit_url("campground.php?action=rest");
             }
             else
-                cli_execute("rest 1");
+                cli_execute("rest 1"); // use the default resting, which may be chateau
             freeRests -= 1;
                 
             BurnManaAndRestores(20, true);
@@ -3239,13 +3308,13 @@ waitq(5);
             cli_execute("buy 1 " + sphygmayo.to_string());
         outfit(manaOutfit);
         RunLOVTunnel();
-        int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 50 : 0;
+        int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 0 : 50;
         BurnManaAndRestores(keep, true);
-        if (keep > 0)
+        if (keep == 0)
             use(1, licenseChill);
-        keep = (yexpressCard.item_amount() > 0 && get_property("expressCardUsed") == "false") ? 50 : 0;
+        keep = (yexpressCard.item_amount() > 0 && get_property("expressCardUsed") == "false") ? 0 : 50;
         BurnManaAndRestores(keep, true);
-        if (keep > 0)
+        if (keep == 0)
             use(1, yexpressCard);
         keep = 20;
         if (clarasBell.item_amount() > 0 && get_property("_claraBellUsed") == "false"
@@ -3342,20 +3411,25 @@ waitq(5);
         }
     }
 
-    void SetRunFamiliar(string familiarName)
+    void SetRunFamiliar(string familiarName, int buffTurns)
     {
-        if (familiarName == "")
-        {
-            if (get_property("_roboDrinks").contains_text(roboMeat.to_string()))
-                familiarName = robort.to_string();
-        }
-
-        familiar fam = familiarName.to_familiar();
-        if (fam.to_int() < 0 && familiarName != "none")
-        {
+        familiar fam;
+        if (familiarName != "")
+            fam = familiarName.to_familiar();
+        else if (get_property("_roboDrinks").contains_text(roboMeat.to_string()))
+            fam = robort;
+        else if (buffTurns >= 100 && robort.have_familiar()) // 2x weight leprechaun
+            fam = robort;
+        else if (hoboMonkey.have_familiar()) // 1.25x weight leprechaun
+            fam = hoboMonkey;
+        else if (leprechaun.have_familiar()) // 1x weight leprechaun
+            fam = leprechaun;
+        else
             fam = my_familiar();
-        }
-        print("Running with familiar " + fam.to_string());
+
+        if (familiarName != "none" && !fam.have_familiar())
+            abort("Cannot run, do not own familiar " + fam);
+        print("Running with familiar " + fam, "orange");
         runFamiliar = fam;
     }
 
@@ -3384,7 +3458,7 @@ waitq(5);
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
-        SetRunFamiliar(familiarName);
+        SetRunFamiliar(familiarName, buffTurns);
 
         RemoveConfusionEffects(true);
         
