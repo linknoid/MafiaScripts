@@ -31,20 +31,19 @@
 
 // TODO:
 
-// auto-choose familiar if it's blank (instead of using current)
-
 // free fight "Evoke Eldritch Horror" and tentacle for science
 // duplicate witchess knight
 
-// bjorn orphan after 100 turns until 3 wads of candy dropped
-// bjorn hobo monkey for barf, obtuse or leprechaun for embezzlers
-// proton pack every 25 turns if available and not part of outfit
 // track candle/scroll drops from intergnat
+
+// consider other sweet synthesis combos besides W&Ws
+// don't re-cast max mana if cost per libram cast is over 1000 mana
 
 // auto-craft 
 
 // Add for mana burning:
 // clara's bell and hobopolis if 20 hobo glyphs and have access
+
 
 
 
@@ -189,6 +188,7 @@
     item egg1 = ToItem("black paisley oyster egg");
     item egg2 = ToItem("black polka-dot oyster egg");
     item egg3 = ToItem("black striped oyster egg");
+    item mojoFilter = ToItem("mojo filter");
 // Sweet Synthesis
     item ww = ToItem("bag of W&Ws");
     item milkStud = ToItem("Milk Studs");
@@ -224,6 +224,7 @@
     familiar leprechaun = ToFamiliar("Leprechaun");
     familiar hoboMonkey = ToFamiliar("Hobo Monkey");
     familiar goldenMonkey = ToFamiliar("Golden Monkey");
+    familiar machineElf = ToFamiliar("Machine Elf");
 
 // familiar equipment
     item snowSuit = ToItem("Snow Suit"); // 20 pounds, but decreases over the day
@@ -231,6 +232,7 @@
     item sugarShield = ToItem("sugar shield"); // 10 pounds, breaks after 30 turns
     item cufflinks = ToItem("recovered cufflinks"); // 6 pounds, requires 400 pound jellyfish
     item hookah = ToItem("ittah bittah hookah"); // 5 pounds, provides buffs
+    item mayflower = ToItem("Mayflower bouquet"); // 5 pounds, provides drops
     item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
     item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
     item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
@@ -331,12 +333,14 @@
     item dice = ToItem("Glenn's golden dice"); // once a day random buffs
     item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
     item gameToken = ToItem("defective Game Grid token"); // once a day activate for 5 turns of +5 everything
+    item mumming = ToItem("mumming trunk"); // cast +meat or +item on familiar
 
 // 2 day items for +meat bonus
     item peppermint = ToItem("peppermint twist"); // candy drop from robort
     item micks = ToItem("Mick's IcyVapoHotness Inhaler"); // from semi-rare
     item sugar = ToItem("bag of powdered sugar"); // 
     item pinkHeart = ToItem("pink candy heart");
+    item polkaPop = ToItem("Polka Pop");
 
 // special activations for +meat bonus
     string summonGreed = "summon 2"; // summoning chamber if you've learned the Hoom-Ha name
@@ -373,6 +377,7 @@
     effect turkeyEffect = ToEffect("Turkey-Ambitious");
     effect joyEffect = ToEffect("Joy");
     effect pinkHeartEffect = ToEffect("Heart of Pink");
+    effect polkaPopEffect = ToEffect("Polka Face");
     effect peppermintEffect = ToEffect("Peppermint Twisted");
     effect sugarEffect = ToEffect("So You Can Work More...");
     effect kgbMeat = ToEffect("A View to Some Meat");
@@ -508,6 +513,7 @@
     item papier2 = ToItem("Papier-mâchuridars"); // inserts random words into sentences
     item papier3 = ToItem("papier-masque"); // inserts random words into sentences
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
+    effect attunement = ToEffect("Eldritch Attunement"); // take an extra combat after free combat
 
 
 // script state variables
@@ -716,12 +722,22 @@
     void RunCombat(string filter)
     {
         string result = run_combat(filter);
-        int[item] itemsGained = extract_items(result);
-        if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
+        if (attunement.have_effect() > 0 && result.contains_text("fight.php")) // Eldritch attunement means an extra combat
         {
-            int wadCount = itemsGained[ToItem("hoarded candy wad")];
-            //if (wadCount > 0)
+            canJokesterGun = false;
+            canBatoomerang = false;
+            canMissileLauncher = false;
+            canShatteringPunch = false;
+            canMobHit = false;
+            visit_url("fight.php");
+            run_combat(filter);
         }
+        //int[item] itemsGained = extract_items(result);
+        //if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
+        //{
+        //    int wadCount = itemsGained[ToItem("hoarded candy wad")];
+        //    //if (wadCount > 0)
+        //}
     }
 
     boolean CanDistention()
@@ -922,6 +938,18 @@
         RemoveConfusionEffects(disAbled);
     }
 
+    boolean PrepareAsdonLauncher()
+    {
+        if ((get_campground() contains asdonMartin)
+            && get_property("_missileLauncherUsed") == "false")
+        {
+            FuelAsdon(100);
+            canMissileLauncher = get_fuel() >= 100;
+            return canMissileLauncher;
+        }
+        return false;
+    }
+
 
 
     void PrepareStandardFilter()
@@ -1009,16 +1037,12 @@
         canJokesterGun = get_property("_firedJokestersGun") == "false"
             && jokesterGun.have_equipped();
 
+        canMissileLauncher = PrepareAsdonLauncher();
+
         if (replicaBatoomerang.item_amount() > 0
             && get_property("_usedReplicaBatoomerang").to_int() < 3)
         {
             canBatoomerang = true;
-        }
-        if (get_campground() contains asdonMartin
-            && get_property("_missileLauncherUsed") == "false"
-            && get_fuel() >= 100)
-        {
-            canMissileLauncher = true;
         }
         if (shatteringPunch.have_skill()
             && get_property("_shatteringPunchUsed").to_int() < 3)
@@ -1281,7 +1305,7 @@
         if (my_familiar() == fam)
             return;
        
-        if (snowSuit.have_equipped() || petSweater.have_equipped() || hookah.have_equipped() || cufflinks.have_equipped())
+        if (snowSuit.have_equipped() || petSweater.have_equipped() || hookah.have_equipped() || cufflinks.have_equipped() || mayflower.have_equipped())
             famEqp.equip("none".to_item()); // remove the equipment so someone else can wear it
         fam.use_familiar();
     }
@@ -1304,6 +1328,8 @@
         if (!forEmbezzler) // can't choose one that does damage
             choice = ChooseBjornCrownFamiliar(choice, hoboMonkey);
         choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
+        if (forDrops)
+            choice = ChooseBjornCrownFamiliar(choice, machineElf);
         if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, orphan);
 // if robortender, maybe do weight buff instead
@@ -1319,6 +1345,22 @@
                 choice.enthrone_familiar();
         }
     }
+    void ActivateMumming()
+    {
+        if (mumming.item_amount() > 0)
+        {
+            if (my_familiar() != runFamiliar)
+                SwitchToFamiliar(runFamiliar);
+            if (my_familiar().to_string() == "none")
+                return;
+            string page = visit_url("inv_use.php?pwd=a39a1bb15d009283969eec2e5dcfc05f&which=f0&whichitem=9592");
+            if (page.contains_text("type=submit value=\"The Captain\""))
+            {
+                run_choice(1);
+            }
+        }
+    }
+
     void PrepareFamiliar(boolean forEmbezzler)
     {
         if (my_familiar() != runFamiliar)
@@ -1339,11 +1381,18 @@
             return;
         if (forEmbezzler && TryEquipFamiliarEquipment(sugarShield, 10))
             return;
+        if (get_property("_mayflowerDrops").to_int() < 5 && !forEmbezzler && TryEquipFamiliarEquipment(mayflower, 6.1))
+        {
+            // mayflower drops take precedence over weight bonus unless embezzler
+            return;
+        }
         if (TryEquipFamiliarEquipment(cufflinks, 6))
+            return;
+        if (get_property("_mayflowerDrops").to_int() < 5 && TryEquipFamiliarEquipment(mayflower, 5.1))
             return;
         // slight weight bonus for hookah because it gives buffs (but how does that
         // compare to the +10% item drop from snow suit even at 5 pounds?)
-        if (TryEquipFamiliarEquipment(hookah, 5.1))
+        if (TryEquipFamiliarEquipment(hookah, 5.2))
             return;
         // final fallback, if no other equipment is matching, this should give +5 weight
         TryEquipFamiliarEquipment(filthyLeash, 5);
@@ -1886,6 +1935,17 @@
     }
 
 
+    void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
+    {
+        int mallPrice = itm.mall_price();
+        if (mallPrice <= maxPrice && (itm.item_amount() < numberRequested || mallPrice < 500))
+        {
+            int buyCount = numberRequested;
+            if (buyCount < 1)
+                buyCount = 1;
+            buy(buyCount, itm);
+        }
+    }
 
     void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem, int maxPrice) // turnsPerItem should be overestimated, not underestimated, if the expected count varies
     {
@@ -1895,14 +1955,7 @@
             int useCount = (buffsNeeded + turnsPerItem - 1) / turnsPerItem; // round up to the nearest integer
             if (maxPrice > 0)
             {
-                int mallPrice = itm.mall_price();
-                if (mallPrice <= maxPrice && (itm.item_amount() < useCount || mallPrice < 500))
-                {
-                    int buyCount = useCount - itm.item_amount();
-                    if (buyCount < 1)
-                        buyCount = 1;
-                    buy(buyCount, itm);
-                }
+                BuyItemIfNeeded(itm, useCount - itm.item_amount(), maxPrice);
             }
             if (useCount > itm.item_amount())
                 useCount = itm.item_amount();
@@ -2102,14 +2155,32 @@
         }
         return craft("cook", 1, cashewIngredient, foodIngredient) > 0;
     }
+
+    boolean TrySpleenSpace(int providedSpleen)
+    {
+        while (!RoomToSpleen(providedSpleen))
+        {
+            if (get_property("currentMojoFilters").to_int() >= 3 || my_spleen_use() == 0)
+                return false;
+
+           BuyItemIfNeeded(mojoFilter, 1, 10000);
+           if (mojoFilter.item_amount() == 0)
+               return false;
+           use(1, mojoFilter);
+        }
+        return true;
+    }
     
     void TrySpleen(item spleenItem, effect desiredEffect, int providedSpleen, int turnLimit)
     {
         if (desiredEffect.have_effect() >= turnLimit)
             return;
 
-        if (!RoomToSpleen(providedSpleen))
+        if (!TrySpleenSpace(providedSpleen))
+        {
+            print("Not enough spleen space remaining for " + spleenItem);
             return;
+        }
         if (spleenItem.item_amount() == 0)
         {
             print("Cannot spleen with " + spleenItem + ", buy in mall if you want me to use it.", "red");
@@ -2321,8 +2392,12 @@
     {
         if (sweetSynth.have_skill())
         {
-            while (synthGreed.have_effect() < requestedTurns && RoomToSpleen(1))
+            while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
             {
+// try alternatives
+// milk studs and swizzler
+// w&w/crimbo candied pecan/breath mint and w&w
+// dweebs/crimbo fudge  and Peez dispenser/hoarded candy wad
                 sweet_synthesis(ww, ww);
             }
         }
@@ -2575,6 +2650,7 @@
             if (!nightBefore)
                 FeedRobotender();
         }
+        ActivateMumming();
 
         if (get_property("demonSummoned") != "true")
             AdventureEffect(summonGreed, preternatualGreed, turns);
@@ -2590,6 +2666,7 @@
                 UseOneTotal(peppermint, peppermintEffect);
                 UseOneTotal(sugar, sugarEffect);
                 UseOneTotal(pinkHeart, pinkHeartEffect);
+                UseOneTotal(polkaPop, polkaPopEffect);
                 if (needWeightBuffs)
                 {
                     UseOneTotal(kinder, kinderEffect);
@@ -3241,6 +3318,8 @@
     void MaxManaSummons()
     {
         if (!summonRes.have_skill())
+            return;
+        if (summonRes.mp_cost() > 1000) // already cast many times previously, don't want to re-buff here
             return;
         if (!UserConfirmDefault("Do you wish to maximize mana to summon as many resolutions as possible?", true))
             return;
