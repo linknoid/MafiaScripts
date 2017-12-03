@@ -102,6 +102,10 @@ item lasagna1 = ToItem("fishy fish lasagna");
 item lasagna2 = ToItem("gnat lasagna");
 item lasagna3 = ToItem("long pork lasagna");
 
+item burrito1 = ToItem("insanely spicy bean burrito");
+item burrito2 = ToItem("insanely spicy jumping bean burrito");
+item burrito3 = ToItem("insanely spicy enchanted bean burrito");
+
 item milk = ToItem("milk of magnesium");
 effect gotmilk = ToEffect("Got Milk");
 item ruby = ToItem("Tuesday's Ruby");
@@ -432,7 +436,7 @@ void DoMining(int advToSpend)
 			else if (page.contains_text("fine velvet")) // shouldn't find any velvet with this script
 				velvetThisRun++;
 			spot = searchPattern.create_matcher(page);
-			if ((turnsSpentMining % 3) == 0)
+			if ((turnsSpentMining % 10) == 0)
 				waitq(1); // delay every third turn to reduce server load
 		}
 		if (reset)
@@ -555,6 +559,33 @@ void PrepareEat(int size)
 	}
 }
 
+int FillSpleen(int remainingSpleen)
+{
+	if (remainingSpleen >= 4)
+	{
+		item bestSpleen = ChooseCheapest(15000, spleen1, spleen2); // expect 5 turns at 3000 mpa
+		print("cheapest spleen = " + bestSpleen.to_string());
+		if (bestSpleen != noItem)
+		{
+			BuyItem(bestSpleen);
+			chew(1, bestSpleen);
+			return remainingSpleen - 4;
+		}
+	}
+	if (remainingSpleen >= 3)
+	{
+		item bestSpleen = ChooseCheapest(9000, spleen3, spleen3); // expect 3 turns at 3000 mpa
+		print("cheapest spleen = " + bestSpleen.to_string());
+		if (bestSpleen != noItem)
+		{
+			BuyItem(bestSpleen);
+			chew(1, bestSpleen);
+			return remainingSpleen - 3;
+		}
+	}
+	return remainingSpleen;
+}
+
 void HandleEatDrinkSpleen()
 {
 	// Non-optimal algorithm for lazy eating and drinking that won't break
@@ -571,29 +602,17 @@ void HandleEatDrinkSpleen()
 		use(1, borrowedTime);
 	}
 
+	while (remainingSpleen >= 3)
+	{
+		int newSpleen = FillSpleen(remainingSpleen);
+		if (newSpleen == remainingSpleen)
+			break;
+		remainingSpleen = newSpleen;
+	}
+
 	if (!user_confirm("Do you wish to automatically eat hi mein/lasagna/drink perfect/spleen?"))
 		return;
 
-	while (remainingSpleen >= 4)
-	{
-		item bestSpleen = ChooseCheapest(15000, spleen1, spleen2); // expect 5 turns at 3000 mpa
-		print("cheapest spleen = " + bestSpleen.to_string());
-		if (bestSpleen == noItem)
-			break;
-		BuyItem(bestSpleen);
-		chew(1, bestSpleen);
-		remainingSpleen -= 4;
-	}
-	while (remainingSpleen >= 3)
-	{
-		item bestSpleen = ChooseCheapest(9000, spleen3, spleen3); // expect 3 turns at 3000 mpa
-		print("cheapest spleen = " + bestSpleen.to_string());
-		if (bestSpleen == noItem)
-			break;
-		BuyItem(bestSpleen);
-		chew(1, bestSpleen);
-		remainingSpleen -= 3;
-	}
         if (ruby.numeric_modifier("Muscle Percent") == 0) // can't use field gar on Monday
         {
 		while (remainingFull >= 3)
@@ -660,16 +679,66 @@ void HandleEatDrinkSpleen()
 	}
 }
 
+int GetAdventureGain(slot sl)
+{
+	return sl.equipped_item().numeric_modifier("adventures").to_int();
+}
+
 void PrepTomorrow()
 {
 	int remainingDrunk = inebriety_limit() - my_inebriety();
 	WearSleepGear();
 	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40;
+	if (get_property("_borrowedTimeUsed") == "true")
+		overnightAdventureGain -= 20;
+	overnightAdventureGain += GetAdventureGain(head);
+	overnightAdventureGain += GetAdventureGain(back);
+	overnightAdventureGain += GetAdventureGain(shirt);
+	overnightAdventureGain += GetAdventureGain(weapon);
+	overnightAdventureGain += GetAdventureGain(offhand);
+	overnightAdventureGain += GetAdventureGain(pants);
+	overnightAdventureGain += GetAdventureGain(acc1);
+	overnightAdventureGain += GetAdventureGain(acc2);
+	overnightAdventureGain += GetAdventureGain(acc3);
+	overnightAdventureGain += GetAdventureGain(famEqp);
+
         while (my_adventures() + overnightAdventureGain < 200
 		&& fullness_limit() - my_fullness() > 0)
 	{
 		PrepareEat(15);
-		// TODO: actual eating here
+		if (fullness_limit() - my_fullness() > 3)
+		{
+			if (burrito1.item_amount() > 0)
+			{
+				eat(1, burrito1);
+			}
+			else if (burrito2.item_amount() > 0)
+			{
+				eat(1, burrito2);
+			}
+			else if (burrito2.item_amount() > 0)
+			{
+				eat(1, burrito3);
+			}
+			else
+			{
+				item cheapestBurrito = ChooseCheapest(1000, burrito1, burrito2, burrito3, burrito3);
+				if (cheapestBurrito.to_string() == "none")
+				{
+					print("burrito prices are too high, find your own food", "red");
+					break;
+				}
+			}
+		}
+	}
+	int remainingSpleen = spleen_limit() - my_spleen_use();
+        while (my_adventures() + overnightAdventureGain < 200
+		&& remainingSpleen >= 3)
+	{
+		int newSpleen = FillSpleen(remainingSpleen);
+		if (newSpleen == remainingSpleen)
+			break;
+		remainingSpleen = newSpleen;
 	}
 	if (remainingDrunk >= 5 // hmm, what should this limit be?
 		&& straightEdge.have_effect() == 0)
@@ -678,7 +747,11 @@ void PrepTomorrow()
 		{
 			if (skeletonX.mall_price() * 2 < Xtattoo.mall_price())
 			{
+				if (skeletonX.item_amount() < 2)
+					buy(2, skeletonX);
 				// make our own
+				string page = visit_url("shop.php?whichshop=xo");
+				visit_url("shop.php?whichshop=xo&amp;action=buyitem&amp;quantity=1&amp;whichrow=957&amp;pwd=" + my_hash());
 			}
 			else
 			{
@@ -697,9 +770,9 @@ void main(int miningTurns)
 	if (my_inebriety() > inebriety_limit())
 		abort("You are too drunk to continue.");
 
-	if (miningTurns < 0 && my_adventures() < 100 && !HasAccess())
+	if (miningTurns == 0)
 	{
-		if (UserConfirmDefault("You are starting with less than 100 turns, do you instead want to prep for max adventures tomorrow?", true))
+		if (UserConfirmDefault("You requested 0 turns, do you want to prep for max adventures tomorrow?", !HasAccess()))
 		{
 			PrepTomorrow();
 			return;
