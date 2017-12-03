@@ -341,6 +341,7 @@
     item sugar = ToItem("bag of powdered sugar"); // 
     item pinkHeart = ToItem("pink candy heart");
     item polkaPop = ToItem("Polka Pop");
+    item cranberryCordial = ToItem("cranberry cordial");
 
 // special activations for +meat bonus
     string summonGreed = "summon 2"; // summoning chamber if you've learned the Hoom-Ha name
@@ -380,6 +381,7 @@
     effect polkaPopEffect = ToEffect("Polka Face");
     effect peppermintEffect = ToEffect("Peppermint Twisted");
     effect sugarEffect = ToEffect("So You Can Work More...");
+    effect cranberryCordialEffect = ToEffect("Cranberry Cordiality");
     effect kgbMeat = ToEffect("A View to Some Meat");
     effect kgbItems = ToEffect("Items Are Forever");
     effect bagOTricksEffect1 = ToEffect("Badger Underfoot");
@@ -719,10 +721,15 @@
             && get_property("_chateauMonsterFought") == "false";
     }
 
-    void RunCombat(string filter)
+    void CheckPostCombat(string pageResult, string combatFilter)
     {
-        string result = run_combat(filter);
-        if (attunement.have_effect() > 0 && result.contains_text("fight.php")) // Eldritch attunement means an extra combat
+        //int[item] itemsGained = extract_items(result);
+        //if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
+        //{
+        //    int wadCount = itemsGained[ToItem("hoarded candy wad")];
+        //    //if (wadCount > 0)
+        //}
+        if (attunement.have_effect() > 0 && pageResult.contains_text("fight.php")) // Eldritch attunement means an extra combat
         {
             canJokesterGun = false;
             canBatoomerang = false;
@@ -730,14 +737,18 @@
             canShatteringPunch = false;
             canMobHit = false;
             visit_url("fight.php");
-            run_combat(filter);
+            run_combat(combatFilter);
         }
-        //int[item] itemsGained = extract_items(result);
-        //if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
-        //{
-        //    int wadCount = itemsGained[ToItem("hoarded candy wad")];
-        //    //if (wadCount > 0)
-        //}
+    }
+    void RunCombat(string filter)
+    {
+        string result = run_combat(filter);
+        CheckPostCombat(result, filter);
+    }
+    void RunAdventure(location loc, string filter)
+    {
+        string page = visit_url(barfMountain.to_url().to_string());
+        RunCombat(filter);
     }
 
     boolean CanDistention()
@@ -1512,34 +1523,98 @@
         BuffNonPMThrall();
         RemoveConfusionEffects(false);
     }
-    void PrepareBarf(boolean RequireOutfit)
+
+    boolean outfitInitialized = false;
+    item[slot] defaultOutfitPieces;
+    item[slot] currentOutfitPieces;
+    void InitOutfit()
     {
-        if (!is_wearing_outfit(defaultOutfit))
+        if (outfitInitialized)
+            return;
+        outfitInitialized = true;
+        foreach ix, it in outfit_pieces(defaultOutfit)
         {
-            if (OutfitContains(defaultOutfit, knife)
-                && !HaveEquipment(knife)
-                && deck.item_amount() > 0
-                && get_property("_deckCardsDrawn").to_int() <= 10)
+            slot s = it.to_slot();
+            if (s == acc1 || s == acc2 || s == acc3)
             {
-                cli_execute("cheat knife");
-            }
-            if (RequireOutfit)
-            {
-                outfit(defaultOutfit);
+                if (defaultOutfitPieces[acc1].to_string() == "none")
+                    defaultOutfitPieces[acc1] = it;
+                else if (defaultOutfitPieces[acc2].to_string() == "none")
+                    defaultOutfitPieces[acc2] = it;
+                else if (defaultOutfitPieces[acc3].to_string() == "none")
+                    defaultOutfitPieces[acc3] = it;
+                else
+                    abort("Not enough slots for accessory " + it);
             }
             else
+                defaultOutfitPieces[s] = it;
+        }
+    }
+
+    void PrepareBarf(boolean RequireOutfit)
+    {
+        InitOutfit();
+        boolean mayflyEq = false;
+        boolean protonEq = false;
+        foreach s, i in defaultOutfitPieces
+        {
+            currentOutfitPieces[s] = i;
+            if (i == mayfly)
+                mayflyEq = true;
+            if (i == protonPack)
+                protonEq = true;
+        }
+
+        if (!hasFreeKillRemaining && HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
+        {
+            if (!mayflyEq)
+                currentOutfitPieces[acc1] = mayfly;
+            needsMayfly = true;
+        }
+        if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
+        {
+            if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
             {
-                foreach ix,itm in outfit_pieces(defaultOutfit)
-                {
-                    if (itm.to_string() != "none" && HaveEquipment(itm) && !itm.have_equipped())
-                    {
-                        itm.to_slot().equip(itm);
-                    }
-                }
+                if (!protonEq)
+                    currentOutfitPieces[back] = protonPack;
             }
         }
+        if (OutfitContains(defaultOutfit, knife)
+            && !HaveEquipment(knife)
+            && deck.item_amount() > 0
+            && get_property("_deckCardsDrawn").to_int() <= 10)
+        {
+            cli_execute("cheat knife");
+        }
+        foreach sl, it in currentOutfitPieces
+        {
+            if (sl.equipped_item() != it)
+            {
+                sl.equip(it);
+            }
+        }
+
+        //if (!matchesOutfit)
+        //{
+        //    if (RequireOutfit)
+        //    {
+        //        outfit(defaultOutfit);
+        //    }
+        //    else
+        //    {
+        //        foreach ix,itm in outfit_pieces(defaultOutfit)
+        //        {
+        //            if (itm.to_string() != "none" && HaveEquipment(itm) && !itm.have_equipped())
+        //            {
+        //                itm.to_slot().equip(itm);
+        //            }
+        //        }
+        //    }
+        //}
         ChooseThrall(true);
         RemoveConfusionEffects(false);
+
+
     }
     boolean TryRunWitchess(string filter)
     {
@@ -2665,6 +2740,7 @@
                 UseOneTotal(micks, sinuses);
                 UseOneTotal(peppermint, peppermintEffect);
                 UseOneTotal(sugar, sugarEffect);
+                UseOneTotal(cranberryCordial, cranberryCordialEffect);
                 UseOneTotal(pinkHeart, pinkHeartEffect);
                 UseOneTotal(polkaPop, polkaPopEffect);
                 if (needWeightBuffs)
@@ -3189,6 +3265,8 @@
             needsLube = true;
         }
     }
+
+
     void RunBarfMountain(boolean requireOutfit)
     {
         if (EmbezzlerScheduled())
@@ -3201,42 +3279,27 @@
         }
         CheckLubeQuest();
 
-        if (needsLube)
+        if (LoadChoiceAdventure(barfMountain, true))
         {
-            if (LoadChoiceAdventure(barfMountain, true))
+            if (needsLube)
             {
-                print("Skipping adventure to equip lube-shoes and come back in.");
+                print("Skipping adventure to equip lube-shoes and come back in.", "orange");
                 run_choice(6);  // skip and come back later
                 if (!lubeShoes.have_equipped())
                     acc3.equip(lubeShoes);
                 needsLube = false;
                 LoadChoiceAdventure(barfMountain, false);
                 run_choice(1);  // ride the rollercoaster
-                print("Lubed the tracks, now turning in adventure");
+                print("Lubed the tracks, now turning in adventure", "orange");
                 if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
                     run_choice(3); // turn in the quest
             }
             else
-            {
-                RunCombat("Filter_Standard");
-            }
+                run_choice(1);  // ride the rollercoaster
         }
         else
         {
-            if (!hasFreeKillRemaining && HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
-            {
-                if (!mayfly.have_equipped())
-                    acc1.equip(mayfly);
-                needsMayfly = true;
-            }
-            if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
-            {
-                if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
-                {
-                    back.equip(protonPack);
-                }
-            }
-            barfMountain.adv1(-1, "Filter_Standard");
+            RunCombat("Filter_Standard");
         }
     }
 

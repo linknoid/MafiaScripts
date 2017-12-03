@@ -703,31 +703,28 @@ void PrepTomorrow()
 	overnightAdventureGain += GetAdventureGain(famEqp);
 
         while (my_adventures() + overnightAdventureGain < 200
-		&& fullness_limit() - my_fullness() > 0)
+		&& fullness_limit() - my_fullness() >= 3)
 	{
-		PrepareEat(15);
-		if (fullness_limit() - my_fullness() > 3)
+		PrepareEat(3);
+		if (burrito1.item_amount() > 0)
 		{
-			if (burrito1.item_amount() > 0)
+			eat(1, burrito1);
+		}
+		else if (burrito2.item_amount() > 0)
+		{
+			eat(1, burrito2);
+		}
+		else if (burrito2.item_amount() > 0)
+		{
+			eat(1, burrito3);
+		}
+		else
+		{
+			item cheapestBurrito = ChooseCheapest(1000, burrito1, burrito2, burrito3, burrito3);
+			if (cheapestBurrito.to_string() == "none")
 			{
-				eat(1, burrito1);
-			}
-			else if (burrito2.item_amount() > 0)
-			{
-				eat(1, burrito2);
-			}
-			else if (burrito2.item_amount() > 0)
-			{
-				eat(1, burrito3);
-			}
-			else
-			{
-				item cheapestBurrito = ChooseCheapest(1000, burrito1, burrito2, burrito3, burrito3);
-				if (cheapestBurrito.to_string() == "none")
-				{
-					print("burrito prices are too high, find your own food", "red");
-					break;
-				}
+				print("burrito prices are too high, find your own food", "red");
+				break;
 			}
 		}
 	}
@@ -772,7 +769,7 @@ void main(int miningTurns)
 
 	if (miningTurns == 0)
 	{
-		if (UserConfirmDefault("You requested 0 turns, do you want to prep for max adventures tomorrow?", !HasAccess()))
+		if (user_confirm("You requested 0 turns, do you want to prep for max adventures tomorrow?"))
 		{
 			PrepTomorrow();
 			return;
