@@ -1367,7 +1367,12 @@
             string page = visit_url("inv_use.php?pwd=a39a1bb15d009283969eec2e5dcfc05f&which=f0&whichitem=9592");
             if (page.contains_text("type=submit value=\"The Captain\""))
             {
-                run_choice(1);
+                run_choice(1); // The Captain, +meat
+            }
+            else
+            {
+                visit_url("main.php");
+                //run_choice(8); // Never mind
             }
         }
     }
@@ -1588,7 +1593,7 @@
         }
         foreach sl, it in currentOutfitPieces
         {
-            if (sl.equipped_item() != it)
+            if (sl.equipped_item() != it && HaveEquipment(it))
             {
                 sl.equip(it);
             }
