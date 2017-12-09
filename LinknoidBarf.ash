@@ -35,13 +35,12 @@
 
 // track candle/scroll drops from intergnat
 
-// consider other sweet synthesis combos besides W&Ws
 // don't re-cast max mana if cost per libram cast is over 1000 mana
 
-// genie wish for:  Covetous Robbery, Eldritch Attunement, frosty
-// run free combats: witchess, snojo, bricko ooze, lynyrd snare, machine elf, drunk pygmy (with bowls of scorpions, double banish), eldritch tentacles, LOV tunnel, infernal seals (if seal clubber)
+// print screen buttons seem broken currently
 
-// auto-craft 
+
+// auto-craft  (umm, what was I thinking here?)
 
 // Add for mana burning:
 // clara's bell and hobopolis if 20 hobo glyphs and have access
@@ -194,6 +193,12 @@
 // Sweet Synthesis
     item ww = ToItem("bag of W&Ws");
     item milkStud = ToItem("Milk Studs");
+    item dweebs = ToItem("Dweebs");
+    item crimboFudge = ToItem("Crimbo Fudge");
+    item crimboPecan = ToItem("Crimbo Candied Pecan");
+    item breathMint = ToItem("breath mint");
+    item peez = ToItem("Peez dispenser");
+    item candyWad = ToItem("hoarded candy wad");
     item seniorMint = ToItem("Senior Mints");
     item daffyTaffy = ToItem("Daffy Taffy");
     item swizzler = ToItem("Swizzler");
@@ -331,6 +336,7 @@
     item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
     item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
     item avoidScams = ToItem("How to Avoid Scams"); // only relevant for barf mountain
+    item begpwnia = ToItem("begpwnia"); // 30% from mayflower bouquet
     item flaskfull = ToItem("Flaskfull of Hollow"); // + smithness for Half a Purse
     item dice = ToItem("Glenn's golden dice"); // once a day random buffs
     item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
@@ -359,7 +365,8 @@
     effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
-    effect scamTourist = ToEffect("How to Scam Tourists"); // from How to Avoid Scams
+    effect begpwniaEffect = ToEffect("Can't Be a Chooser"); // from begpwnia
+    effect avoidScamsEffect = ToEffect("How to Scam Tourists"); // from How to Avoid Scams
     effect leering = ToEffect("Disco Leer"); // from Disco Leer (disco bandit skill)
     effect polkad = ToEffect("Polka of Plenty"); // from Polka (accordion thief)
     effect phatLooted = ToEffect("Fat Leon's Phat Loot Lyric"); // from Fat Leon's (accordion thief)
@@ -517,6 +524,7 @@
     item papier2 = ToItem("Papier-mâchuridars"); // inserts random words into sentences
     item papier3 = ToItem("papier-masque"); // inserts random words into sentences
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
+    effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
 
 // free combats
     item genie = ToItem("genie bottle");
@@ -524,6 +532,7 @@
     effect covetous = ToEffect("Covetous Robbery"); // raises base meat drop on stingy monsters
     effect attunement = ToEffect("Eldritch Attunement"); // take an extra combat after free combat
     effect frosty = ToEffect("frosty"); // +200% meat, +100% item drop
+    effect braaaaaains = ToEffect("Braaaaaains"); // +200% meat, -50% item drop
     skill evokeHorror = ToSkill("Evoke Eldritch Horror"); // fight an eldritch horror
     item uraniumSeal = ToItem("depleted uranium seal figurine"); // 5 extra seal fights
     item lynyrdSnare = ToItem("lynyrd snare"); // 3 free fights a day
@@ -633,19 +642,34 @@
             return defaultValue;
         return user_confirm(message);
     }
-    int FindVariableChoice(string page, string match)
+    int LastIndexOf(string page, string match, int beforeIndex) // this doesn't appear to be part of the ASH standard API, not sure why
+    {
+        int ix = page.index_of(match);
+        int result = -1;
+        while (ix < beforeIndex && ix >= 0)
+        {
+            result = ix;
+            ix = page.index_of(match, ix + 1);
+        }
+        return result;
+    }
+    int FindVariableChoice(string page, string match, boolean matchTextIsButtonText)
     {
         int ix = page.index_of(match);
         if (ix <= 0)
             return -1;
 
-        string searchFor = "<input type=hidden name=option value=";
-        ix = page.index_of(searchFor, ix);
+        string optionSearch = "<input type=hidden name=option value=";
+        if (matchTextIsButtonText) // the name=option value=1 comes before the button text
+            ix = LastIndexOf(page, optionSearch, ix);
+        else // otherwise we found a prefix with that text
+            ix = page.index_of(optionSearch, ix);
         if (ix <= 0)
             return -1;
-        ix += searchFor.length();
+        ix += optionSearch.length();
 
-        string choice = page.substring(ix, ix + 2).replace_string(" ", ""); // allow up to 99 options
+        string choice = page.substring(ix, ix + 2); // allow up to 99 options
+        choice = choice.replace_string(">", "").replace_string("/", "").replace_string(" ", ""); // strip off extra invalid character
         return choice.to_int();
     }
     boolean InList(string value, string list, string delimiter)
@@ -884,6 +908,56 @@
             return false;
         return true;
     }
+    boolean FreeDailyManaRestore()
+    {
+        int restoreLimit = my_maxmp() - my_mp();
+        if (restoreLimit > 300 && get_property("oscusSodaUsed") == "false" && oscusSoda.item_amount() > 0)
+        {
+            use(1, oscusSoda);
+            return true;
+        }
+        if (restoreLimit >= 55 && get_property("_eternalCarBatteryUsed") == "false" && eternalBattery.item_amount() > 0)
+        {
+            use(1, eternalBattery);
+            return true;
+        }
+        if (restoreLimit >= 1000 && get_property("sidequestNunsCompleted") == "fratboy" && get_property("nunsVisits").to_int() < 3)
+        {
+            cli_execute("nuns");
+            return true;
+        }
+        if (soulFood.have_skill() && restoreLimit >= 15 && my_soulsauce() >= 5)
+        {
+            int wantCastCount = restoreLimit / 15;
+            int maxCastCount = my_soulsauce() / 5;
+            if (wantCastCount > maxCastCount)
+                wantCastCount = maxCastCount;
+            use_skill(wantCastCount, soulFood);
+            return true;
+        }
+        if (get_property("timesRested").to_int() < total_free_rests())
+        {
+            int restAmount = 80;
+            if (HaveEquipment(pantsGiving)) // increases rest
+            {
+                pants.equip(pantsGiving);
+                restAmount = 250;
+            }
+            if (restAmount < restoreLimit)
+            {
+                if (get_campground() contains pilgrimHat // pilgrim hat gives random buffs, which may be useful
+                   || (get_campground() contains snowFort && snowFortified.have_effect() == 0) // snow fort gives +meat buff and +item buff on first use
+                   || pants.equipped_item() == pantsGiving) // get more mana from campground than chateau when pantsgiving is equipped
+                {
+                    visit_url("campground.php?action=rest");
+                }
+                else
+                    cli_execute("rest 1"); // use the default resting, which may be chateau
+                return true;
+            }
+        }
+        return false;
+    }
     void BurnManaAndRestores(int keepMana, boolean burnDailyRestores)
     {
         if (!summonRes.have_skill())
@@ -1005,6 +1079,7 @@
         RemoveConfusionEffects(papier2, firstCheck);
         RemoveConfusionEffects(papier3, firstCheck);
         RemoveConfusionEffects(disAbled);
+        RemoveConfusionEffects(anapests);
     }
 
     boolean PrepareAsdonLauncher()
@@ -1718,9 +1793,6 @@
         //if (attunement.have_effect() == 0)
         //    RunWish("I was Eldritch Attunement");
 
-        // This might be worthwhile if we could also get Eldritch Attunement:
-        //if (frosty.have_effect() == 0)
-        //    RunWish("I was frosty");
     }
     int CountFreeCombatsAvailable()
     {
@@ -1731,43 +1803,28 @@
             count += get_property("_witchessFights").to_int();
         count += 10 - get_property("_brickoFights").to_int();
         count += 3 - get_property("_lynyrdSnareUses").to_int();
-        count += 11 - get_property("_drunkPygmyBanishes").to_int();
-
-        // strictly speaking, the following items should be worth half as much,
-        // since they won't trigger an extra free combat from Eldritch Attunement:
-        // edit:  nevermind, Eldritch Attunement isn't easily available
-
-        if (machineElf.have_familiar())
-            count += 5 - get_property("_machineTunnelsAdv").to_int();
-        if (get_property("_eldritchTentacleFought") == "false")
-            count += 1;
-        if (get_property("_eldritchHorrorEvoked") == "false")
-            count += 1;
         if (my_class().to_string() == "Seal Clubber")
         {
             count += 5 - get_property("_sealsSummoned").to_int();
             if (uraniumSeal.item_amount() > 0)
                 count += 5;
         }
+        if (machineElf.have_familiar())
+            count += 5 - get_property("_machineTunnelsAdv").to_int();
+
+        if (attunement.have_effect() > 0) // if we have Eldritch attunement, get an extra free fight after each
+        {
+            count *= 2;
+            count += 11 - get_property("_drunkPygmyBanishes").to_int();
+        }
+
+        // the remaining free fights don't trigger eldritch attunement:
+
+        if (get_property("_eldritchTentacleFought") == "false")
+            count += 1;
+        if (evokeHorror.have_skill() && get_property("_eldritchHorrorEvoked") == "false")
+            count += 1;
         return count;
-    }
-    void PrepareFreeCombatResources()
-    {
-        BuyItemIfNeeded(lynyrdSnare, 3, 1000);
-        if (scorpions.item_amount() < 11)
-        {
-            buy(11 - scorpions.item_amount(), scorpions);
-        }
-        int brickosNeeded = 10 - brickoOoze.item_amount();
-        if (brickosNeeded > 0)
-        {
-            BuyItemIfNeeded(brickoBrick, 2 * brickosNeeded, 500);
-            BuyItemIfNeeded(brickoEye, brickosNeeded, 1000);
-        }
-        while (brickoOoze.item_amount() < 10 && brickoBrick.item_amount() >= 2 && brickoEye.item_amount() >= 1)
-        {
-            use(2, brickoBrick);
-        }
     }
     void PrepareFreeCombat(familiar chosenFamiliar)
     {
@@ -1863,72 +1920,115 @@
         return Filter_Standard(round, mon, page);
     }
     
-    void RunFreeCombats()
+    boolean RunFreeCombat(string filter)
     {
-        string filter = "Filter_Standard"; // this might need to change
-        while (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
+        if (get_property("_eldritchTentacleFought") == "false")
+        {
+            PrepareFreeCombat();
+            string page = visit_url("place.php?whichplace=forestvillage&action=fv_scientist");
+            int choiceId = FindVariableChoice(page, "Can I fight that tentacle you saved for science?", true);
+            if (choiceId >= 0)
+            {
+                run_choice(choiceId, false);
+                RunCombat(filter);
+                return true;
+            }
+        }
+        if (evokeHorror.have_skill() && get_property("_eldritchHorrorEvoked") == "false")
+        {
+            PrepareFreeCombat();
+            use_skill(1, evokeHorror);
+            RunCombat(filter);
+            return true;
+        }
+        if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
         {
             PrepareFreeCombat(machineElf);
             abstractioned = false;
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
+            return true;
         }
-        while (get_property("_brickoFights").to_int() < 10 && brickoOoze.item_amount() > 0)
+        if (get_property("_brickoFights").to_int() < 10)
         {
-            PrepareFreeCombat();
-            use(1, brickoOoze);
-            RunCombat(filter);
+            int brickosNeeded = 10 - brickoOoze.item_amount();
+            if (brickosNeeded > 0)
+            {
+                BuyItemIfNeeded(brickoBrick, 2 * brickosNeeded, 500);
+                BuyItemIfNeeded(brickoEye, brickosNeeded, 1000);
+            }
+            while (brickoOoze.item_amount() < 10 && brickoBrick.item_amount() >= 2 && brickoEye.item_amount() >= 1)
+            {
+                use(2, brickoBrick);
+            }
+            if (brickoOoze.item_amount() > 0)
+            {
+                PrepareFreeCombat();
+                use(1, brickoOoze);
+                RunCombat(filter);
+                return true;
+            }
         }
-        while (get_property("_lynyrdSnareUses").to_int() < 3 && lynyrdSnare.item_amount() > 0)
+        if (get_property("_lynyrdSnareUses").to_int() < 3)
         {
-            PrepareFreeCombat();
-            use(1, lynyrdSnare);
-            RunCombat(filter);
+            BuyItemIfNeeded(lynyrdSnare, 3, 1000);
+            if (lynyrdSnare.item_amount() > 0)
+            {
+                PrepareFreeCombat();
+                use(1, lynyrdSnare);
+                RunCombat(filter);
+                return true;
+            }
         }
-        while (get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
+        if (attunement.have_effect() > 0 && get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
         {
+            // you don't get bonus from these fights, but they should trigger eldritch attunement fights
+            if (scorpions.item_amount() < 11)
+            {
+                buy(11 - scorpions.item_amount(), scorpions);
+            }
             PrepareFreeCombat();
             if (bowlingBall.item_amount() > 0)
                 put_closet(bowlingBall.item_amount(), bowlingBall);
             RunAdventure(bowlingAlley, "Filter_BowlingAlley");
+            return true;
         }
-        while (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
+        if (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
         {
             PrepareFreeCombat();
-            if (!TryRunSnojo(filter))
-                break;
+            if (TryRunSnojo(filter))
+                return true;
         }
-        while (get_campground() contains witchess
+        if (get_campground() contains witchess
             && get_property("_witchessFights").to_int() < 4) // save one for manual running to cast duplicate
         {
             PrepareFreeCombat();
-            if (!TryRunWitchess(filter))
-                break;
+            if (TryRunWitchess(filter))
+                return true;
         }
         // todo:
 // infernal seals
-// tentacles
+        return false;
+    }
+    boolean RunFreeCombat()
+    {
+        string filter = "Filter_Standard"; // this might need to change
+        return RunFreeCombat(filter);
     }
 
     void FreeCombatsForProfit()
     {
         if (covetous.have_effect() > 0)
         {
-            PrepareFreeCombatResources();
-            RunFreeCombats();
+            HealUp();
+            while (RunFreeCombat())
+            {
+                if (beatenUp.have_effect() > 0)
+                    abort("Lost during free combat, do you need to adjust your combat parameters?");
+            }
         }
     }
     
 
-    boolean ChooseFreeCombat(string filter)
-    {
-        if (TryRunMachineTunnels(filter))
-            return true;
-        if (TryRunWitchess(filter))
-            return true;
-        if (TryRunSnojo(filter))
-            return true;
-        return false;
-    }
     void EnsureSingleHandedWeapon()
     {
         if (weapon.equipped_item().weapon_hands() < 2)
@@ -2024,7 +2124,7 @@
         offhand.equip(bagOtricks);
         if (!bagOtricks.have_equipped()) // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
             return;
-        ChooseFreeCombat("Filter_BagOTricks");
+        RunFreeCombat("Filter_BagOTricks");
         offhand.equip(oldOffhand);
     }
     boolean TryActivatePantsgivingFullness()
@@ -2033,6 +2133,7 @@
             return false;
         if (my_fullness() != fullness_limit())
             return false;
+        print("Trying to activate Pantsgiving to increase max fullness by 1", "orange");
         pants.equip(pantsGiving);
         boolean first = true;
         while (get_property("_pantsgivingFullness").to_int() == 0)
@@ -2047,8 +2148,11 @@
             else
             {
                 EquipDropsItems();
-                if (!TryRunSnojo(""))
-                    return false;
+                if (!RunFreeCombat())
+                {
+                    abort("Failed to run free combat for Pantsgiving"); // todo: change this to a print once it's debugged
+                    break;
+                }
             }
         }
         return my_fullness() == fullness_limit() - 1;
@@ -2320,7 +2424,9 @@
         UseItem(itm, resultingEffect, requestedTurns, turnsPerItem, 0);
     }
 
-    void TryReduceManaCost(skill sk)
+    int kgbManaBonus = 1; // -1 means hasn't been checked yet, should be 0 or -3
+
+    void TryReduceManaCost(skill forSkill)
     {
         if (mysticality.my_basestat() >= 200
             && HaveEquipment(oscusWeapon)
@@ -2333,14 +2439,20 @@
             pants.equip(oscusPants);
             acc1.equip(oscusAccessory);
         }
-        if (HaveEquipment(kgb))
+        if (HaveEquipment(kgb) && kgbManaBonus == 1)
         {
-            // todo: verify whether this actually has the proper -3 MP bonus on it
-            float modifier = kgb.numeric_modifier("Mana Cost");
-            print("kgb mana cost modifier = " + modifier, "orange");
+            string page = visit_url("desc_item.php?whichitem=311743898");
+            if (page.contains_text("-3 MP to use Skills"))
+                kgbManaBonus = -3;
+            else
+                kgbManaBonus = 0;
+            print("kgb mana cost modifier = " + kgbManaBonus, "orange");
+        }
+        if (kgbManaBonus == -3)
+        {
             acc2.equip(kgb);
         }
-        else if (sk.mp_cost() > 2 && sk.mp_cost() < 12 // Too small, no effect. Too big, and insignificant
+        else if (forSkill.mp_cost() > 2 && forSkill.mp_cost() < 12 // Too small, no effect. Too big, insignificant cost reduction
             && rubberEffect.have_effect() <= 0
             && rubber.item_amount() > 0)
         {
@@ -2362,7 +2474,10 @@
         {
             if (sk.mp_cost() > my_mp())
             {
-                restore_mp(sk.mp_cost() - my_mp());
+                if (FreeDailyManaRestore()) // this can change equipment, so need to swap back
+                    TryReduceManaCost(sk);
+                if (sk.mp_cost() > my_mp())
+                    restore_mp(sk.mp_cost() - my_mp());
             }
             int beforeTurns = resultingEffect.have_effect();
             int timesCast = (requestedTurns - resultingEffect.have_effect() + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
@@ -2731,19 +2846,92 @@
         eat(1, food);
         return true;
     }
-    void SweetMeat(int requestedTurns)
+
+    item meatBuffCandy1, meatBuffCandy2;
+    void ChooseSweetMeat(int[item] candies1, int[item] candies2)
     {
-        if (sweetSynth.have_skill())
+        foreach candy1, count1 in candies1
         {
-            while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
+            if (count1 < 2)
+                continue;
+            foreach candy2, count2 in candies2
             {
-// try alternatives
-// milk studs and swizzler
-// w&w/crimbo candied pecan/breath mint and w&w
-// dweebs/crimbo fudge  and Peez dispenser/hoarded candy wad
-                sweet_synthesis(ww, ww);
+                if (count2 < 2)
+                    continue;
+                meatBuffCandy1 = candy1;
+                meatBuffCandy2 = candy2;
+                break;
             }
         }
+    }
+    
+    void SweetMeat(int requestedTurns)
+    {
+        if (!sweetSynth.have_skill())
+            return;
+
+        // Since this is used for farming, don't want to waste irreplacible candy (even if it's
+        // temporarily cheaper).  Only use stuff which is relatively easy to replace.
+
+        // pair 1: w&w/crimbo candied pecan/breath mint with itself
+        int[item] pair1_1 =
+        {
+            ww : ww.item_amount(), // trick or treat
+            crimboPecan : crimboPecan.item_amount(), // summon crimbo candy
+            breathMint : breathMint.item_amount(), // glass gnoll eye once a day
+        };
+
+        // pair 2: dweebs or crimbo fudge with peez or hoarded candy wad
+        int[item] pair2_1 = 
+        {
+            dweebs : dweebs.item_amount(), // trick or treat
+            crimboFudge : crimboFudge.item_amount(), // summon crimbo candy
+        };
+        int[item] pair2_2 = 
+        {
+            peez : peez.item_amount(), // trick or treat
+            candyWad : candyWad.item_amount(), // from buddy bjorn + orphan tot
+        };
+
+        // pair 3: milk studs with swizzler
+        int[item] pair3_1 = 
+        {
+            milkStud : milkStud.item_amount(), // trick or treat
+        };
+        int[item] pair3_2 = 
+        {
+            // swizzler needs to be stored in closet so it doesn't get used automatically
+            swizzler : (swizzler.closet_amount() + swizzler.item_amount()), // trick-or-treat
+        };
+
+        while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
+        {
+            meatBuffCandy1 = "none".to_item();
+            meatBuffCandy2 = "none".to_item();
+            ChooseSweetMeat(pair3_1, pair3_2);
+            ChooseSweetMeat(pair2_1, pair2_2);
+            ChooseSweetMeat(pair1_1, pair1_1);
+            if (meatBuffCandy1.to_string() == "none" || meatBuffCandy2.to_string() == "none")
+            {
+                print("Out of candy for sweet synthesis, skipping", "orange");
+                break;
+            }
+            if (meatBuffCandy1 == swizzler || meatBuffCandy2 == swizzler)
+            {
+                take_closet(swizzler.closet_amount(), swizzler);
+            }
+
+            while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
+            {
+                if (meatBuffCandy1.item_amount() == 0)
+                    break;
+                if (meatBuffCandy2.item_amount() == 0)
+                    break;
+                sweet_synthesis(meatBuffCandy1, meatBuffCandy2);
+            }
+        }
+        if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+            put_closet(swizzler.item_amount(), swizzler);
     }
 
     void GetPirateCostume()
@@ -3028,6 +3216,17 @@
                 {
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
+                // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
+                // but with free fights giving meat, it can beat break-even over 2 days
+                // 2 +200% meat effects:
+                if (frosty.have_effect() == 0)
+                {
+                    RunWish("I was frosty");
+                }
+                if (braaaaaains.have_effect() == 0)
+                {
+                    RunWish("I was Braaaaaains");
+                }
             }
         }
         if (!get_property("_defectiveTokenUsed").to_boolean()
@@ -3053,7 +3252,9 @@
             UseItem(wealthy, resolve, turns, 20);
         else
             UseItem(wealthy, resolve, 1, 20, 1000);
-        UseItem(avoidScams, scamTourist, turns, 20, 500);
+        if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
+            UseOneTotal(begpwnia, begpwniaEffect);
+        UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
         CastSkill(leer, leering, turns, 10);
         CastSkill(polka, polkad, turns, 25);
         RentAHorse();
@@ -3531,7 +3732,7 @@
         if (needsLube)
             return;
         page = visit_url(kioskUrl);
-        int choice = FindVariableChoice(page, "Track Maintenance");
+        int choice = FindVariableChoice(page, "Track Maintenance", false);
         if (choice > 0)
         {
             print("Taking quest Track Maintenance option " + choice.to_string());
@@ -3704,24 +3905,12 @@
             cli_execute("ballpit");
         }
 
-        int freeRests = total_free_rests() - get_property("timesRested").to_int();
-        while (freeRests > 0)
-        {
-            if (HaveEquipment(pantsGiving)) // increases rest
-                pants.equip(pantsGiving);
-            if (get_campground() contains pilgrimHat // pilgrim hat gives random buffs, which may be useful
-               || (get_campground() contains snowFort && snowFortified.have_effect() == 0)) // snow fort gives +meat buff and +item buff on first use
-            {
-                visit_url("campground.php?action=rest");
-            }
-            else
-                cli_execute("rest 1"); // use the default resting, which may be chateau
-            freeRests -= 1;
-                
-            BurnManaAndRestores(20, true);
-        }
         if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
             cli_execute("buy 1 " + sphygmayo.to_string());
+        while (FreeDailyManaRestore())
+        {
+            BurnManaAndRestores(20, true);
+        }
         outfit(manaOutfit);
         RunLOVTunnel();
         int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 0 : 50;

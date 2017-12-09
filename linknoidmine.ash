@@ -74,9 +74,15 @@ item velvet = ToItem("unsmoothed velvet");
 item borrowedTime = ToItem("borrowed time");
 item swizzler = ToItem("Swizzler");
 
-item spleen1 = ToItem("powdered gold");
-item spleen2 = ToItem("agua de vida");
-item spleen3 = ToItem("carrot juice");
+item spleen4_1 = ToItem("powdered gold");
+item spleen4_2 = ToItem("agua de vida");
+item spleen4_3 = ToItem("groose grease");
+item spleen4_4 = ToItem("Unconscious Collective Dream Jar");
+item spleen3_1 = ToItem("carrot juice");
+item spleen3_2 = ToItem("prismatic wad");
+item spleen1_1 = ToItem("nasty snuff");
+item spleen1_2 = ToItem("homeopathic mint tea");
+item spleen1_3 = ToItem("transdermal smoke patch");
 
 item perfect1 = ToItem("perfect cosmopolitan");
 item perfect2 = ToItem("perfect dark and stormy");
@@ -346,7 +352,7 @@ void DoBunker()
 		&& !CheckForBunkerTurnin(page, bunker17, 1)
 		&& !CheckForBunkerTurnin(page, bunker18, 1))
 	{
-		if (UserConfirmDefault("Cannot turn in any quest item in WLF bunker, do you wish to abort so you can run one of these quests manually?", false))
+		if (!UserConfirmDefault("Cannot acquire WLF bunker quest items.\r\n\r\nSkip getting that volcoino and start mining?", true))
 		{
 			abort(availableItemPrompt);
 		}
@@ -563,7 +569,7 @@ int FillSpleen(int remainingSpleen)
 {
 	if (remainingSpleen >= 4)
 	{
-		item bestSpleen = ChooseCheapest(15000, spleen1, spleen2); // expect 5 turns at 3000 mpa
+		item bestSpleen = ChooseCheapest(15000, spleen4_1, spleen4_2, spleen4_3, spleen4_4); // expect 5 turns at 3000 mpa
 		print("cheapest spleen = " + bestSpleen.to_string());
 		if (bestSpleen != noItem)
 		{
@@ -574,13 +580,24 @@ int FillSpleen(int remainingSpleen)
 	}
 	if (remainingSpleen >= 3)
 	{
-		item bestSpleen = ChooseCheapest(9000, spleen3, spleen3); // expect 3 turns at 3000 mpa
+		item bestSpleen = ChooseCheapest(9000, spleen3_1, spleen3_2); // expect 3 turns at 3000 mpa
 		print("cheapest spleen = " + bestSpleen.to_string());
 		if (bestSpleen != noItem)
 		{
 			BuyItem(bestSpleen);
 			chew(1, bestSpleen);
 			return remainingSpleen - 3;
+		}
+	}
+	if (remainingSpleen >= 1)
+	{
+		item bestSpleen = ChooseCheapest(3000, spleen1_1, spleen1_2, spleen1_3, noItem); // expect 1.5 turns at 3000 mpa
+		print("cheapest spleen = " + bestSpleen.to_string());
+		if (bestSpleen != noItem)
+		{
+			BuyItem(bestSpleen);
+			chew(1, bestSpleen);
+			return remainingSpleen - 1;
 		}
 	}
 	return remainingSpleen;
@@ -748,7 +765,7 @@ void PrepTomorrow()
 					buy(2, skeletonX);
 				// make our own
 				string page = visit_url("shop.php?whichshop=xo");
-				visit_url("shop.php?whichshop=xo&amp;action=buyitem&amp;quantity=1&amp;whichrow=957&amp;pwd=" + my_hash());
+				visit_url("shop.php?whichshop=xo&action=buyitem&quantity=1&whichrow=957&pwd=" + my_hash());
 			}
 			else
 			{
