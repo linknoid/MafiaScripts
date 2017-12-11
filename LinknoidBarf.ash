@@ -730,9 +730,35 @@
             use(1, i);
         }
     }
+
+    boolean familiarListInitialized = false;
+    familiar[int] cachedFamiliarList;
+    familiar[int] GetFamiliarList()
+    {
+        if (familiarListInitialized)
+            return cachedFamiliarList;
+        familiarListInitialized = true;
+        foreach fam in $familiars[]
+        {
+            if (fam.have_familiar())
+                cachedFamiliarList[fam.to_int()] = fam;
+        }
+        return cachedFamiliarList;
+    }
+
     boolean HaveEquipment(item itm)
     {
-        return itm.item_amount() > 0 || itm.have_equipped();
+        if ( itm.item_amount() > 0 || itm.have_equipped() )
+            return true;
+        if (itm.to_slot() != famEqp)
+            return false;
+        familiar[int] myFamiliars = GetFamiliarList();
+        foreach id, fam in myFamiliars
+        {
+            if (fam.familiar_equipped_equipment() == itm)
+                return true;
+        }
+        return false;
     }
     boolean OutfitContains(string outfit, item eq)
     {
@@ -740,6 +766,47 @@
             if (value == eq)
                 return true;
         return false;
+    }
+    boolean OutfitContains(item[slot] outfitDef, item eq)
+    {
+        foreach key,value in outfitDef
+            if (value == eq)
+                return true;
+        return false;
+    }
+    void CheatKnifeIfNeeded(item[slot] outfitDef)
+    {
+        if (!HaveEquipment(knife)
+            && OutfitContains(outfitDef, knife)
+            && deck.item_amount() > 0
+            && get_property("_deckCardsDrawn").to_int() <= 10)
+        {
+            cli_execute("cheat knife");
+        }
+    }
+    void WearOutfit(item[slot] outfitDef)
+    {
+        CheatKnifeIfNeeded(outfitDef);
+        // remove wrong accessories, in case the slots don't match up
+        foreach sl, it in outfitDef
+        {
+            if ((sl == acc1 || sl == acc2 || sl == acc3) && sl.equipped_item() != it)
+            {
+                sl.equip("none".to_item());
+            }
+        }
+        foreach sl, it in outfitDef
+        {
+            if (sl.equipped_item() != it && HaveEquipment(it))
+            {
+                if (it.have_equipped())
+                {
+                    if (sl == acc1 || sl == acc2 || sl == acc3) // in case it's in the wrong slot, and need to move it
+                        sl.equip("none".to_item());
+                }
+                sl.equip(it);
+            }
+        }
     }
     boolean IsAccordion(item it)
     {
@@ -1453,16 +1520,6 @@
         }
     }
 
-    void CheatKnifeIfNeeded()
-    {
-        if (OutfitContains(defaultOutfit, knife)
-            && !HaveEquipment(knife)
-            && deck.item_amount() > 0
-            && get_property("_deckCardsDrawn").to_int() <= 10)
-        {
-            cli_execute("cheat knife");
-        }
-    }
 
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus)
     {
@@ -1484,8 +1541,6 @@
         if (my_familiar() == fam)
             return;
        
-        if (snowSuit.have_equipped() || petSweater.have_equipped() || hookah.have_equipped() || cufflinks.have_equipped() || mayflower.have_equipped())
-            famEqp.equip("none".to_item()); // remove the equipment so someone else can wear it
         fam.use_familiar();
     }
     familiar ChooseBjornCrownFamiliar(familiar currentChoice, familiar newOption)
@@ -1726,14 +1781,7 @@
                     barfOutfitPieces[back] = protonPack;
             }
         }
-        CheatKnifeIfNeeded();
-        foreach sl, it in barfOutfitPieces
-        {
-            if (sl.equipped_item() != it && HaveEquipment(it))
-            {
-                sl.equip(it);
-            }
-        }
+        WearOutfit(barfOutfitPieces);
 
         ChooseThrall(true);
         RemoveConfusionEffects(false);
@@ -1774,7 +1822,7 @@
         return false;
     }
 
-    void RunWish(string wishFor)
+    void WishFor(string wishFor)
     {
         if (get_property("_genieWishesUsed").to_int() >= 3
             || genie.item_amount() == 0)
@@ -1783,17 +1831,13 @@
         }
         cli_execute("genie wish " + wishFor);
     }
-
-    void BuffForFreeCombats()
+    void WishForEffect(effect e)
     {
-        if (covetous.have_effect() == 0)
-            RunWish("I was Covetous Robbery");
-
-        // This is apparently impossible...unfortunately
-        //if (attunement.have_effect() == 0)
-        //    RunWish("I was Eldritch Attunement");
-
+        if (e.have_effect() > 0) // wishes are expensive, only wish for things you don't already have
+            return;
+        WishFor("I was " + e);
     }
+
     int CountFreeCombatsAvailable()
     {
         int count = 0;
@@ -1831,14 +1875,7 @@
         if (my_familiar() != chosenFamiliar)
             SwitchToFamiliar(chosenFamiliar);
         InitOutfit();
-        CheatKnifeIfNeeded();
-        foreach sl, it in defaultOutfitPieces
-        {
-            if (sl.equipped_item() != it && HaveEquipment(it))
-            {
-                sl.equip(it);
-            }
-        }
+        WearOutfit(defaultOutfitPieces);
         SwapOutSunglasses();
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
@@ -3151,6 +3188,35 @@
             use(1, distention);
         }
     }
+    TryBuffForFreeCombats()
+    {
+        int freeCombats = CountFreeCombatsAvailable();
+        float expectedMeatPerAdventure = 95.0; // really 100, but just to be on the safe side
+        expectedMeatPerAdventure *= (1 + meat_drop_modifier() / 100.0);
+        if (freeCombats * expectedMeatPerAdventure > 55000)
+        {
+            print("Buffing specifically for free combats, expect payback of approximately "
+                + freeCombats * expectedMeatPerAdventure, "orange");
+
+            WishForEffect(covetous); // this effect makes the lowest base meat drop = 100
+
+            // This is apparently disallowed...unfortunately
+            // WishForEffect(attunement);
+        }
+    }
+    void TryLimitedAccordionBuff(skill limitedSkill, effect limitedEffect, string castProperty, int turns)
+    {
+        if (EnsureOneSongSpace())
+        {
+            if (my_class().to_string() == "Accordion Thief"
+                && limitedSkill.have_skill()
+                && get_property("_thingfinderCasts").to_int() < 10)
+            {
+                CastSkill(limitedSkill, limitedEffect, turns, 25);
+            }
+        }
+    }
+
 
     void BuffTurns(int turns)
     {
@@ -3219,32 +3285,20 @@
                 // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
                 // but with free fights giving meat, it can beat break-even over 2 days
                 // 2 +200% meat effects:
-                if (frosty.have_effect() == 0)
-                {
-                    RunWish("I was frosty");
-                }
-                if (braaaaaains.have_effect() == 0)
-                {
-                    RunWish("I was Braaaaaains");
-                }
+                WishForEffect(frosty);
+                WishForEffect(braaaaaains);
             }
-        }
-        if (!get_property("_defectiveTokenUsed").to_boolean()
-            && gameToken.item_amount() > 0)
-        {
-            use(1, gameToken);
-        }
-        int freeCombats = CountFreeCombatsAvailable();
-        if (freeCombats > 20)
-        {
-            print("Buffing specifically for free combats, expect approximately " + freeCombats * 2, "orange");
-            BuffForFreeCombats();
         }
 
         // want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
         if (bagOtricks.item_amount() > 0 && get_property("_bagOTricksUsed") == "false")
         {
             use(1, bagOtricks);
+        }
+        if (!get_property("_defectiveTokenUsed").to_boolean()
+            && gameToken.item_amount() > 0)
+        {
+            use(1, gameToken);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
         UseItem(nasalSpray, wasabi, turns, 10);
@@ -3308,6 +3362,7 @@
         KGBBuff(turns);
 
         TryDrink(dirt, dirtEffect, 1, 1);
+
         BeforeSwapOutAsdon();
         if (nightBefore)
         {
@@ -3360,6 +3415,7 @@
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
                 && my_fullness() == fullness_limit()) // pants can't activate without being completely full
             {
+                TryBuffForFreeCombats();
                 TryActivatePantsgivingFullness(); // open up 1 more fullness
             }
             while (thanksgetting.have_effect() < turns)
@@ -3374,30 +3430,16 @@
         }
 
         // don't finish with accordion buffs until after we've drunk, because we might need to shrug Ode to fit the song in our head
-        if (EnsureOneSongSpace())
-        {
-            if (my_class().to_string() == "Accordion Thief"
-                && thingfinder.have_skill()
-                && get_property("_thingfinderCasts").to_int() < 10)
-            {
-                CastSkill(thingfinder, thingfinderEffect, turns, 25);
-            }
-        }
-        if (EnsureOneSongSpace())
-        {
-            if (my_class().to_string() == "Accordion Thief"
-                && companionship.have_skill()
-                && get_property("_companionshipCasts").to_int() < 10)
-            {
-                CastSkill(companionship, companionshipEffect, turns, 25);
-            }
-        }
+        TryLimitedAccordionBuff(thingfinder, thingfinderEffect, "_thingfinderCasts", turns);
+        TryLimitedAccordionBuff(companionship, companionshipEffect, "_companionshipCasts", turns);
+
         if (EnsureOneSongSpace())
         {
             CastSkill(phatLoot, phatLooted, turns, 25);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
+        TryBuffForFreeCombats();
         MaxManaSummons();
     }
 
