@@ -53,6 +53,7 @@
 
     string defaultOutfit = "barf";
     string manaOutfit = "Max MP";
+    string dropsOutfit = "drops";
 
     int usePrintScreens = 1;
     int useEnamorangs = 1;
@@ -503,6 +504,7 @@
 // barf mountain quest
     item lubeShoes = ToItem("lube-shoes");
     static string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
+    static string maintenanceUrl = "place.php?whichplace=airport_stench&action=airport3_tunnels";
 
 // Gingerbread
     location gingerCivic = ToLocation("Gingerbread Civic Center");
@@ -607,6 +609,7 @@
     boolean outfitInitialized = false;
     item[slot] defaultOutfitPieces;
     item[slot] barfOutfitPieces;
+    item[slot] dropsOutfitPieces;
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -1469,10 +1472,9 @@
             puttyAvailable++;
         if (hasRaindoh)
             puttyAvailable++;
-        if (puttyAvailable > 0) // both have 5 individually, combined they get 6 total
-            puttyAvailable += 4;
-        else
+        if (puttyAvailable == 0)
             return 0;
+        puttyAvailable += 4; // both have 5 individually, combined they get 6 total
         int puttiesUsed = get_property("spookyPuttyCopiesMade").to_int();
         int raindohsUsed = get_property("_raindohCopiesMade").to_int();
         return puttyAvailable - (puttiesUsed + raindohsUsed);
@@ -1517,6 +1519,23 @@
             }
             else
                 defaultOutfitPieces[s] = it;
+        }
+        foreach ix, it in outfit_pieces(dropsOutfit)
+        {
+            slot s = it.to_slot();
+            if (s == acc1 || s == acc2 || s == acc3)
+            {
+                if (dropsOutfitPieces[acc1].to_string() == "none")
+                    dropsOutfitPieces[acc1] = it;
+                else if (dropsOutfitPieces[acc2].to_string() == "none")
+                    dropsOutfitPieces[acc2] = it;
+                else if (dropsOutfitPieces[acc3].to_string() == "none")
+                    dropsOutfitPieces[acc3] = it;
+                else
+                    abort("Not enough slots for accessory " + it);
+            }
+            else
+                dropsOutfitPieces[s] = it;
         }
     }
 
@@ -1587,7 +1606,7 @@
                 SwitchToFamiliar(runFamiliar);
             if (my_familiar().to_string() == "none")
                 return;
-            string page = visit_url("inv_use.php?pwd=a39a1bb15d009283969eec2e5dcfc05f&which=f0&whichitem=9592");
+            string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9592");
             if (page.contains_text("type=submit value=\"The Captain\""))
             {
                 run_choice(1); // The Captain, +meat
@@ -1636,18 +1655,18 @@
         // final fallback, if no other equipment is matching, this should give +5 weight
         TryEquipFamiliarEquipment(filthyLeash, 5);
     }
-    void SwapOutSunglasses()
+    item[slot] SwapOutSunglasses(item[slot] selectedOutfit)
     {
         // replace cheap sunglasses because they only work in barf mountain
         slot matching;
-        if (acc1.equipped_item() == sunglasses)
+        if (selectedOutfit[acc1] == sunglasses)
             matching = acc1;
-        else if (acc2.equipped_item() == sunglasses)
+        else if (selectedOutfit[acc2] == sunglasses)
             matching = acc2;
-        else if (acc3.equipped_item() == sunglasses)
+        else if (selectedOutfit[acc3] == sunglasses)
             matching = acc3;
         else
-            return;
+            return selectedOutfit;
         item best = "none".to_item();
         float bestPercent = 0;
         foreach i in get_inventory()
@@ -1661,10 +1680,16 @@
                 bestPercent = percent;
             }
         }
-        if (bestPercent > 0)
+        if (bestPercent <= 0)
+            return selectedOutfit;
+
+        item[slot] result;
+        foreach key, value in selectedOutfit
         {
-            matching.equip(best);
+            result[key] = value;
         }
+        result[matching] = best;
+        return result;
     }
     boolean TryScratchNSniff()
     {
@@ -1713,8 +1738,7 @@
     }
     void PrepareEmbezzler()
     {
-        outfit(defaultOutfit);
-        SwapOutSunglasses();
+        WearOutfit(SwapOutSunglasses(defaultOutfitPieces));
         if (HaveEquipment(jokesterGun)
             && jokesterGun.can_equip()
             && get_property("_firedJokestersGun") == "false")
@@ -1838,13 +1862,13 @@
         WishFor("I was " + e);
     }
 
-    int CountFreeCombatsAvailable()
+    int CountFreeCombatsAvailable(boolean nextDay)
     {
         int count = 0;
         if (get_property("snojoAvailable").to_boolean())
-            count += get_property("_snojoFreeFights").to_int();
+            count += 10 - get_property("_snojoFreeFights").to_int();
         if (get_campground() contains witchess)
-            count += get_property("_witchessFights").to_int();
+            count += 5 - get_property("_witchessFights").to_int();
         count += 10 - get_property("_brickoFights").to_int();
         count += 3 - get_property("_lynyrdSnareUses").to_int();
         if (my_class().to_string() == "Seal Clubber")
@@ -1870,21 +1894,20 @@
             count += 1;
         return count;
     }
-    void PrepareFreeCombat(familiar chosenFamiliar)
+    void PrepareFreeCombat(item[slot] selectedOutfit, familiar chosenFamiliar)
     {
         if (my_familiar() != chosenFamiliar)
             SwitchToFamiliar(chosenFamiliar);
         InitOutfit();
-        WearOutfit(defaultOutfitPieces);
-        SwapOutSunglasses();
+        WearOutfit(SwapOutSunglasses(selectedOutfit));
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
         RemoveConfusionEffects(false);
         HealUp();
     }
-    void PrepareFreeCombat()
+    void PrepareFreeCombat(item[slot] selectedOutfit)
     {
-        PrepareFreeCombat(runFamiliar);
+        PrepareFreeCombat(selectedOutfit, runFamiliar);
     }
     int snokebombTurn = 0;
     int politicsTurn = 0;
@@ -1903,11 +1926,6 @@
                 snokebombTurn = my_turnCount() + 30;
                 return "skill Snokebomb";
             }
-            if (politicsTurn < my_turnCount())
-            {
-                politicsTurn = my_turnCount() + 30;
-                return "skill Talk About Politics";
-            }
             if (kgbDartTurn < my_turnCount())
             {
                 kgbDartTurn = my_turnCount() + 20;
@@ -1922,6 +1940,11 @@
             {
                 tennisballTurn = my_turnCount() + 30;
                 return "item " + tennisBall + ",none";
+            }
+            if (politicsTurn < my_turnCount())
+            {
+                politicsTurn = my_turnCount() + 30;
+                return "skill Talk About Politics";
             }
         }
         return Filter_Standard(round, mon, page);
@@ -1957,11 +1980,11 @@
         return Filter_Standard(round, mon, page);
     }
     
-    boolean RunFreeCombat(string filter)
+    boolean RunFreeCombat(item[slot] selectedOutfit, string filter)
     {
         if (get_property("_eldritchTentacleFought") == "false")
         {
-            PrepareFreeCombat();
+            PrepareFreeCombat(selectedOutfit);
             string page = visit_url("place.php?whichplace=forestvillage&action=fv_scientist");
             int choiceId = FindVariableChoice(page, "Can I fight that tentacle you saved for science?", true);
             if (choiceId >= 0)
@@ -1973,14 +1996,14 @@
         }
         if (evokeHorror.have_skill() && get_property("_eldritchHorrorEvoked") == "false")
         {
-            PrepareFreeCombat();
+            PrepareFreeCombat(selectedOutfit);
             use_skill(1, evokeHorror);
             RunCombat(filter);
             return true;
         }
         if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
         {
-            PrepareFreeCombat(machineElf);
+            PrepareFreeCombat(selectedOutfit, machineElf);
             abstractioned = false;
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
             return true;
@@ -1999,7 +2022,7 @@
             }
             if (brickoOoze.item_amount() > 0)
             {
-                PrepareFreeCombat();
+                PrepareFreeCombat(selectedOutfit);
                 use(1, brickoOoze);
                 RunCombat(filter);
                 return true;
@@ -2010,7 +2033,7 @@
             BuyItemIfNeeded(lynyrdSnare, 3, 1000);
             if (lynyrdSnare.item_amount() > 0)
             {
-                PrepareFreeCombat();
+                PrepareFreeCombat(selectedOutfit);
                 use(1, lynyrdSnare);
                 RunCombat(filter);
                 return true;
@@ -2023,7 +2046,7 @@
             {
                 buy(11 - scorpions.item_amount(), scorpions);
             }
-            PrepareFreeCombat();
+            PrepareFreeCombat(selectedOutfit);
             if (bowlingBall.item_amount() > 0)
                 put_closet(bowlingBall.item_amount(), bowlingBall);
             RunAdventure(bowlingAlley, "Filter_BowlingAlley");
@@ -2031,14 +2054,14 @@
         }
         if (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
         {
-            PrepareFreeCombat();
+            PrepareFreeCombat(selectedOutfit);
             if (TryRunSnojo(filter))
                 return true;
         }
         if (get_campground() contains witchess
             && get_property("_witchessFights").to_int() < 4) // save one for manual running to cast duplicate
         {
-            PrepareFreeCombat();
+            PrepareFreeCombat(selectedOutfit);
             if (TryRunWitchess(filter))
                 return true;
         }
@@ -2046,10 +2069,14 @@
 // infernal seals
         return false;
     }
-    boolean RunFreeCombat()
+    boolean RunFreeCombat(item[slot] selectedOutfit)
     {
         string filter = "Filter_Standard"; // this might need to change
-        return RunFreeCombat(filter);
+        return RunFreeCombat(selectedOutfit, filter);
+    }
+    boolean RunFreeCombat()
+    {
+        return RunFreeCombat(defaultOutfitPieces);
     }
 
     void FreeCombatsForProfit()
@@ -2155,13 +2182,29 @@
             return;
         if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
             return;
+        InitOutfit();
         item oldOffhand = offhand.equipped_item();
-        EquipDropsItems();
-        EnsureSingleHandedWeapon();
-        offhand.equip(bagOtricks);
-        if (!bagOtricks.have_equipped()) // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
-            return;
-        RunFreeCombat("Filter_BagOTricks");
+        item[slot] eqSet;
+        if (covetous.have_effect() > 0)
+        {
+            foreach key, value in defaultOutfitPieces
+                eqSet[key] = value;
+        }
+        else
+        {
+            foreach key, value in dropsOutfitPieces
+                eqSet[key] = value;
+        }
+        eqSet[offhand] = bagOtricks;
+        if (eqSet[weapon].weapon_hands() >= 2)
+        {
+            // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
+            eqSet[weapon] = "none".to_item();
+        }
+        if (bagOtricks.have_equipped())
+        {
+            RunFreeCombat(eqSet, "Filter_BagOTricks");
+        }
         offhand.equip(oldOffhand);
     }
     boolean TryActivatePantsgivingFullness()
@@ -2897,7 +2940,7 @@
                     continue;
                 meatBuffCandy1 = candy1;
                 meatBuffCandy2 = candy2;
-                break;
+                return;
             }
         }
     }
@@ -3188,12 +3231,19 @@
             use(1, distention);
         }
     }
-    TryBuffForFreeCombats()
+    void TryBuffForFreeCombats(boolean nightBefore)
     {
-        int freeCombats = CountFreeCombatsAvailable();
-        float expectedMeatPerAdventure = 95.0; // really 100, but just to be on the safe side
-        expectedMeatPerAdventure *= (1 + meat_drop_modifier() / 100.0);
-        if (freeCombats * expectedMeatPerAdventure > 55000)
+        int freeCombats = CountFreeCombatsAvailable(false);
+        if (nightBefore)
+            freeCombats += CountFreeCombatsAvailable(true);
+        print("Free combats = " + freeCombats);
+        float expectedMeatPerAdventure = 100.0;
+        float meatmodifier = 1 + (meat_drop_modifier() / 100.0);
+        expectedMeatPerAdventure *= meatmodifier;
+        expectedMeatPerAdventure -= 400; // subtract 400 for potential cost to get the adventure, particularly bricko and lynyrd
+        float expectedMeat = freeCombats * expectedMeatPerAdventure;
+        print("Expected meat from free combats = " + expectedMeat);
+        if (expectedMeat > 55000) // will buy wishes up to 55000 meat
         {
             print("Buffing specifically for free combats, expect payback of approximately "
                 + freeCombats * expectedMeatPerAdventure, "orange");
@@ -3206,14 +3256,14 @@
     }
     void TryLimitedAccordionBuff(skill limitedSkill, effect limitedEffect, string castProperty, int turns)
     {
-        if (EnsureOneSongSpace())
+        if (!EnsureOneSongSpace())
+            return;
+
+        if (my_class().to_string() == "Accordion Thief"
+            && limitedSkill.have_skill()
+            && get_property(castProperty).to_int() < 10)
         {
-            if (my_class().to_string() == "Accordion Thief"
-                && limitedSkill.have_skill()
-                && get_property("_thingfinderCasts").to_int() < 10)
-            {
-                CastSkill(limitedSkill, limitedEffect, turns, 25);
-            }
+            CastSkill(limitedSkill, limitedEffect, turns, 25);
         }
     }
 
@@ -3282,11 +3332,19 @@
                 {
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
-                // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
-                // but with free fights giving meat, it can beat break-even over 2 days
-                // 2 +200% meat effects:
-                WishForEffect(frosty);
-                WishForEffect(braaaaaains);
+                TryBuffForFreeCombats(true);
+                if (covetous.have_effect() > 0 && CopiedEmbezzlerAvailable() && PuttyCopiesRemaining() > 8)
+                {
+                    // The test for this isn't a very accurate calculation, but it should get us in the
+                    // ballpark of whether these wishes are worthwhile or not.
+                    // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
+                    // but with free fights giving meat, it can beat break-even over 2 days, and come
+                    // out ahead when accounting for 20 turns of barf monsters (and more with buff extenders)
+
+                    // 2 +200% meat effects:
+                    WishForEffect(frosty);
+                    WishForEffect(braaaaaains);
+                }
             }
         }
 
@@ -3415,7 +3473,7 @@
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
                 && my_fullness() == fullness_limit()) // pants can't activate without being completely full
             {
-                TryBuffForFreeCombats();
+                TryBuffForFreeCombats(false);
                 TryActivatePantsgivingFullness(); // open up 1 more fullness
             }
             while (thanksgetting.have_effect() < turns)
@@ -3439,7 +3497,7 @@
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
-        TryBuffForFreeCombats();
+        TryBuffForFreeCombats(false);
         MaxManaSummons();
     }
 
@@ -3718,19 +3776,19 @@
         PrepareEmbezzler();
         if (EmbezzlerPuttied())
         {
-            print("using spooky putty embezzler");
+            print("using spooky putty embezzler", "orange");
             needsSpookyPutty = get_property("spookyPuttyCopiesMade").to_int() < 5;
             return ActivateCopyItem(usedSpookyPutty);
         }
         else if (EmbezzlerRainDohed())
         {
-            print("using rain doh embezzler");
+            print("using rain doh embezzler", "orange");
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
         else if (EmbezzlerPrintScreened())
         {
-            print("using print screen embezzler");
+            print("using print screen embezzler", "orange");
             set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
 
             needsPrintScreen = true;
@@ -3738,18 +3796,18 @@
         }
         else if (EmbezzlerCameraed())
         {
-            print("using camera embezzler");
+            print("using camera embezzler", "orange");
             needsCamera = true;
             return ActivateCopyItem(usedcamera);
         }
         else if (EmbezzlerChateaud())
         {
-            print("using Chateau painting embezzler");
+            print("using Chateau painting embezzler", "orange");
             visit_url("place.php?whichplace=chateau&action=chateau_painting");
             RunCombat("Filter_Standard");
             return true;
         }
-        print("no embezzler found");
+        print("no embezzler found", "orange");
         return false;
     }
 
@@ -3762,10 +3820,16 @@
             return;
 
         lubeChecked = true;
-        if (LoadChoiceAdventure("place.php?whichplace=airport_stench&action=airport3_tunnels", "Maint Misbehavin'", false))
+        if (get_property("_dinseyGarbageDisposed") != "true")
         {
-            run_choice(6); // Waste Disposal
+            if (LoadChoiceAdventure(maintenanceUrl, "Maint Misbehavin'", false))
+            {
+                run_choice(6); // Waste Disposal
+            }
         }
+
+        // is there a better way to check this setting?  End up re-checking each time the script runs
+
         string page = visit_url("questlog.php?which=7");
         if (page.contains_text("rollercoaster in order to lubricate the tracks"))
         {
