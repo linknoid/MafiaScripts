@@ -55,8 +55,8 @@
     string manaOutfit = "Max MP";
     string dropsOutfit = "drops";
 
-    int usePrintScreens = 1;
-    int useEnamorangs = 1;
+    int maxUsePrintScreens = 1;
+    int maxUseEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
 
 
@@ -362,7 +362,7 @@
     effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
     effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
     effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
-    effect wasabi = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
+    effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
     effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
@@ -821,7 +821,7 @@
     boolean EmbezzlerPrintScreened()
     {
         return get_property("screencappedMonster") == embezzler.to_string()
-            && get_property("_printscreensUsedToday").to_int() < usePrintScreens; // need guard to prevent infinite print screening
+            && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
     boolean EmbezzlerCameraed()
     {
@@ -1232,7 +1232,7 @@
             int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
             if (digitizeRange >= 4)
                 needsDigitize = true;
-            else if (my_turnCount() == digitizeCounter && digitizeRange == 3)
+            else if (my_turnCount() >= digitizeCounter && digitizeRange == 3)
             {
                 needsDigitize = true;
                 needBagOTricks = true;
@@ -1240,13 +1240,12 @@
                 
         }
         ChooseEducate(false, needsDigitize);
-        needsEnamorang = enamorang.item_amount() > 0
-            && get_property("enamorangMonster") == "";
 
-        if (usedCamera.item_amount() == 0 && camera.item_amount() > 0)
-        {
-            needsCamera = true;
-        }
+        needsEnamorang = enamorang.item_amount() > 0 && get_property("enamorangMonster") == "";
+        needsCamera = usedCamera.item_amount() == 0 && camera.item_amount() > 0;
+        needsPrintScreen = printScreen.item_amount() > 0 && get_property("screencappedMonster") == "";
+        needsRainDoh = rainDoh.item_amount() > 0 && usedRainDoh.item_amount() == 0;
+        needsSpookyPutty = spookyPutty.item_amount() > 0 && usedSpookyPutty.item_amount() == 0;
 
         canJokesterGun = get_property("_firedJokestersGun") == "false"
             && jokesterGun.have_equipped();
@@ -1346,7 +1345,7 @@
             if (needsEnamorang && itemCount < maxItemUse)
             {
                 enamorangsUsed = get_property("_enamorangsUsedToday").to_int();
-                if (enamorangsUsed < useEnamorangs)
+                if (enamorangsUsed < maxUseEnamorangs)
                 {
                     set_property("_enamorangsUsedToday", (++enamorangsUsed).to_string());
                     if (itemCount == 1)
@@ -1428,20 +1427,17 @@
                 return "combo rave nirvana";
             }
         }
+        if (canTurbo) // bonus meat drops are higher priority than mana regen, but other combos are lower
+        {
+            canTurbo = false;
+            return "skill Turbo";
+        }
         if (canRaveConcentration && my_hp() > 100) // increase item drops
         {
             if (!ravedConcentration)
             {
                 ravedConcentration = true;
                 return "combo rave concentration";
-            }
-        }
-        if (canRaveSteal && my_hp() > 100) // sometimes steals an item
-        {
-            if (!ravedSteal)
-            {
-                ravedSteal = true;
-                return "combo rave steal";
             }
         }
         if (canExtract && my_mp() > 10)
@@ -1454,10 +1450,13 @@
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
         }
-        if (canTurbo)
+        if (canRaveSteal && my_hp() > 100) // sometimes steals an item
         {
-            canTurbo = false;
-            return "skill Turbo";
+            if (!ravedSteal)
+            {
+                ravedSteal = true;
+                return "combo rave steal";
+            }
         }
             
         return "";
@@ -2172,18 +2171,9 @@
         return NonSpellWhileWearingBagOfTricks(); // finish them off with non-spell skills
     }
 
-    void TryActivateBagOTricks()
+    item[slot] GetModifiableOutfit(boolean forDrops)
     {
-        if (!HaveEquipment(bagOtricks))
-            return;
-        if (HaveBagOTricksBuff())
-            return;
-        if (AvailableSpellForBagOfTricks() == "")
-            return;
-        if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
-            return;
         InitOutfit();
-        item oldOffhand = offhand.equipped_item();
         item[slot] eqSet;
         if (covetous.have_effect() > 0)
         {
@@ -2195,6 +2185,21 @@
             foreach key, value in dropsOutfitPieces
                 eqSet[key] = value;
         }
+        return eqSet;
+    }
+
+    void TryActivateBagOTricks()
+    {
+        if (!HaveEquipment(bagOtricks))
+            return;
+        if (HaveBagOTricksBuff())
+            return;
+        if (AvailableSpellForBagOfTricks() == "")
+            return;
+        if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
+            return;
+        item[slot] eqSet = GetModifiableOutfit(covetous.have_effect() > 0);
+        item oldOffhand = offhand.equipped_item();
         eqSet[offhand] = bagOtricks;
         if (eqSet[weapon].weapon_hands() >= 2)
         {
@@ -2213,11 +2218,16 @@
             return false;
         if (my_fullness() != fullness_limit())
             return false;
+
+        item[slot] eqSet = GetModifiableOutfit(covetous.have_effect() > 0);
+        eqSet[pants] = pantsGiving;
         print("Trying to activate Pantsgiving to increase max fullness by 1", "orange");
-        pants.equip(pantsGiving);
         boolean first = true;
         while (get_property("_pantsgivingFullness").to_int() == 0)
         {
+            WearOutfit(eqSet);
+            if (!pantsGiving.have_equipped())
+                break;
             ChooseDropsFamiliar(false);
             if (first)
             {
@@ -2227,8 +2237,7 @@
             }
             else
             {
-                EquipDropsItems();
-                if (!RunFreeCombat())
+                if (!RunFreeCombat(eqSet))
                 {
                     abort("Failed to run free combat for Pantsgiving"); // todo: change this to a print once it's debugged
                     break;
@@ -2501,7 +2510,7 @@
     }
     void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem)
     {
-        UseItem(itm, resultingEffect, requestedTurns, turnsPerItem, 0);
+        UseItem(itm, resultingEffect, requestedTurns, turnsPerItem, 0); // price limit 0, don't ever buy on mall
     }
 
     int kgbManaBonus = 1; // -1 means hasn't been checked yet, should be 0 or -3
@@ -2701,7 +2710,7 @@
             if (get_property("currentMojoFilters").to_int() >= 3 || my_spleen_use() == 0)
                 return false;
 
-           BuyItemIfNeeded(mojoFilter, 1, 10000);
+           BuyItemIfNeeded(mojoFilter, 1, 6000);
            if (mojoFilter.item_amount() == 0)
                return false;
            use(1, mojoFilter);
@@ -2775,7 +2784,7 @@
             && get_property("_barrelPrayer") != "true"
             && RoomToDrink(10)) // if there's not enough liver left to benefit, wait for nightcap
         {
-            cli_execute("barrelprayer buff");
+            cli_execute("barrelprayer buff"); // bonus adventures from drinking
         }
         if (HaveEquipment(pinkyRing))
         {
@@ -3212,11 +3221,11 @@
 
         boolean doturbo = (!doduplicate || !dodigitize)
             && known.contains_text("turbo.edu")
-            && overheated.have_effect() <= 0
-            && (summonRes.have_skill() || my_mp() < 10)
-            && my_mp() < 300 // this will reduce by 50% afterwards, so don't use it unless we're way under capacity
-            && my_maxmp() > 4000 // don't use if max mp is too low
-            && (my_maxmp() / 2) > summonRes.mp_cost();
+            && overheated.have_effect() == 0
+            && (my_mp() + 1000) < (my_maxmp() / 2); // this will reduce by 50% afterwards, so don't use it unless we'll have capacity to keep the mana after
+
+        if (summonRes.have_skill()) // don't want to spoil max mana if summon resolution hasn't been cast yet
+            doturbo &= summonRes.mp_cost() < (my_maxmp() / 2) && summonRes.mp_cost() > 1000;
 
         boolean doextract = (!doduplicate && !dodigitize) || (!doduplicate && !doturbo) || (!dodigitize && !doturbo);
         CastEducate(doduplicate, dodigitize, doturbo, doextract);
@@ -3359,7 +3368,7 @@
             use(1, gameToken);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
-        UseItem(nasalSpray, wasabi, turns, 10);
+        UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
         if (summonRes.have_skill())
             UseItem(wealthy, resolve, turns, 20);
         else
@@ -3375,7 +3384,6 @@
         {
             CastSkill(leash, leashEffect, turns, 10);
             CastSkill(empathy, empathyEffect, turns, 35);
-            UseItem(petBuff, petBuffEffect, turns, 10);
             TrySpleen(joy, joyEffect, 1, 1);
 
             if ((get_campground() contains witchess)
@@ -3413,7 +3421,7 @@
             && my_class().to_string() == "Pastamancer"
             && get_property("_barrelPrayer") != "true")
         {
-            cli_execute("barrelprayer buff");
+            cli_execute("barrelprayer buff"); // bonus adventures from eating
         }
 
         SweetMeat(turns);
@@ -3499,6 +3507,12 @@
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
         TryBuffForFreeCombats(false);
         MaxManaSummons();
+
+        if (needWeightBuffs)
+        {
+            // this reduces all stats, so use after MaxManaSummons
+            UseItem(petBuff, petBuffEffect, turns, 10, 250);
+        }
     }
 
 
@@ -3774,6 +3788,10 @@
     boolean RunCopiedEmbezzler()
     {
         PrepareEmbezzler();
+
+        // any copying item that we're using up should be set to "need to use" to
+        // replenish the copy
+
         if (EmbezzlerPuttied())
         {
             print("using spooky putty embezzler", "orange");
@@ -3786,11 +3804,11 @@
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
-        else if (EmbezzlerPrintScreened())
+        else if (EmbezzlerPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
         {
             print("using print screen embezzler", "orange");
-            set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
 
+            set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
             needsPrintScreen = true;
             return ActivateCopyItem(usedPrintScreen);
         }
