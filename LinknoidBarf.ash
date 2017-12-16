@@ -229,10 +229,15 @@
 // Bjorn/crown familiars:
     item bjorn = ToItem("Buddy Bjorn");
     item crown = ToItem("Crown of Thrones");
-    familiar leprechaun = ToFamiliar("Leprechaun");
-    familiar hoboMonkey = ToFamiliar("Hobo Monkey");
-    familiar goldenMonkey = ToFamiliar("Golden Monkey");
-    familiar machineElf = ToFamiliar("Machine Elf");
+    familiar leprechaun = ToFamiliar("Leprechaun"); // 20% meat
+    familiar hoboMonkey = ToFamiliar("Hobo Monkey"); // 25% meat
+    familiar goldenMonkey = ToFamiliar("Golden Monkey"); // 25% meat
+    familiar happyMedium = ToFamiliar("Happy Medium"); // 25% meat
+    familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
+    familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
+    familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
+    familiar grue = ToFamiliar("Grue"); // +15% myst
+
 
 // familiar equipment
     item snowSuit = ToItem("Snow Suit"); // 20 pounds, but decreases over the day
@@ -342,6 +347,7 @@
     item dice = ToItem("Glenn's golden dice"); // once a day random buffs
     item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
     item gameToken = ToItem("defective Game Grid token"); // once a day activate for 5 turns of +5 everything
+    item chibi = ToItem("ChibiBuddy™ (on)"); // once a day activate for 5 turns of +5 familiar weight
     item mumming = ToItem("mumming trunk"); // cast +meat or +item on familiar
 
 // 2 day items for +meat bonus
@@ -403,6 +409,7 @@
     effect empathyEffect = ToEffect("Empathy");
     effect petBuffEffect = ToEffect("Heavy Petting");
     effect kinderEffect = ToEffect("Kindly Resolve");
+    effect chibiEffect = ToEffect("ChibiChanged™");
 
 // skills to activate Bag O' Tricks
     skill BoTspell0 = ToSkill("Stuffed Mortar Shell"); // this one is special because it has a one turn delay
@@ -623,6 +630,7 @@
     void MaxManaSummons();
     void ChooseEducate(boolean duplicate, boolean digitize);
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
+    void EquipBjornCrownFamiliars(familiar first, familiar second);
     void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops);
 
 
@@ -674,6 +682,14 @@
         string choice = page.substring(ix, ix + 2); // allow up to 99 options
         choice = choice.replace_string(">", "").replace_string("/", "").replace_string(" ", ""); // strip off extra invalid character
         return choice.to_int();
+    }
+    boolean PushChoiceAdventureButton(string page, string buttonText)
+    {
+        int ix = FindVariableChoice(page, buttonText, true);
+        if (ix < 0)
+            return false;
+        run_choice(ix);
+        return true;
     }
     boolean InList(string value, string list, string delimiter)
     {
@@ -1561,41 +1577,67 @@
        
         fam.use_familiar();
     }
-    familiar ChooseBjornCrownFamiliar(familiar currentChoice, familiar newOption)
+    record familiarPair
+    {
+        familiar first;
+        familiar second;
+    };
+    void EquipBjornCrownFamiliars(familiar first, familiar second)
+    {
+        if (bjorn.have_equipped() && first.to_string() != "none")
+        {
+            if (my_bjorned_familiar() != first)
+            {
+                first.bjornify_familiar();
+                first = second;
+            }
+        }
+        if (crown.have_equipped() && first.to_string() != "none")
+        {
+            if (my_enthroned_familiar() != first)
+                first.enthrone_familiar();
+        }
+    }
+    familiarPair ChooseBjornCrownFamiliar(familiarPair currentChoice, familiar newOption)
     {
         if (my_familiar() == newOption)
             return currentChoice;
         if (!newOption.have_familiar())
             return currentChoice;
-        return newOption;
+        familiarPair result;
+        result.first = newOption;
+        result.second = currentChoice.first;
+        return result;
+    }
+    familiarPair ChooseBjornCrownFamiliar(familiar[] choices)
+    {
+        familiarPair best;
+        foreach ix, fam in choices
+        {
+            best = ChooseBjornCrownFamiliar(best, fam);
+        }
+        return best;
     }
     void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops)
     {
         if (!bjorn.have_equipped() && !crown.have_equipped())
             return;
 
-        familiar choice;
+        familiarPair choice;
         choice = ChooseBjornCrownFamiliar(choice, leprechaun);
         choice = ChooseBjornCrownFamiliar(choice, obtuseAngel);
         if (!forEmbezzler) // can't choose one that does damage
             choice = ChooseBjornCrownFamiliar(choice, hoboMonkey);
         choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
+        choice = ChooseBjornCrownFamiliar(choice, happyMedium);
+        choice = ChooseBjornCrownFamiliar(choice, organGrinder);
         if (forDrops)
             choice = ChooseBjornCrownFamiliar(choice, machineElf);
         if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, orphan);
-// if robortender, maybe do weight buff instead
+// todo: if robortender, maybe do weight buff instead
 
-        if (bjorn.have_equipped())
-        {
-            if (my_bjorned_familiar() != choice)
-                choice.bjornify_familiar();
-        }
-        else if (crown.have_equipped())
-        {
-            if (my_enthroned_familiar() != choice)
-                choice.enthrone_familiar();
-        }
+        EquipBjornCrownFamiliars(choice.first, choice.second);
     }
     void ActivateMumming()
     {
@@ -3391,6 +3433,11 @@
             {
                 cli_execute("witchess");
             }
+            if (chibi.item_amount() > 0 && chibiEffect.have_effect() == 0)
+            {
+                string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5908");
+                PushChoiceAdventureButton(page, "Have a ChibiChat");
+            }
         }
 
         if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
@@ -4036,6 +4083,10 @@
             BurnManaAndRestores(20, true);
         }
         outfit(manaOutfit);
+        if (bjorn.have_equipped() || crown.have_equipped())
+        {
+            EquipBjornCrownFamiliars(mayoWasp, grue); // extra 15% mysticality
+        }
         RunLOVTunnel();
         int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 0 : 50;
         BurnManaAndRestores(keep, true);
