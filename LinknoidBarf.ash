@@ -55,6 +55,10 @@
     string manaOutfit = "Max MP";
     string dropsOutfit = "drops";
 
+// Change these values to put limits on how much of certain resources to keep back:
+    int saveSpleen = 15;
+    int saveStomach = 3;
+    int saveLiver = 0;
     int maxUsePrintScreens = 1;
     int maxUseEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
@@ -613,6 +617,14 @@
     boolean ravedSteal = false;
     boolean ravedConcentration = false;
 
+    int ghostShot = 0;
+    int stunRound = 0;
+    boolean cursed = false;
+    boolean extracted = false;
+    boolean bashed = false;
+    boolean bubbled = false;
+    boolean noodled = false;
+
     boolean outfitInitialized = false;
     item[slot] defaultOutfitPieces;
     item[slot] barfOutfitPieces;
@@ -637,15 +649,15 @@
 // general utility functions
     boolean RoomToEat(int size)
     {
-        return size <= fullness_limit() - my_fullness();
+        return size <= fullness_limit() - my_fullness() - saveStomach;
     }
     boolean RoomToDrink(int size)
     {
-        return size <= inebriety_limit() - my_inebriety();
+        return size <= inebriety_limit() - my_inebriety() - saveLiver;
     }
     boolean RoomToSpleen(int size)
     {
-        return size <= spleen_limit() - my_spleen_use();
+        return size <= spleen_limit() - my_spleen_use() - saveSpleen;
     }
     boolean UserConfirmDefault(string message, boolean defaultValue)
     {
@@ -876,6 +888,18 @@
             buy(buyCount, itm);
         }
     }
+    void ResetCombatState()
+    {
+        ravedNirvana = false;
+        ravedSteal = false;
+        ravedConcentration = false;
+        cursed = false;
+        extracted = false;
+        bashed = false;
+        bubbled = false;
+        noodled = false;
+        canPocketCrumb = HaveEquipment(pantsGiving);
+    }
     void DisableFreeKills()
     {
         // combat will be free anyway, so don't waste them on this combat
@@ -885,11 +909,6 @@
         canShatteringPunch = false;
         canMobHit = false;
         hasFreeKillRemaining = false;
-
-        needsCleesh = false;
-        ravedNirvana = false;
-        ravedConcentration = false;
-        canPocketCrumb = HaveEquipment(pantsGiving);
     }
 
     void CheckPostCombat(string pageResult, string combatFilter)
@@ -903,6 +922,7 @@
         if (attunement.have_effect() > 0 && pageResult.contains_text("fight.php")) // Eldritch attunement means an extra combat
         {
             DisableFreeKills();
+            ResetCombatState();
             visit_url("fight.php");
             run_combat(combatFilter);
         }
@@ -1185,9 +1205,7 @@
     void PrepareStandardFilter()
     {
         needsCleesh = false; // always reset this, don't want to cleesh on accident
-        ravedNirvana = false;
-        ravedSteal = false;
-        ravedConcentration = false;
+        ResetCombatState();
         if (!canPickpocket)
         {
             canPickpocket = my_class().to_string() == "Disco Bandit" || my_class().to_string() == "Accordion Thief";
@@ -1432,6 +1450,11 @@
         {
             needsMayfly = false;
             return "skill Summon Mayfly Swarm";
+        }
+        if (extractJelly.have_skill() && !extracted)
+        {
+            extracted = true;
+            return "skill " + extractJelly.to_string();
         }
         // rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
         // Only do combos when HP are over 100, don't want to get beat up
@@ -2289,15 +2312,8 @@
         return my_fullness() == fullness_limit() - 1;
     }
 
-    int ghostShot = 0;
-    int stunRound = 0;
     string Filter_TrapGhost(int round, monster mon, string page)
     {
-        static boolean cursed = false;
-        static boolean extracted = false;
-        static boolean bashed = false;
-        static boolean bubbled = false;
-        static boolean noodled = false;
         if (CanCast(curseOfIslands) && !cursed) // reduce chances of stun breaking early
         {
             cursed = true;
@@ -3331,7 +3347,7 @@
             && (PuttyCopiesRemaining() >= 5);
 
         AcquirePrintScreen();
-        if (my_fullness() < fullness_limit())
+        if (RoomToEat(2))
             AcquireFullFeast();
 
         if (runFamiliar == orphan)
