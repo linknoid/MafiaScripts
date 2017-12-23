@@ -56,12 +56,13 @@
     string dropsOutfit = "drops";
 
 // Change these values to put limits on how much of certain resources to keep back:
-    int saveSpleen = 15;
-    int saveStomach = 3;
+    int saveSpleen = 0;
+    int saveStomach = 0;
     int saveLiver = 0;
     int maxUsePrintScreens = 1;
     int maxUseEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
+    boolean abortOnBeatenUp = false;
 
 
     slot ToSlot(string s)
@@ -273,9 +274,12 @@
     location icyPeak = ToLocation("The Icy Peak");
     skill weakenGhost = ToSkill("Shoot Ghost");
     skill trapGhost = ToSkill("Trap Ghost");
+// survival
     skill curseOfIslands = ToSkill("Curse of the Thousand Islands");
     skill soulBubble = ToSkill("Soul Bubble");
     skill entanglingNoodles = ToSkill("Entangling Noodles");
+    skill curseOfWeaksauce = ToSkill("Curse of Weaksauce");
+    skill micrometeorite = ToSkill("Micrometeorite");
 
 
 // Skills and items for extending buffs
@@ -416,12 +420,12 @@
     effect chibiEffect = ToEffect("ChibiChanged™");
 
 // skills to activate Bag O' Tricks
-    skill BoTspell0 = ToSkill("Stuffed Mortar Shell"); // this one is special because it has a one turn delay
+    skill mortarShell = ToSkill("Stuffed Mortar Shell"); // this one is special because it has a one turn delay
     skill BoTspell1 = ToSkill("Spaghetti Spear"); // low damage
     skill BoTspell2 = ToSkill("Salsaball"); // low damage
-    skill BoTspell3 = ToSkill("Saucestorm"); // likely to have skill
+    skill sauceStorm = ToSkill("Saucestorm"); // likely to have skill
     skill BoTnonspell0 = ToSkill("Lunging Thrust-Smack");
-    skill BoTnonspell1 = ToSkill("Weapon of the Pastalord");
+    skill weaponPasta = ToSkill("Weapon of the Pastalord");
 
 // between turns skills
     skill summonRes = ToSkill("Summon Resolutions");
@@ -504,6 +508,7 @@
     skill winkAt = ToSkill("Wink at");
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
+    monster mimeExecutive = ToMonster("cheerless mime executive");
     monster tourist = ToMonster("garbage tourist");
     skill olfaction = ToSkill("Transcendent Olfaction");
     effect olfactionEffect = ToEffect("On the Trail");
@@ -605,6 +610,7 @@
     boolean canMobHit = false;
     boolean hasFreeKillRemaining = false;
     boolean needBagOTricks = false;
+    boolean canMortor = mortarShell.have_skill();
     int digitizeCounter = 0;
     int enamorangCounter = 0;
     int fortuneCookieCounter = 0;
@@ -620,6 +626,8 @@
     int ghostShot = 0;
     int stunRound = 0;
     boolean cursed = false;
+    boolean mortored = false;
+    boolean micrometeorited = false;
     boolean extracted = false;
     boolean bashed = false;
     boolean bubbled = false;
@@ -633,8 +641,8 @@
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
-    void PrepareFamiliar(boolean forEmbezzler);
-    void PrepareEmbezzler();
+    void PrepareFamiliar(boolean forMeaty);
+    void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
@@ -643,7 +651,7 @@
     void ChooseEducate(boolean duplicate, boolean digitize);
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
     void EquipBjornCrownFamiliars(familiar first, familiar second);
-    void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops);
+    void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops);
 
 
 // general utility functions
@@ -731,6 +739,13 @@
     {
         return LoadChoiceAdventure(loc.to_url().to_string(), loc.to_string(), optional);
     }
+    boolean CanCast(skill sk)
+    {
+        if (!sk.have_skill())
+            return false;
+        return sk.mp_cost() <= my_mp();
+    }
+
     boolean HaveEaten(item food)
     {
         string eatenList = get_property("_timeSpinnerFoodAvailable");
@@ -846,35 +861,42 @@
 
 // more specific helper functions
 
-    boolean EmbezzlerPrintScreened()
+    boolean MeatyPrintScreened()
     {
-        return get_property("screencappedMonster") == embezzler.to_string()
+        string capped = get_property("screencappedMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive)
             && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
-    boolean EmbezzlerCameraed()
+    boolean MeatyCameraed()
     {
-        return get_property("cameraMonster") == embezzler.to_string()
+        string capped = get_property("cameraMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive)
             && !get_property("_cameraUsed").to_boolean();
     }
-    boolean EmbezzlerRainDohed()
+    boolean MeatyRainDohed()
     {
-        return get_property("rainDohMonster") == embezzler.to_string();
+        string capped = get_property("rainDohMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive);
     }
-    boolean EmbezzlerPuttied()
+    boolean MeatyPuttied()
     {
-        return get_property("spookyPuttyMonster") == embezzler.to_string();
+        string capped = get_property("spookyPuttyMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive);
     }
-    boolean EmbezzlerEnamoranged()
+    boolean MeatyEnamoranged()
     {
-        return get_property("enamorangMonster") == embezzler.to_string();
+        string capped = get_property("enamorangMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive);
     }
-    boolean EmbezzlerDigitized()
+    boolean MeatyDigitized()
     {
-        return get_property("digitized") == embezzler.to_string();
+        string capped = get_property("digitized");
+        return (capped == embezzler.to_string() || capped == mimeExecutive);
     }
-    boolean EmbezzlerChateaud()
+    boolean MeatyChateaud()
     {
-        return get_property("chateauMonster") == embezzler.to_string()
+        string capped = get_property("chateauMonster");
+        return (capped == embezzler.to_string() || capped == mimeExecutive)
             && get_property("_chateauMonsterFought") == "false";
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
@@ -894,6 +916,7 @@
         ravedSteal = false;
         ravedConcentration = false;
         cursed = false;
+        micrometeorited = false;
         extracted = false;
         bashed = false;
         bubbled = false;
@@ -1100,18 +1123,20 @@
     }
     void HealUp()
     {
-        int freeRests = total_free_rests() - get_property("timesRested").to_int();
-        if (freeRests > 0)
-        {
-            if (get_campground() contains snowFort && snowFortified.have_effect() == 0)
-            {
-                if (HaveEquipment(pantsGiving)) // increases rest mana
-                    pants.equip(pantsGiving);
-                visit_url("campground.php?action=rest");
-            }
-        }
         if (beatenUp.have_effect() > 0)
         {
+            if (abortOnBeatenUp)
+                abort("Cannot continue because beaten up");
+            int freeRests = total_free_rests() - get_property("timesRested").to_int();
+            if (freeRests > 0)
+            {
+                if (get_campground() contains snowFort && snowFortified.have_effect() == 0)
+                {
+                    if (HaveEquipment(pantsGiving)) // increases rest mana
+                        pants.equip(pantsGiving);
+                    visit_url("campground.php?action=rest");
+                }
+            }
             if (walrus.have_skill() && my_mp() > 8)
             {
                 use_skill(1, walrus);
@@ -1322,8 +1347,12 @@
             return "skill Cleesh";
         }
 
-        if (mon == embezzler) // capture embezzler
+        if (mon == embezzler || mon == mimeExecutive) // capture meaty monster
         {
+            if (canPickpocket && can_still_steal() && mon == mimeExecutive) // embezzler not worth pickpocketing
+            {
+                return "\"pickpocket\"";
+            }
             if (needsRomanticArrow)
             {
                 needsRomanticArrow = false;
@@ -1441,6 +1470,19 @@
             canMobHit = false;
             return "skill " + gingerbreadMobHit.to_string();
         }
+        if (expected_damage() * 8 > my_hp())
+        {
+            if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+            {
+                cursed = true;
+                return "skill " + curseOfWeaksauce.to_string();
+            }
+            if (CanCast(micrometeorite) && !micrometeorited) // reduce damage taken
+            {
+                micrometeorited = true;
+                return "skill " + micrometeorite.to_string();
+            }
+        }
         if (canAccordionBash)
         {
             canAccordionBash = false;
@@ -1456,9 +1498,11 @@
             extracted = true;
             return "skill " + extractJelly.to_string();
         }
+        boolean CanCombo = my_hp() > 100
+            && (expected_damage() * 4 < my_hp()); // a combo will take 3 turns to execute, so make sure we can survive 4
+
         // rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
-        // Only do combos when HP are over 100, don't want to get beat up
-        if (canRaveNirvana && my_hp() > 100) // increase meat drops
+        if (canRaveNirvana && CanCombo) // increase meat drops
         {
             if (!ravedNirvana)
             {
@@ -1466,12 +1510,34 @@
                 return "combo rave nirvana";
             }
         }
+        if (mon == mimeExecutive // tough scaling monster, don't want to dink around while getting beat up
+            || round > 18) // maybe for a damage immune wandering monster?
+        {
+            if (canMortor && !mortored)
+            {
+                mortored = true;
+                return "skill " + mortarShell.to_string();
+            }
+            if (monster_hp() > 300)
+            {
+                if (CanCast(weaponPasta))
+                    return "skill " + weaponPasta;
+                // else punt to secondary script
+            }
+            else
+            {
+                if (CanCast(sauceStorm))
+                    return "skill " + sauceStorm;
+                else if (CanCast(weaponPasta))
+                    return "skill " + weaponPasta;
+            }
+        }
         if (canTurbo) // bonus meat drops are higher priority than mana regen, but other combos are lower
         {
             canTurbo = false;
             return "skill Turbo";
         }
-        if (canRaveConcentration && my_hp() > 100) // increase item drops
+        if (canRaveConcentration && CanCombo) // increase item drops
         {
             if (!ravedConcentration)
             {
@@ -1489,7 +1555,8 @@
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
         }
-        if (canRaveSteal && my_hp() > 100) // sometimes steals an item
+
+        if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
         {
             if (!ravedSteal)
             {
@@ -1519,18 +1586,18 @@
     }
 
 
-    boolean CopiedEmbezzlerAvailable()
+    boolean CopiedMeatyAvailable()
     {
         int count = 0;
-        if (EmbezzlerPrintScreened())
+        if (MeatyPrintScreened())
             return true;
-        if (EmbezzlerCameraed())
+        if (MeatyCameraed())
             return true;
-        if (EmbezzlerRainDohed())
+        if (MeatyRainDohed())
             return true;
-        if (EmbezzlerPuttied())
+        if (MeatyPuttied())
             return true;
-        if (EmbezzlerChateaud())
+        if (MeatyChateaud())
             return true;
         return false;
     }
@@ -1641,7 +1708,7 @@
         }
         return best;
     }
-    void ChooseBjornCrownFamiliars(boolean forEmbezzler, boolean forDrops)
+    void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops)
     {
         if (!bjorn.have_equipped() && !crown.have_equipped())
             return;
@@ -1649,7 +1716,7 @@
         familiarPair choice;
         choice = ChooseBjornCrownFamiliar(choice, leprechaun);
         choice = ChooseBjornCrownFamiliar(choice, obtuseAngel);
-        if (!forEmbezzler) // can't choose one that does damage
+        if (!forMeaty) // can't choose one that does damage
             choice = ChooseBjornCrownFamiliar(choice, hoboMonkey);
         choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
         choice = ChooseBjornCrownFamiliar(choice, happyMedium);
@@ -1683,11 +1750,11 @@
         }
     }
 
-    void PrepareFamiliar(boolean forEmbezzler)
+    void PrepareFamiliar(boolean forMeaty)
     {
         if (my_familiar() != runFamiliar)
             SwitchToFamiliar(runFamiliar);
-        ChooseBjornCrownFamiliars(forEmbezzler, false);
+        ChooseBjornCrownFamiliars(forMeaty, false);
         if (my_familiar() == orphan)
         {
             // counts as an 80+ pound leprechaun, but just chose some arbitrary number larger
@@ -1701,9 +1768,9 @@
 
         if (TryEquipFamiliarEquipment(petSweater, 10))
             return;
-        if (forEmbezzler && TryEquipFamiliarEquipment(sugarShield, 10))
+        if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
             return;
-        if (get_property("_mayflowerDrops").to_int() < 5 && !forEmbezzler && TryEquipFamiliarEquipment(mayflower, 6.1))
+        if (get_property("_mayflowerDrops").to_int() < 5 && !forMeaty && TryEquipFamiliarEquipment(mayflower, 6.1))
         {
             // mayflower drops take precedence over weight bonus unless embezzler
             return;
@@ -1800,7 +1867,7 @@
             use_skill(1, lasagnaThrallSkill);
         }
     }
-    void PrepareEmbezzler()
+    void PrepareMeaty()
     {
         WearOutfit(SwapOutSunglasses(defaultOutfitPieces));
         if (HaveEquipment(jokesterGun)
@@ -2187,31 +2254,24 @@
         ChooseBjornCrownFamiliars(false, true); // drops familiar
     }
 
-    boolean CanCast(skill sk)
-    {
-        if (!sk.have_skill())
-            return false;
-        return sk.mp_cost() <= my_mp();
-    }
-
     string AvailableSpellForBagOfTricks()
     {
-        if (CanCast(BoTspell0))
-            return "skill " + BoTspell0.to_string();
+        if (CanCast(mortarShell))
+            return "skill " + mortarShell.to_string();
         if (CanCast(BoTspell1))
             return "skill " + BoTspell1.to_string();
         if (CanCast(BoTspell2))
             return "skill " + BoTspell2.to_string();
-        if (CanCast(BoTspell3))
-            return "skill " + BoTspell3.to_string();
+        if (CanCast(sauceStorm))
+            return "skill " + sauceStorm.to_string();
         return "";
     }
     string NonSpellWhileWearingBagOfTricks()
     {
         if (CanCast(BoTnonspell0))
             return "skill " + BoTnonspell0.to_string();
-        if (CanCast(BoTnonspell1))
-            return "skill " + BoTnonspell1.to_string();
+        if (CanCast(weaponPasta))
+            return "skill " + weaponPasta.to_string();
         return "attack";
     }
     boolean HaveBagOTricksBuff()
@@ -3400,7 +3460,7 @@
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
                 TryBuffForFreeCombats(true);
-                if (covetous.have_effect() > 0 && CopiedEmbezzlerAvailable() && PuttyCopiesRemaining() > 8)
+                if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
                 {
                     // The test for this isn't a very accurate calculation, but it should get us in the
                     // ballpark of whether these wishes are worthwhile or not.
@@ -3788,7 +3848,7 @@
     }
     void SemiRareEmbezzler()
     {
-        PrepareEmbezzler();
+        PrepareMeaty();
         //treasury.adv1(-1, "Filter_Standard");
         visit_url("adventure.php?snarfblat=260"); // treasury
         RunCombat("Filter_Standard");
@@ -3836,7 +3896,7 @@
         RunCombat("Filter_Standard");
         return true;
     }
-    boolean EmbezzlerScheduled()
+    boolean MeatyScheduled()
     {
         if (my_turnCount() == digitizeCounter)
         {
@@ -3848,26 +3908,26 @@
         }
         return false;
     }
-    boolean RunCopiedEmbezzler()
+    boolean RunCopiedMeaty()
     {
-        PrepareEmbezzler();
+        PrepareMeaty();
 
         // any copying item that we're using up should be set to "need to use" to
         // replenish the copy
 
-        if (EmbezzlerPuttied())
+        if (MeatyPuttied())
         {
             print("using spooky putty embezzler", "orange");
             needsSpookyPutty = get_property("spookyPuttyCopiesMade").to_int() < 5;
             return ActivateCopyItem(usedSpookyPutty);
         }
-        else if (EmbezzlerRainDohed())
+        else if (MeatyRainDohed())
         {
             print("using rain doh embezzler", "orange");
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
-        else if (EmbezzlerPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
+        else if (MeatyPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
         {
             print("using print screen embezzler", "orange");
 
@@ -3875,13 +3935,13 @@
             needsPrintScreen = true;
             return ActivateCopyItem(usedPrintScreen);
         }
-        else if (EmbezzlerCameraed())
+        else if (MeatyCameraed())
         {
             print("using camera embezzler", "orange");
             needsCamera = true;
             return ActivateCopyItem(usedcamera);
         }
-        else if (EmbezzlerChateaud())
+        else if (MeatyChateaud())
         {
             print("using Chateau painting embezzler", "orange");
             visit_url("place.php?whichplace=chateau&action=chateau_painting");
@@ -3931,9 +3991,9 @@
 
     void RunBarfMountain(boolean requireOutfit)
     {
-        if (EmbezzlerScheduled())
+        if (MeatyScheduled())
         {
-            PrepareEmbezzler();
+            PrepareMeaty();
         }
         else
         {
@@ -3974,16 +4034,16 @@
         }
         else if (mon == LOVengineer)
         {
-            if (BoTnonspell1.have_skill() && my_mp() > BoTnonspell1.mp_cost())
-                return "skill " + BoTnonspell1.to_string();
+            if (weaponPasta.have_skill() && my_mp() > weaponPasta.mp_cost())
+                return "skill " + weaponPasta.to_string();
             if (CanMortar >= 2)
             {
                 CanMortar = 1;
-                return "skill " + BoTspell0.to_string();
+                return "skill " + mortarShell.to_string();
             }
      
-            if (BoTspell3.have_skill() && my_mp() > BoTspell3.mp_cost()) // saucestorm
-                return "skill " + BoTspell3.to_string();
+            if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
+                return "skill " + sauceStorm.to_string();
         }
         else // equivaocator
         {
@@ -3992,18 +4052,18 @@
             if (CanMortar >= 1)
             {
                 CanMortar = 0;
-                return "skill " + BoTspell0.to_string();
+                return "skill " + mortarShell.to_string();
             }
         }
         if (BoTnonspell0.have_skill() && my_mp() > BoTnonspell0.mp_cost())
             return "skill " + BoTnonspell0.to_string();
-        if (BoTspell3.have_skill() && my_mp() > BoTspell3.mp_cost()) // saucestorm
-            return "skill " + BoTspell3.to_string();
+        if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
+            return "skill " + sauceStorm.to_string();
         return "";
     }
     void PrepareFilterLOV()
     {
-        CanMortar = BoTspell0.have_skill() ? 3 : 0;
+        CanMortar = mortarShell.have_skill() ? 3 : 0;
     }
     
     void RunLOVTunnel()
@@ -4013,8 +4073,11 @@
     
         if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
             return;
-        
-        ChooseDropsFamiliar(false); // hmm tradeoff between familiar drops, familiar assist, or non-acting to get elixir...
+
+        if (jellyfish.have_familiar() && canPickpocket)
+            SwitchToFamiliar(jellyfish);
+        else
+            ChooseDropsFamiliar(false); // hmm tradeoff between familiar drops, familiar assist, or non-acting to get elixir...
         print("Running LOV tunnel");
         PrepareFilterLOV();
         HealUp();
@@ -4028,17 +4091,17 @@
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1223&option=1"); // Fight LOV Enforcer
         RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gear", false);
-        run_choice(3); // LOV Earrings
+        run_choice(3); // LOV Earrings, +50% meat
     
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1225&option=1"); // Fight LOV Engineer
         RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV buff", false);
-        run_choice(2); // open heart surgery
+        run_choice(2); // open heart surgery, +10 pet weight
     
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1227&option=1"); // Fight LOV Equivocator
         RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gift", false);
-        run_choice(1); // LOV Enamorang
+        run_choice(1); // LOV Enamorang, copy monster
     }
     void MaxManaSummons()
     {
@@ -4073,11 +4136,11 @@
 
         if (muscle.my_basestat() > mysticality.my_basestat())
         {
-            BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 2000);
+            BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 5000);
         }
         else if (moxie.my_basestat() > mysticality.my_basestat())
         {
-            BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 2000);
+            BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 5000);
         }
         BuyAndUseOneTotal(hawkings, hawkingsEffect, 1000);
         BuyAndUseOneTotal(occult, occultEffect, 400);
@@ -4197,11 +4260,11 @@
                     continue;
                 }
             }
-            if (CopiedEmbezzlerAvailable())
+            if (CopiedMeatyAvailable())
             {
                 print("Running copied embezzler");
                 PrepareFamiliar(true);
-                if (RunCopiedEmbezzler())
+                if (RunCopiedMeaty())
                     continue;
             }
             PrepareFamiliar(false);
