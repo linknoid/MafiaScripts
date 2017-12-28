@@ -197,14 +197,7 @@
     item egg3 = ToItem("black striped oyster egg");
     item mojoFilter = ToItem("mojo filter");
 // Sweet Synthesis
-    item ww = ToItem("bag of W&Ws");
     item milkStud = ToItem("Milk Studs");
-    item dweebs = ToItem("Dweebs");
-    item crimboFudge = ToItem("Crimbo Fudge");
-    item crimboPecan = ToItem("Crimbo Candied Pecan");
-    item breathMint = ToItem("breath mint");
-    item peez = ToItem("Peez dispenser");
-    item candyWad = ToItem("hoarded candy wad");
     item seniorMint = ToItem("Senior Mints");
     item daffyTaffy = ToItem("Daffy Taffy");
     item swizzler = ToItem("Swizzler");
@@ -251,6 +244,7 @@
     item cufflinks = ToItem("recovered cufflinks"); // 6 pounds, requires 400 pound jellyfish
     item hookah = ToItem("ittah bittah hookah"); // 5 pounds, provides buffs
     item mayflower = ToItem("Mayflower bouquet"); // 5 pounds, provides drops
+    item moveableFeast = ToItem("moveable feast"); // 5 pounds, provides drops
     item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
     item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
     item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
@@ -454,6 +448,8 @@
     item circleDrum = ToItem("Circle Drum");
     effect circleDrumEffect = ToEffect("Feelin' the Rhythm");
     item sugarShorts = ToItem("sugar shorts");
+    skill quietJudgement = ToSkill("Quiet Judgement");
+    effect quietJudgementEffect = ToEffect("Quiet Judgement");
 
 
 // locations for adventuring
@@ -958,6 +954,11 @@
     void RunAdventure(location loc, string filter)
     {
         string page = visit_url(loc.to_url().to_string());
+        if (page.contains_text("choice.php") && page.contains_text("value=\"Tame it!\""))
+        {
+            run_choice(1); // tame the turtle
+            return;
+        }
         string combatResult = run_combat(filter);
         CheckPostCombat(combatResult, filter);
     }
@@ -1470,13 +1471,13 @@
             canMobHit = false;
             return "skill " + gingerbreadMobHit.to_string();
         }
+        if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+        {
+            cursed = true;
+            return "skill " + curseOfWeaksauce.to_string();
+        }
         if (expected_damage() * 8 > my_hp())
         {
-            if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
-            {
-                cursed = true;
-                return "skill " + curseOfWeaksauce.to_string();
-            }
             if (CanCast(micrometeorite) && !micrometeorited) // reduce damage taken
             {
                 micrometeorited = true;
@@ -1761,6 +1762,17 @@
             // than the 20 pound max of snow suit
             TryEquipFamiliarEquipment(pirateCostume, 80);
             return;
+        }
+        if (forMeaty)
+        {
+            // should use this during the most valuable times, when we're fighting a 1000 or 1500 base
+            // monster, since it only last 20 combats, not 20 adventures
+            if (moveableFeast.item_amount() > 0
+                && get_property("_feastUsed").to_int() < 5
+                && !get_property("_feastFamiliars").contains_text(runFamiliar.to_string()))
+            {
+                use(1, moveableFeast);
+            }
         }
 
         if (HaveEquipment(snowSuit))
@@ -3059,11 +3071,13 @@
     {
         foreach candy1, count1 in candies1
         {
-            if (count1 < 2)
+            if (count1 < 1)
                 continue;
             foreach candy2, count2 in candies2
             {
-                if (count2 < 2)
+                if (count2 < 1)
+                    continue;
+                if (candy1 == candy2 && count2 < 2)
                     continue;
                 meatBuffCandy1 = candy1;
                 meatBuffCandy2 = candy2;
@@ -3071,53 +3085,120 @@
             }
         }
     }
+
+    // convert strings to the corresponding item and count in inventory
+    int[item] ToItemAndCount(string[] items)
+    {
+        int[item] result;
+        foreach ix,s in items
+        {
+            item i = ToItem(s);
+            result[i] = i.item_amount();
+        }
+        return result;
+    }
     
     void SweetMeat(int requestedTurns)
     {
         if (!sweetSynth.have_skill())
             return;
 
+        if (synthGreed.have_effect() >= requestedTurns)
+            return;
+
+        print("Doing sweet synthesis for +300% meat", "orange");
+
         // Since this is used for farming, don't want to waste irreplacible candy (even if it's
         // temporarily cheaper).  Only use stuff which is relatively easy to replace.
 
+        string[] temp;
+
         // pair 1: w&w/crimbo candied pecan/breath mint with itself
-        int[item] pair1_1 =
+        temp =
         {
-            ww : ww.item_amount(), // trick or treat
-            crimboPecan : crimboPecan.item_amount(), // summon crimbo candy
-            breathMint : breathMint.item_amount(), // glass gnoll eye once a day
+            "bag of W&Ws", // trick or treat
+            "Crimbo Candied Pecan", // summon crimbo candy
+            "breath mint", // glass gnoll eye once a day
+            "Now and Earlier",
+            "abandoned candy",
+            "Wax Flask",
+            "piece of after eight",
+            "licorice root",
+            "garbage-juice flavored Hob-O",
+            "Necbro wafers",
+            "sugar shank",
         };
+        int[item] candy1_1 = ToItemAndCount(temp);
 
         // pair 2: dweebs or crimbo fudge with peez or hoarded candy wad
-        int[item] pair2_1 = 
+        temp =
         {
-            dweebs : dweebs.item_amount(), // trick or treat
-            crimboFudge : crimboFudge.item_amount(), // summon crimbo candy
-        };
-        int[item] pair2_2 = 
-        {
-            peez : peez.item_amount(), // trick or treat
-            candyWad : candyWad.item_amount(), // from buddy bjorn + orphan tot
+            "Dweebs", // trick or treat
+            "Crimbo Fudge", // summon crimbo candy
+            "sugar-coated pine cone",
+            "PlexiPips",
+            "sugar shillelagh",
+            "licorice boa",
+            "double-ice gum",
+            "fry-oil-flavored Hob-O",
+            "Good 'n' Slimy",
+            "black candy heart",
+            "fruitfilm",
+            "fudge spork",
+            "peanut brittle shield",
+            "irradiated candy cane",
+            "bag of many confections",
         };
 
+        int[item] candy2_1 = ToItemAndCount(temp);
+        temp =
+        {
+            "Peez dispenser", // trick or treat
+            "hoarded candy wad", // from buddy bjorn + orphan tot
+            "Atomic Pop",
+            "Pain Dip",
+            "Gummi-DNA",
+            "spooky sap",
+            "nanite-infested candy cane",
+            "sugar chapeau",
+            "dubious peppermint",
+            "sugar shirt",
+            "strawberry-flavored Hob-O",
+        };
+        int[item] candy2_2 = ToItemAndCount(temp); 
+
         // pair 3: milk studs with swizzler
-        int[item] pair3_1 = 
+        temp =
         {
-            milkStud : milkStud.item_amount(), // trick or treat
+            milkStud.to_string(), // trick or treat
+            "frostbite-flavored Hob-O",
+            "Nuclear Blastball",
+            "ribbon candy",
+            "children of the candy corn",
+            "elderly jawbreaker",
+           
         };
-        int[item] pair3_2 = 
+        int[item] candy3_1 = ToItemAndCount(temp);
+        temp =
         {
-            // swizzler needs to be stored in closet so it doesn't get used automatically
-            swizzler : (swizzler.closet_amount() + swizzler.item_amount()), // trick-or-treat
+            swizzler.to_string(),
+            //"nasty gum", // does this drop from robortender?  Maybe I just bought a bunch on the market
+            "Comet Drop",
+            "sterno-flavored Hob-O",
+            "Fudgie Roll",
         };
+        int[item] candy3_2 = ToItemAndCount(temp);
+        candy3_2[swizzler] += swizzler.closet_amount();
+        
 
         while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
         {
+            print("Calculating candies...", "orange");
             meatBuffCandy1 = "none".to_item();
             meatBuffCandy2 = "none".to_item();
-            ChooseSweetMeat(pair3_1, pair3_2);
-            ChooseSweetMeat(pair2_1, pair2_2);
-            ChooseSweetMeat(pair1_1, pair1_1);
+            ChooseSweetMeat(candy3_1, candy3_2);
+            ChooseSweetMeat(candy2_1, candy2_2);
+            ChooseSweetMeat(candy1_1, candy1_1);
             if (meatBuffCandy1.to_string() == "none" || meatBuffCandy2.to_string() == "none")
             {
                 print("Out of candy for sweet synthesis, skipping", "orange");
@@ -3127,6 +3208,7 @@
             {
                 take_closet(swizzler.closet_amount(), swizzler);
             }
+            print("Sweet synthesis candies = " + meatBuffCandy1 + ", " + meatBuffCandy2, "orange");
 
             while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
             {
@@ -3134,7 +3216,19 @@
                     break;
                 if (meatBuffCandy2.item_amount() == 0)
                     break;
+                if (meatBuffCandy1 == meatBuffCandy2 && meatBuffCandy2.item_amount() < 2)
+                    break;
                 sweet_synthesis(meatBuffCandy1, meatBuffCandy2);
+                candy1_1[meatBuffCandy1]--;
+                candy1_1[meatBuffCandy2]--;
+                candy2_1[meatBuffCandy1]--;
+                candy2_1[meatBuffCandy2]--;
+                candy2_2[meatBuffCandy1]--;
+                candy2_2[meatBuffCandy2]--;
+                candy3_1[meatBuffCandy1]--;
+                candy3_1[meatBuffCandy2]--;
+                candy3_2[meatBuffCandy1]--;
+                candy3_2[meatBuffCandy2]--;
             }
         }
         if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
@@ -3369,7 +3463,7 @@
         expectedMeatPerAdventure *= meatmodifier;
         expectedMeatPerAdventure -= 400; // subtract 400 for potential cost to get the adventure, particularly bricko and lynyrd
         float expectedMeat = freeCombats * expectedMeatPerAdventure;
-        print("Expected meat from free combats = " + expectedMeat);
+        print("Expected meat from free combats = " + expectedMeat, "orange");
         if (expectedMeat > 55000) // will buy wishes up to 55000 meat
         {
             print("Buffing specifically for free combats, expect payback of approximately "
@@ -3494,7 +3588,8 @@
         if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
             UseOneTotal(begpwnia, begpwniaEffect);
         UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
-        CastSkill(leer, leering, turns, 10);
+        if (!quietJudgement.have_skill())
+            CastSkill(leer, leering, turns, 10);
         CastSkill(polka, polkad, turns, 25);
         RentAHorse();
 
@@ -3630,6 +3725,8 @@
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
         TryBuffForFreeCombats(false);
         MaxManaSummons();
+        // switching from Quiet Judgement +MP to Disco Leer +meat
+        CastSkill(leer, leering, turns, 10);
 
         if (needWeightBuffs)
         {
@@ -4111,6 +4208,9 @@
             return;
         if (!UserConfirmDefault("Do you wish to maximize mana to summon as many resolutions as possible?", true))
             return;
+        int minKeep = 50;
+        if (leer.have_skill() && quietJudgement.have_skill())
+            minKeep = 400; // estimate 1 MP per turn
         BurnManaAndRestores(0, true);
 
         // increase max mana before doing the 100% restores
@@ -4142,6 +4242,10 @@
         {
             BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 5000);
         }
+        if (quietJudgementEffect.have_effect() == 0 && quietJudgement.have_skill())
+        {
+            use_skill(1, quietJudgement);
+        }
         BuyAndUseOneTotal(hawkings, hawkingsEffect, 1000);
         BuyAndUseOneTotal(occult, occultEffect, 400);
         BuyAndUseOneTotal(tomatoJuice, tomatoJuiceEffect, 400);
@@ -4167,15 +4271,15 @@
             EquipBjornCrownFamiliars(mayoWasp, grue); // extra 15% mysticality
         }
         RunLOVTunnel();
-        int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 0 : 50;
+        int keep = (licenseChill.item_amount() > 0 && get_property("_licenseToChillUsed") == "false") ? 0 : minKeep;
         BurnManaAndRestores(keep, true);
         if (keep == 0)
             use(1, licenseChill);
-        keep = (yexpressCard.item_amount() > 0 && get_property("expressCardUsed") == "false") ? 0 : 50;
+        keep = (yexpressCard.item_amount() > 0 && get_property("expressCardUsed") == "false") ? 0 : minKeep;
         BurnManaAndRestores(keep, true);
         if (keep == 0)
             use(1, yexpressCard);
-        keep = 20;
+        keep = minKeep;
         if (clarasBell.item_amount() > 0 && get_property("_claraBellUsed") == "false"
             && HaveEquipment(hoboBinder))
         {
