@@ -418,7 +418,7 @@
     skill BoTspell1 = ToSkill("Spaghetti Spear"); // low damage
     skill BoTspell2 = ToSkill("Salsaball"); // low damage
     skill sauceStorm = ToSkill("Saucestorm"); // likely to have skill
-    skill BoTnonspell0 = ToSkill("Lunging Thrust-Smack");
+    skill thrustSmack = ToSkill("Lunging Thrust-Smack");
     skill weaponPasta = ToSkill("Weapon of the Pastalord");
 
 // between turns skills
@@ -566,6 +566,12 @@
     monster bowler = ToMonster("pygmy bowler");
     monster janitor = ToMonster("pygmy janitor");
     monster orderlies = ToMonster("pygmy orderlies");
+// seal clubber supplies
+    item bludgeon = ToItem("Brimstone Bludgeon");
+    item tenderizer = ToItem("Meat Tenderizer is Murder");
+    item club = ToItem("seal-clubbing club");
+    item sealFigurine = ToItem("figurine of a wretched-looking seal");
+    item sealCandle = ToItem("seal-blubber candle");
 
 // banish skills and items
     skill snokebomb = ToSkill("Snokebomb");
@@ -639,6 +645,7 @@
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
+    void InitOutfit();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
@@ -1188,6 +1195,22 @@
         }
         return true;
     }
+    item[slot] GetModifiableOutfit(boolean forDrops)
+    {
+        InitOutfit();
+        item[slot] eqSet;
+        if (covetous.have_effect() > 0)
+        {
+            foreach key, value in defaultOutfitPieces
+                eqSet[key] = value;
+        }
+        else
+        {
+            foreach key, value in dropsOutfitPieces
+                eqSet[key] = value;
+        }
+        return eqSet;
+    }
 
     void RemoveConfusionEffects(item i, boolean firstCheck)
     {
@@ -1567,6 +1590,16 @@
         }
             
         return "";
+    }
+
+    string Filter_Seal(int round, monster mon, string page)
+    {
+        if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+        {
+            cursed = true;
+            return "skill " + curseOfWeaksauce.to_string();
+        }
+        return "skill " + thrustSmack.to_string();
     }
 
     int PuttyCopiesRemaining()
@@ -1983,6 +2016,24 @@
         }
         return false;
     }
+    boolean TryFightSeal(string filter)
+    {
+        if (sealFigurine.item_amount() == 0)
+            buy(10, sealFigurine);
+        if (sealCandle.item_amount() == 0)
+            buy(10, sealCandle);
+        string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=3&whichitem=" + sealFigurine.to_int()); // use(1, sealFigurine);
+        if (page.contains_text("Begin the Ritual"))
+        {
+            page = visit_url("inv_use.php?pwd=" + my_hash() + "&whichitem=" + sealFigurine.to_int() + "&checked=1");
+            if (page.contains_text("You light the candle"))
+            {
+                RunCombat(filter);
+                return true;
+            }
+        }
+        return false;
+    }
     boolean TryRunMachineTunnels(string filter)
     {
 // todo
@@ -2047,6 +2098,7 @@
         ChooseThrall(true);
         RemoveConfusionEffects(false);
         HealUp();
+        ResetCombatState();
     }
     void PrepareFreeCombat(item[slot] selectedOutfit)
     {
@@ -2098,6 +2150,11 @@
         if (can_still_steal())
         {
             return "\"pickpocket\"";
+        }
+        if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+        {
+            cursed = true;
+            return "skill " + curseOfWeaksauce.to_string();
         }
         if (!abstractioned)
         {
@@ -2210,6 +2267,33 @@
         }
         // todo:
 // infernal seals
+        if (my_class().to_string() == "Seal Clubber")
+        {
+            int sealsRemaining = 5 - get_property("_sealsSummoned").to_int();
+            if (uraniumSeal.item_amount() > 0)
+                sealsRemaining += 5;
+            if (sealsRemaining > 0)
+            {
+                if (selectedOutfit[weapon].item_type() != "club")
+                {
+                    if (HaveEquipment(tenderizer))
+                        selectedOutfit[weapon] = tenderizer;
+                    else if (HaveEquipment(bludgeon))
+                        selectedOutfit[weapon] = bludgeon;
+                    else if (HaveEquipment(club))
+                        selectedOutfit[weapon] = club;
+                }
+                print("Trying to equip club for seal fight: " + selectedOutfit[weapon], "orange");
+
+                PrepareFreeCombat(selectedOutfit);
+                if (weapon.equipped_item().item_type() == "club")
+                {
+                    return TryFightSeal("Filter_Seal");
+                }
+                else
+                    print("Cannot fight seal because no club found, wearing " + weapon.equipped_item().to_string(), "orange");
+            }
+        }
         return false;
     }
     boolean RunFreeCombat(item[slot] selectedOutfit)
@@ -2219,7 +2303,7 @@
     }
     boolean RunFreeCombat()
     {
-        return RunFreeCombat(defaultOutfitPieces);
+        return RunFreeCombat(GetModifiableOutfit(true));
     }
 
     void FreeCombatsForProfit()
@@ -2280,8 +2364,8 @@
     }
     string NonSpellWhileWearingBagOfTricks()
     {
-        if (CanCast(BoTnonspell0))
-            return "skill " + BoTnonspell0.to_string();
+        if (CanCast(thrustSmack))
+            return "skill " + thrustSmack.to_string();
         if (CanCast(weaponPasta))
             return "skill " + weaponPasta.to_string();
         return "attack";
@@ -2308,22 +2392,6 @@
         return NonSpellWhileWearingBagOfTricks(); // finish them off with non-spell skills
     }
 
-    item[slot] GetModifiableOutfit(boolean forDrops)
-    {
-        InitOutfit();
-        item[slot] eqSet;
-        if (covetous.have_effect() > 0)
-        {
-            foreach key, value in defaultOutfitPieces
-                eqSet[key] = value;
-        }
-        else
-        {
-            foreach key, value in dropsOutfitPieces
-                eqSet[key] = value;
-        }
-        return eqSet;
-    }
 
     void TryActivateBagOTricks()
     {
@@ -3588,8 +3656,7 @@
         if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
             UseOneTotal(begpwnia, begpwniaEffect);
         UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
-        if (!quietJudgement.have_skill())
-            CastSkill(leer, leering, turns, 10);
+        CastSkill(leer, leering, quietJudgement.have_skill() ? 1 : turns, 10);
         CastSkill(polka, polkad, turns, 25);
         RentAHorse();
 
@@ -4152,8 +4219,8 @@
                 return "skill " + mortarShell.to_string();
             }
         }
-        if (BoTnonspell0.have_skill() && my_mp() > BoTnonspell0.mp_cost())
-            return "skill " + BoTnonspell0.to_string();
+        if (thrustSmack.have_skill() && my_mp() > thrustSmack.mp_cost())
+            return "skill " + thrustSmack.to_string();
         if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
             return "skill " + sauceStorm.to_string();
         return "";
@@ -4210,7 +4277,7 @@
             return;
         int minKeep = 50;
         if (leer.have_skill() && quietJudgement.have_skill())
-            minKeep = 400; // estimate 1 MP per turn
+            minKeep = 400; // estimate 1 MP per turn to cast leer after
         BurnManaAndRestores(0, true);
 
         // increase max mana before doing the 100% restores
