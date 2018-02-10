@@ -35,8 +35,6 @@
 
 // track candle/scroll drops from intergnat
 
-// don't re-cast max mana if cost per libram cast is over 1000 mana
-
 // print screen buttons seem broken currently
 
 
@@ -51,9 +49,12 @@
 // LINKNOIDBARF.ASH
 
 
+    boolean autoConfirmBarf = false;
     string defaultOutfit = "barf";
     string manaOutfit = "Max MP";
     string dropsOutfit = "drops";
+
+    string printColor = "orange";
 
 // Change these values to put limits on how much of certain resources to keep back:
     int saveSpleen = 0;
@@ -63,6 +64,50 @@
     int maxUseEnamorangs = 1;
     boolean allowExpensiveBuffs = true;
     boolean abortOnBeatenUp = false;
+    boolean preferCalcUniversePvP = false;
+
+void WriteSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    map["autoConfirmBarf"] = autoConfirmBarf.to_string();
+    map["defaultOutfit"] = defaultOutfit;
+    map["manaOutfit"] = manaOutfit;
+    map["dropsOutfit"] = dropsOutfit;
+    map["printColor"] = printColor;
+    map["saveSpleen"] = saveSpleen.to_string();
+    map["saveStomach"] = saveStomach.to_string();
+    map["saveLiver"] = saveLiver.to_string();
+    map["maxUsePrintScreens"] = maxUsePrintScreens.to_string();
+    map["maxUseEnamorangs"] = maxUseEnamorangs.to_string();
+    map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
+    map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
+    map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
+    map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
+}
+void ReadSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    foreach key,value in map
+    {
+        switch (key)
+        {
+            case "autoConfirmBarf": autoConfirmBarf = value == "true"; break;
+            case "defaultOutfit": defaultOutfit = value; break;
+            case "manaOutfit": manaOutfit = value; break;
+            case "dropsOutfit": dropsOutfit = value; break;
+            case "saveSpleen": saveSpleen = value.to_int(); break;
+            case "saveStomach": saveStomach = value.to_int(); break;
+            case "saveLiver": saveLiver = value.to_int(); break;
+            case "maxUsePrintScreens": maxUsePrintScreens = value.to_int(); break;
+            case "maxUseEnamorangs": maxUseEnamorangs = value.to_int(); break;
+            case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
+            case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
+            case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
+        }
+    }
+}
 
 
     slot ToSlot(string s)
@@ -158,6 +203,8 @@
     item asdonMartin = ToItem("Asdon Martin keyfob");
     effect observantly = ToEffect("Driving Observantly");
     item pieFuel = ToItem("pie man was not meant to eat");
+    item water = to_item("soda water"); // food for adsonMartin
+    item dough = to_item("wad of dough"); // food for adsonMartin
     item breadFuel = ToItem("loaf of soda bread");
     item sphygmayo = ToItem("sphygmayomanometer");
 
@@ -215,6 +262,7 @@
     item roboHobo = ToItem("Newark");
 
 // other familiars of interest
+    familiar sandworm = ToFamiliar("Baby Sandworm");
     familiar fistTurkey = ToFamiliar("Fist Turkey");
     familiar intergnat = ToFamiliar("Intergnat");
     familiar jellyfish = ToFamiliar("Space Jellyfish");
@@ -233,6 +281,7 @@
     familiar happyMedium = ToFamiliar("Happy Medium"); // 25% meat
     familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
     familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
+    familiar garbageFire = ToFamiliar("Garbage Fire"); // drops abstractions
     familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
     familiar grue = ToFamiliar("Grue"); // +15% myst
 
@@ -298,6 +347,7 @@
     skill extractJelly = ToSkill("Extract Jelly");
     skill extract = ToSkill("Extract");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
+    item bittyMeat = ToItem("BittyCar MeatCar");
 
 // monster level so it can survive longer
     skill annoyingNoise = ToSkill("Drescher's Annoying Noise");
@@ -313,8 +363,9 @@
     item smokebomb = ToItem("fish-oil smoke bomb"); // quest item receive 3 from each fisherman's sack, use 'em or lose 'em on ascending
 
 
-// Skills for consumption
+// Skills for more turns
     skill odeToBooze = ToSkill("The Ode to Booze");
+    skill calcUniverse = ToSkill("Calculate the Universe");
 
 // skills for +meat bonus
     skill leer = ToSkill("Disco Leer");
@@ -332,11 +383,14 @@
     item joy = ToItem("abstraction: joy");
 
 // items for +meat bonus
+    item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
+    item poolTable = ToItem("Clan Pool Table");
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
-    item deck = ToItem("Deck of Every Card"); // required for knife if part of outfit
+    item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
+    item rope = ToItem("rope"); // from deck of every card
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
@@ -349,7 +403,8 @@
     item dice = ToItem("Glenn's golden dice"); // once a day random buffs
     item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
     item gameToken = ToItem("defective Game Grid token"); // once a day activate for 5 turns of +5 everything
-    item chibi = ToItem("ChibiBuddy™ (on)"); // once a day activate for 5 turns of +5 familiar weight
+    item chibiOff = ToItem("ChibiBuddy™ (off)"); // once a day activate for 5 turns of +5 familiar weight
+    item chibiOn = ToItem("ChibiBuddy™ (on)"); // once a day activate for 5 turns of +5 familiar weight
     item mumming = ToItem("mumming trunk"); // cast +meat or +item on familiar
 
 // 2 day items for +meat bonus
@@ -400,6 +455,7 @@
     effect peppermintEffect = ToEffect("Peppermint Twisted");
     effect sugarEffect = ToEffect("So You Can Work More...");
     effect cranberryCordialEffect = ToEffect("Cranberry Cordiality");
+    effect poolEffect = ToEffect("Billiards Belligerence");
     effect kgbMeat = ToEffect("A View to Some Meat");
     effect kgbItems = ToEffect("Items Are Forever");
     effect bagOTricksEffect1 = ToEffect("Badger Underfoot");
@@ -423,6 +479,7 @@
 
 // between turns skills
     skill summonRes = ToSkill("Summon Resolutions");
+    skill summonTaffy = ToSkill("Summon Taffy");
     skill soulFood = ToSkill("Soul Food");
 // mana cost reduction
     item oscusWeapon = ToItem("Wand of Oscus");
@@ -471,6 +528,7 @@
     item licenseChill = ToItem("License to Chill"); // mana restore
     item yexpressCard = ToItem("Platinum Yendorian Express Card"); // mana restore
     item oscusSoda = ToItem("Oscus's neverending soda");
+    item aprilShower = ToItem("Clan Shower");
     item eternalBattery = ToItem("Eternal Car Battery");
     skill discoNap = ToSkill("Disco Nap");
     skill leisure = ToSkill("Adventurer of Leisure");
@@ -504,7 +562,7 @@
     skill winkAt = ToSkill("Wink at");
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
-    monster mimeExecutive = ToMonster("cheerless mime executive");
+    monster mimeExecutive = ToMonster("cheerless mime executive"); // this was 1500, now it's 500
     monster tourist = ToMonster("garbage tourist");
     skill olfaction = ToSkill("Transcendent Olfaction");
     effect olfactionEffect = ToEffect("On the Trail");
@@ -624,6 +682,7 @@
     boolean ravedNirvana = false;
     boolean ravedSteal = false;
     boolean ravedConcentration = false;
+    skill summonCurrent = summonRes;
 
     int ghostShot = 0;
     int stunRound = 0;
@@ -655,6 +714,8 @@
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
     void EquipBjornCrownFamiliars(familiar first, familiar second);
     void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops);
+    void ActivateChibiBuddy();
+    void ActivateFortuneTeller();
 
 
 // general utility functions
@@ -672,7 +733,7 @@
     }
     boolean UserConfirmDefault(string message, boolean defaultValue)
     {
-        if (get_property("LinknoidBarf.AutoConfirm") == "true")
+        if (autoConfirmBarf)
             return defaultValue;
         return user_confirm(message);
     }
@@ -832,6 +893,13 @@
         {
             cli_execute("cheat knife");
         }
+        if (!HaveEquipment(rope)
+            && OutfitContains(outfitDef, rope)
+            && deck.item_amount() > 0
+            && get_property("_deckCardsDrawn").to_int() <= 10)
+        {
+            cli_execute("cheat rope");
+        }
     }
     void WearOutfit(item[slot] outfitDef)
     {
@@ -864,42 +932,48 @@
 
 // more specific helper functions
 
+    boolean IsMeatyMonster(string monsterName)
+    {
+        return monsterName == embezzler.to_string();
+            //|| monsterName == mimeExecutive.to_string();
+    }
+
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive)
+        return IsMeatyMonster(capped)
             && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
     boolean MeatyCameraed()
     {
         string capped = get_property("cameraMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive)
+        return IsMeatyMonster(capped)
             && !get_property("_cameraUsed").to_boolean();
     }
     boolean MeatyRainDohed()
     {
         string capped = get_property("rainDohMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive);
+        return IsMeatyMonster(capped);
     }
     boolean MeatyPuttied()
     {
         string capped = get_property("spookyPuttyMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive);
+        return IsMeatyMonster(capped);
     }
     boolean MeatyEnamoranged()
     {
         string capped = get_property("enamorangMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive);
+        return IsMeatyMonster(capped);
     }
     boolean MeatyDigitized()
     {
         string capped = get_property("digitized");
-        return (capped == embezzler.to_string() || capped == mimeExecutive);
+        return IsMeatyMonster(capped);
     }
     boolean MeatyChateaud()
     {
         string capped = get_property("chateauMonster");
-        return (capped == embezzler.to_string() || capped == mimeExecutive)
+        return IsMeatyMonster(capped)
             && get_property("_chateauMonsterFought") == "false";
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
@@ -974,15 +1048,26 @@
     {
         return distention.item_amount() > 0 && !get_property("_distentionPillUsed").to_boolean();
     }
+    void ChooseSummonType()
+    {
+        if (summonTaffy.have_skill() && get_property("_taffyYellowSummons").to_int() == 0)
+        {
+            summonCurrent = summonTaffy;
+        }
+        else if (summonRes.have_skill())
+        {
+            summonCurrent = summonRes;
+        }
+    }
     void BurnManaSummoning(int keepMana)
     {
-        if (!summonRes.have_skill())
+        if (!summonCurrent.have_skill())
             return;
         while (true)
         {
             int availableMana = my_mp() - keepMana;
             int castCount = 0;
-            int baseManaCost = summonRes.mp_cost();
+            int baseManaCost = summonCurrent.mp_cost();
             //if (keepMana == 0)
             //{
             //    // if not saving any mana back, we don't have to take into account the growing costs, the
@@ -1019,8 +1104,9 @@
             }
             if (castCount == 0)
                 break;
-            print( "casting summon resolutions " + castCount + " times", "orange" );
-            use_skill(castCount, summonRes);
+            print( "casting " + summonCurrent + " " + castCount + " times", printColor );
+            use_skill(castCount, summonCurrent);
+            ChooseSummonType();
         }
     }
     void BurnManaSummoning()
@@ -1041,7 +1127,7 @@
     {
         if (maxRestore + my_mp() > my_maxmp())
             return false;
-        if (minRestore + soulsauceManaAvailable + my_mp() < summonRes.mp_cost() + keep)
+        if (minRestore + soulsauceManaAvailable + my_mp() < summonCurrent.mp_cost() + keep)
             return false;
         return true;
     }
@@ -1061,6 +1147,11 @@
         if (restoreLimit >= 1000 && get_property("sidequestNunsCompleted") == "fratboy" && get_property("nunsVisits").to_int() < 3)
         {
             cli_execute("nuns");
+            return true;
+        }
+        if (restoreLimit >= 1000 && get_property("_aprilShower") != true && vipKey.item_amount() > 0 && get_clan_lounge() contains aprilShower)
+        {
+            cli_execute("shower hot");
             return true;
         }
         if (soulFood.have_skill() && restoreLimit >= 15 && my_soulsauce() >= 5)
@@ -1097,7 +1188,7 @@
     }
     void BurnManaAndRestores(int keepMana, boolean burnDailyRestores)
     {
-        if (!summonRes.have_skill())
+        if (!summonCurrent.have_skill())
             return;
         BurnManaSummoning(keepMana);
         boolean changed = true;
@@ -1107,7 +1198,7 @@
 
             int soulsauceBonus = my_soulsauce() / 5;
             soulsauceBonus *= 3;
-            int cost = summonRes.mp_cost() + keepMana;
+            int cost = summonCurrent.mp_cost() + keepMana;
             if (ShouldSummonRestore(keepMana, soulsauceBonus, 200, 300) && get_property("oscusSodaUsed") == "false" && oscusSoda.item_amount() > 0)
             {
                 use(1, oscusSoda);
@@ -1176,6 +1267,20 @@
     {
         return GetFamiliarRunaways() + smokebomb.item_amount() + fishermansack.item_amount() * 3;
     }
+    int BakeBread(int fuelRequired) // returns number of breads to reach that much fuel
+    {
+        int totalBread = (fuelRequired + 4) / 5; // this number might be an overshoot
+        int bakeBread = totalBread - breadFuel.item_amount();
+        if (bakeBread > 0)
+        {
+            if (dough.item_amount() < bakeBread)
+                buy(bakeBread - dough.item_amount(), dough);
+            if (water.item_amount() < bakeBread)
+                buy(bakeBread - water.item_amount(), water);
+            craft("cook", bakeBread, dough, water);
+        }
+        return totalBread;
+    }
     boolean FuelAsdon(int requestedFuel)
     {
         if (!(get_campground() contains asdonMartin))
@@ -1185,8 +1290,11 @@
         {
             if (pieFuel.item_amount() > 0)
                 cli_execute("asdonmartin fuel 1 " + pieFuel.to_string());
-            else if (breadFuel.item_amount() > 0)
-                cli_execute("asdonmartin fuel 1 " + breadFuel.to_string());
+            else
+            {
+                int breadCount = BakeBread(requestedFuel - hadFuel);
+                cli_execute("asdonmartin fuel " + breadCount + " " + breadFuel.to_string());
+            }
             if (get_fuel() == hadFuel)
             {
                 abort("Asdon Martin is out of gas, please refuel manually, or acquire pies or bake soda bread before resuming.");
@@ -1363,7 +1471,7 @@
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
-            print("using Filter_Standard", "orange");
+            print("using Filter_Standard", printColor);
 
         if (needsCleesh)
         {
@@ -1371,7 +1479,7 @@
             return "skill Cleesh";
         }
 
-        if (mon == embezzler || mon == mimeExecutive) // capture meaty monster
+        if (IsMeatyMonster(mon)) // capture meaty monster
         {
             if (canPickpocket && can_still_steal() && mon == mimeExecutive) // embezzler not worth pickpocketing
             {
@@ -1468,6 +1576,8 @@
         {
             return "skill " + olfaction.to_string();
         }
+if (false) // TODO: free kills are now worthless for farming, don't waste them here
+{
         if (canMissileLauncher && shouldMissileLauncher)
         {
             // if "shouldMissileLauncher" is true, takes precedence over jokester's gun
@@ -1494,6 +1604,7 @@
             canMobHit = false;
             return "skill " + gingerbreadMobHit.to_string();
         }
+}
         if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
         {
             cursed = true;
@@ -1755,10 +1866,12 @@
         choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
         choice = ChooseBjornCrownFamiliar(choice, happyMedium);
         choice = ChooseBjornCrownFamiliar(choice, organGrinder);
-        if (forDrops)
+        if (forDrops && get_property("_abstractionDropsCrown").to_int() < 20)
             choice = ChooseBjornCrownFamiliar(choice, machineElf);
         if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, orphan);
+        if (forDrops && get_property("_garbageFireDropsCrown").to_int() < 3)
+            choice = ChooseBjornCrownFamiliar(choice, garbageFire);
 // todo: if robortender, maybe do weight buff instead
 
         EquipBjornCrownFamiliars(choice.first, choice.second);
@@ -1887,7 +2000,7 @@
         {
             if (scratchUPC.item_amount() < 3)
             {
-                print("Buying 3 scratch and sniff stickers", "orange");
+                print("Buying 3 scratch and sniff stickers", printColor);
                 buy(3 - scratchUPC.item_amount(), scratchUPC);
             }
             if (scratchUPC.item_amount() >= 3)
@@ -2008,7 +2121,7 @@
         {
             if (get_property("snojoSetting") == "NONE")
             {
-                print("Cannot run snojo because it hasn't been configured yet", "orange");
+                print("Cannot run snojo because it hasn't been configured yet", printColor);
                 return false;
             }
             RunAdventure(snojo, filter);
@@ -2283,7 +2396,7 @@
                     else if (HaveEquipment(club))
                         selectedOutfit[weapon] = club;
                 }
-                print("Trying to equip club for seal fight: " + selectedOutfit[weapon], "orange");
+                print("Trying to equip club for seal fight: " + selectedOutfit[weapon], printColor);
 
                 PrepareFreeCombat(selectedOutfit);
                 if (weapon.equipped_item().item_type() == "club")
@@ -2291,7 +2404,7 @@
                     return TryFightSeal("Filter_Seal");
                 }
                 else
-                    print("Cannot fight seal because no club found, wearing " + weapon.equipped_item().to_string(), "orange");
+                    print("Cannot fight seal because no club found, wearing " + weapon.equipped_item().to_string(), printColor);
             }
         }
         return false;
@@ -2426,7 +2539,7 @@
 
         item[slot] eqSet = GetModifiableOutfit(covetous.have_effect() > 0);
         eqSet[pants] = pantsGiving;
-        print("Trying to activate Pantsgiving to increase max fullness by 1", "orange");
+        print("Trying to activate Pantsgiving to increase max fullness by 1", printColor);
         boolean first = true;
         while (get_property("_pantsgivingFullness").to_int() == 0)
         {
@@ -2515,6 +2628,11 @@
     }
     void ChooseDropsFamiliar(boolean isElemental)
     {
+        if (sandworm.have_familiar() && get_property("_aguaDrops").to_int() < 5)
+        {
+            SwitchToFamiliar(sandworm); // drops agua de vida
+            return;
+        }
         if (fistTurkey.have_familiar() && get_property("_turkeyBooze").to_int() < 5)
         {
             SwitchToFamiliar(fistTurkey); // drops booze
@@ -2733,7 +2851,7 @@
                 kgbManaBonus = -3;
             else
                 kgbManaBonus = 0;
-            print("kgb mana cost modifier = " + kgbManaBonus, "orange");
+            print("kgb mana cost modifier = " + kgbManaBonus, printColor);
         }
         if (kgbManaBonus == -3)
         {
@@ -2781,7 +2899,7 @@
             int afterTurns = resultingEffect.have_effect();
             if (beforeTurns == afterTurns)
             {
-                print("Casting " + sk + " failed, skipping", "orange");
+                print("Casting " + sk + " failed, skipping", printColor);
                 break;
             }
         }
@@ -2951,7 +3069,7 @@
                 CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25);
             else
             {
-                print("Requesting Ode to Booze buff from Buffy the buff bot", "orange");
+                print("Requesting Ode to Booze buff from Buffy the buff bot", printColor);
                 cli_execute("/msg buffy ode");
                 for (int i = 0; i < 5; i++)
                 {
@@ -2959,7 +3077,7 @@
                     refresh_status();
                     if (odeToBoozeEffect.have_effect() >= providedDrunk)
                     {
-                        print("Got ode to booze from buffy, sending 2000 meat as thanks", "orange");
+                        print("Got ode to booze from buffy, sending 2000 meat as thanks", printColor);
                         cli_execute("csend 2000 meat to buffy");
                         break;
                     }
@@ -3095,7 +3213,7 @@
     }
     boolean TryBonusThanksgetting()
     {
-        print("Attempting bonus eating, fullness at " + my_fullness() + " / " + fullness_limit(), "orange");
+        print("Attempting bonus eating, fullness at " + my_fullness() + " / " + fullness_limit(), printColor);
         if (!RoomToEat(2))
         {
             return false;
@@ -3174,7 +3292,7 @@
         if (synthGreed.have_effect() >= requestedTurns)
             return;
 
-        print("Doing sweet synthesis for +300% meat", "orange");
+        print("Doing sweet synthesis for +300% meat", printColor);
 
         // Since this is used for farming, don't want to waste irreplacible candy (even if it's
         // temporarily cheaper).  Only use stuff which is relatively easy to replace.
@@ -3261,7 +3379,7 @@
 
         while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
         {
-            print("Calculating candies...", "orange");
+            print("Calculating candies...", printColor);
             meatBuffCandy1 = "none".to_item();
             meatBuffCandy2 = "none".to_item();
             ChooseSweetMeat(candy3_1, candy3_2);
@@ -3269,14 +3387,14 @@
             ChooseSweetMeat(candy1_1, candy1_1);
             if (meatBuffCandy1.to_string() == "none" || meatBuffCandy2.to_string() == "none")
             {
-                print("Out of candy for sweet synthesis, skipping", "orange");
+                print("Out of candy for sweet synthesis, skipping", printColor);
                 break;
             }
             if (meatBuffCandy1 == swizzler || meatBuffCandy2 == swizzler)
             {
                 take_closet(swizzler.closet_amount(), swizzler);
             }
-            print("Sweet synthesis candies = " + meatBuffCandy1 + ", " + meatBuffCandy2, "orange");
+            print("Sweet synthesis candies = " + meatBuffCandy1 + ", " + meatBuffCandy2, printColor);
 
             while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
             {
@@ -3386,7 +3504,7 @@
         while (effectTurns < turns)
         {
             FuelAsdon(37);
-            print("Trying to drive observantly, fuel = " + get_fuel().to_string() + ", existing turns = " + observantly.have_effect(), "orange");
+            print("Trying to drive observantly, fuel = " + get_fuel().to_string() + ", existing turns = " + observantly.have_effect(), printColor);
             cli_execute("asdonmartin drive observantly");
             //visit_url("campground.php?pwd="+my_hash()+"&preaction=drive&whichdrive=7");  // apparently this works even while already driving
 
@@ -3504,8 +3622,8 @@
             && overheated.have_effect() == 0
             && (my_mp() + 1000) < (my_maxmp() / 2); // this will reduce by 50% afterwards, so don't use it unless we'll have capacity to keep the mana after
 
-        if (summonRes.have_skill()) // don't want to spoil max mana if summon resolution hasn't been cast yet
-            doturbo &= summonRes.mp_cost() < (my_maxmp() / 2) && summonRes.mp_cost() > 1000;
+        if (summonCurrent.have_skill()) // don't want to spoil max mana if summon resolution hasn't been cast yet
+            doturbo &= summonCurrent.mp_cost() < (my_maxmp() / 2) && summonCurrent.mp_cost() > 1000;
 
         boolean doextract = (!doduplicate && !dodigitize) || (!doduplicate && !doturbo) || (!dodigitize && !doturbo);
         CastEducate(doduplicate, dodigitize, doturbo, doextract);
@@ -3531,11 +3649,11 @@
         expectedMeatPerAdventure *= meatmodifier;
         expectedMeatPerAdventure -= 400; // subtract 400 for potential cost to get the adventure, particularly bricko and lynyrd
         float expectedMeat = freeCombats * expectedMeatPerAdventure;
-        print("Expected meat from free combats = " + expectedMeat, "orange");
+        print("Expected meat from free combats = " + expectedMeat, printColor);
         if (expectedMeat > 55000) // will buy wishes up to 55000 meat
         {
             print("Buffing specifically for free combats, expect payback of approximately "
-                + freeCombats * expectedMeatPerAdventure, "orange");
+                + freeCombats * expectedMeatPerAdventure, printColor);
 
             WishForEffect(covetous); // this effect makes the lowest base meat drop = 100
 
@@ -3567,6 +3685,9 @@
             nightBefore
             && allowExpensiveBuffs
             && (PuttyCopiesRemaining() >= 5);
+
+        if (bittyMeat.item_amount() > 0 && get_property("_bittycar") != "meatcar")
+            use(1, bittyMeat);
 
         AcquirePrintScreen();
         if (RoomToEat(2))
@@ -3621,7 +3742,7 @@
                 {
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
-                TryBuffForFreeCombats(true);
+                //TryBuffForFreeCombats(true);
                 if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
                 {
                     // The test for this isn't a very accurate calculation, but it should get us in the
@@ -3666,17 +3787,22 @@
             CastSkill(empathy, empathyEffect, turns, 35);
             TrySpleen(joy, joyEffect, 1, 1);
 
+            if (vipKey.item_amount() > 0 && get_clan_lounge() contains poolTable)
+            {
+                while (get_property("_poolGames").to_int() < 3 && poolEffect.have_effect() < turns)
+                {
+                    cli_execute("pool aggressive");
+                }
+            }
+
             if ((get_campground() contains witchess)
                  && !get_property("_witchessBuff").to_boolean())
             {
                 cli_execute("witchess");
             }
-            if (chibi.item_amount() > 0 && chibiEffect.have_effect() == 0)
-            {
-                string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5908");
-                PushChoiceAdventureButton(page, "Have a ChibiChat");
-            }
+            ActivateChibiBuddy();
         }
+        ActivateFortuneTeller();
 
         if (get_property("_sourceTerminalEnhanceUses").to_int() < 3)
             AdventureEffect(meatEnh, meatEnhanced, turns);
@@ -3939,10 +4065,11 @@
             run_choice(2); // buy chocolate sculpture
         else
         {
-            print("Out of sprinkles, taking a drink instead of chocolate sculpture.", "orange");
+            print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
             run_choice(1); // take a free drink
         }
     }
+
 
     void SemiRareCastle()
     {
@@ -4055,7 +4182,7 @@
 
     boolean ActivateCopyItem(item copyItem)
     {
-        print("Trying to activate " + copyItem.to_string() + " for embezzler", "orange");
+        print("Trying to activate " + copyItem.to_string() + " for embezzler", printColor);
         visit_url("inv_use.php?whichitem=" + copyItem.to_int());
         RunCombat("Filter_Standard");
         return true;
@@ -4081,19 +4208,19 @@
 
         if (MeatyPuttied())
         {
-            print("using spooky putty embezzler", "orange");
+            print("using spooky putty embezzler", printColor);
             needsSpookyPutty = get_property("spookyPuttyCopiesMade").to_int() < 5;
             return ActivateCopyItem(usedSpookyPutty);
         }
         else if (MeatyRainDohed())
         {
-            print("using rain doh embezzler", "orange");
+            print("using rain doh embezzler", printColor);
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
         else if (MeatyPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
         {
-            print("using print screen embezzler", "orange");
+            print("using print screen embezzler", printColor);
 
             set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
             needsPrintScreen = true;
@@ -4101,19 +4228,92 @@
         }
         else if (MeatyCameraed())
         {
-            print("using camera embezzler", "orange");
+            print("using camera embezzler", printColor);
             needsCamera = true;
             return ActivateCopyItem(usedcamera);
         }
         else if (MeatyChateaud())
         {
-            print("using Chateau painting embezzler", "orange");
+            print("using Chateau painting embezzler", printColor);
             visit_url("place.php?whichplace=chateau&action=chateau_painting");
             RunCombat("Filter_Standard");
             return true;
         }
-        print("no embezzler found", "orange");
+        print("no embezzler found", printColor);
         return false;
+    }
+
+    int moonSignInt = -1;
+    boolean universesLeft = true;
+    void TryCalculateUniverse()
+    {
+        if (!universesLeft || my_mp() < 1)
+            return;
+        if (moonSignInt < 0)
+        {
+            switch (my_sign()) // cache this value, it won't change while script is running
+            {
+                case "Mongoose": moonSignInt = 1; break;
+                case "Wallaby": moonSignInt = 2; break;
+                case "Vole": moonSignInt = 3; break;
+                case "Platypus": moonSignInt = 4; break;
+                case "Opossum": moonSignInt = 5; break;
+                case "Marmot": moonSignInt = 6; break;
+                case "Wombat": moonSignInt = 7; break;
+                case "Blender": moonSignInt = 8; break;
+                case "Packrat": moonSignInt = 9; break;
+                case "Bad Moon": moonSignInt = 10; break;
+                default: moonSignInt = 0; break;
+            }
+        }
+        universesLeft = get_property("_universeCalculated").to_int() < get_property("skillLevel144").to_int();
+        int desiredNumber;
+        if (hippy_stone_broken() && preferCalcUniversePvP)
+            desiredNumber = 37;
+        else
+            desiredNumber = 69;
+
+        int multiplier = my_spleen_use() + my_level();
+        int sum = (moonSignInt + my_ascensions()) * multiplier + my_adventures();
+        // solve for x: ( x * multiplier = desiredNumber - sum ) modulo 100
+
+        int targetNum = (desiredNumber - sum + 100000000) % 100; // try to make sure it's positive before remainder
+        for (int i = 0; i < 100; i++)
+        {
+            if ((i * multiplier) % 100 == targetNum)
+            {
+                print("Calculate the universe " + i, printColor);
+                cli_execute("numberology " + desiredNumber);
+                return;
+            }
+        }
+    }
+
+    void ActivateChibiBuddy()
+    {
+        if (chibiOff.item_amount() > 0)
+        {
+            //use(1, chibiOff);
+            visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5925");
+            visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=633&name=ChibiBuffMaker");
+        }
+        if (chibiOn.item_amount() > 0 && chibiEffect.have_effect() == 0)
+        {
+            string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5908");
+            PushChoiceAdventureButton(page, "Have a ChibiChat");
+        }
+    }
+    void ActivateFortuneTeller()
+    {
+        // todo: this can probably be simplified later once Mafia has full support
+
+        if (vipKey.item_amount() <= 0)
+            return;
+
+        string page = visit_url("clan_viplounge.php?preaction=lovetester");
+        if (!page.contains_text("Pick a Testee"))
+            return;
+        page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1278&option=1&which=-3&q1=Pizza&q2=MadameZatara&q3=Hello");
     }
 
     boolean needsLube = false;
@@ -4169,14 +4369,14 @@
         {
             if (needsLube)
             {
-                print("Skipping adventure to equip lube-shoes and come back in.", "orange");
+                print("Skipping adventure to equip lube-shoes and come back in.", printColor);
                 run_choice(6);  // skip and come back later
                 if (!lubeShoes.have_equipped())
                     acc3.equip(lubeShoes);
                 needsLube = false;
                 LoadChoiceAdventure(barfMountain, false);
                 run_choice(1);  // ride the rollercoaster
-                print("Lubed the tracks, now turning in adventure", "orange");
+                print("Lubed the tracks, now turning in adventure", printColor);
                 if (LoadChoiceAdventure(kioskUrl, "Employee Assignment Kiosk", false))
                     run_choice(3); // turn in the quest
             }
@@ -4232,7 +4432,7 @@
     
     void RunLOVTunnel()
     {
-        if (!summonRes.have_skill())
+        if (!summonCurrent.have_skill())
             return;
     
         if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
@@ -4269,9 +4469,9 @@
     }
     void MaxManaSummons()
     {
-        if (!summonRes.have_skill())
+        if (!summonCurrent.have_skill())
             return;
-        if (summonRes.mp_cost() > 1000) // already cast many times previously, don't want to re-buff here
+        if (summonCurrent.mp_cost() > 1000) // already cast many times previously, don't want to re-buff here
             return;
         if (!UserConfirmDefault("Do you wish to maximize mana to summon as many resolutions as possible?", true))
             return;
@@ -4396,12 +4596,13 @@
     {
         if (turnCount != 0)
         {
-            FreeCombatsForProfit();
+            //FreeCombatsForProfit();
             RunawayGingerbread();
         }
         for (int i = 0; i < turnCount || (turnCount < 0); i++)
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
+            TryCalculateUniverse();
             BurnManaAndRestores(20, false);
           
             PrepareStandardFilter();
@@ -4462,7 +4663,7 @@
 
         if (familiarName != "none" && !fam.have_familiar())
             abort("Cannot run, do not own familiar " + fam);
-        print("Running with familiar " + fam, "orange");
+        print("Running with familiar " + fam, printColor);
         runFamiliar = fam;
     }
 
@@ -4491,6 +4692,9 @@
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
+        ReadSettings();
+        WriteSettings(); // in case there are new properties
+        ChooseSummonType();
         SetRunFamiliar(familiarName, buffTurns);
 
         RemoveConfusionEffects(true);
