@@ -15,7 +15,7 @@
 // 1 hell in a bucket @2400                               =     2,400
 // 1 jumping horseradish @3333                            =     3,333
 // 1 Newark @4000                                         =     4,000
-// 2 Milk Studs @640                                      =      1280
+// 2 Milk Studs @640                                      =     1,280
 // 3 pie man was not meant to eat @2500                   =     7,500
 // 10 resolution: be wealthier @1300                      =    13,000
 // 1 senior mints @100                                    =       100
@@ -31,13 +31,15 @@
 
 // TODO:
 
-// free fight "Evoke Eldritch Horror" and tentacle for science
 // duplicate witchess knight
 
 // track candle/scroll drops from intergnat
 
 // consider other sweet synthesis combos besides W&Ws
 // don't re-cast max mana if cost per libram cast is over 1000 mana
+
+// genie wish for:  Covetous Robbery, Eldritch Attunement, frosty
+// run free combats: witchess, snojo, bricko ooze, lynyrd snare, machine elf, drunk pygmy (with bowls of scorpions, double banish), eldritch tentacles, LOV tunnel, infernal seals (if seal clubber)
 
 // auto-craft 
 
@@ -515,8 +517,37 @@
     item papier2 = ToItem("Papier-mâchuridars"); // inserts random words into sentences
     item papier3 = ToItem("papier-masque"); // inserts random words into sentences
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
-    effect attunement = ToEffect("Eldritch Attunement"); // take an extra combat after free combat
 
+// free combats
+    item genie = ToItem("genie bottle");
+    item wish = ToItem("pocket wish");
+    effect covetous = ToEffect("Covetous Robbery"); // raises base meat drop on stingy monsters
+    effect attunement = ToEffect("Eldritch Attunement"); // take an extra combat after free combat
+    effect frosty = ToEffect("frosty"); // +200% meat, +100% item drop
+    skill evokeHorror = ToSkill("Evoke Eldritch Horror"); // fight an eldritch horror
+    item uraniumSeal = ToItem("depleted uranium seal figurine"); // 5 extra seal fights
+    item lynyrdSnare = ToItem("lynyrd snare"); // 3 free fights a day
+    item scorpions = ToItem("Bowl of Scorpions"); // 11 free fights a day
+    item brickoOoze = ToItem("BRICKO ooze"); // 10 free fights a day
+    item brickoBrick = ToItem("BRICKO brick"); // to make oozes from
+    item brickoEye = ToItem("BRICKO eye brick"); // also required to make oozes
+    location machineTunnels = ToLocation("The Deep Machine Tunnels"); // needs machine elf
+    monster machineTriangle = ToMonster("Perceiver of Sensations");
+    monster machineCircle = ToMonster("Thinker of Thoughts");
+    monster machineSquare = ToMonster("Performer of Actions");
+    item abstrThought = ToItem("abstraction: thought");
+    item abstrAction = ToItem("abstraction: action");
+    item abstrSensation = ToItem("abstraction: sensation");
+    location bowlingAlley = ToLocation("The Hidden Bowling Alley");
+    item bowlingBall = ToItem("bowling ball");
+    monster bowler = ToMonster("pygmy bowler");
+    monster janitor = ToMonster("pygmy janitor");
+    monster orderlies = ToMonster("pygmy orderlies");
+
+// banish skills and items
+    skill snokebomb = ToSkill("Snokebomb");
+    item louderThanBomb = ToItem("Louder Than Bomb");
+    item tennisBall = ToItem("tennis ball");
 
 // script state variables
     familiar runFamiliar;
@@ -563,6 +594,10 @@
     boolean ravedNirvana = false;
     boolean ravedSteal = false;
     boolean ravedConcentration = false;
+
+    boolean outfitInitialized = false;
+    item[slot] defaultOutfitPieces;
+    item[slot] barfOutfitPieces;
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -720,6 +755,32 @@
         return get_property("chateauMonster") == embezzler.to_string()
             && get_property("_chateauMonsterFought") == "false";
     }
+    void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
+    {
+        int mallPrice = itm.mall_price();
+        if (mallPrice <= maxPrice && (itm.item_amount() < numberRequested || mallPrice < 500))
+        {
+            int buyCount = numberRequested;
+            if (buyCount < 1)
+                buyCount = 1;
+            buy(buyCount, itm);
+        }
+    }
+    void DisableFreeKills()
+    {
+        // combat will be free anyway, so don't waste them on this combat
+        canJokesterGun = false;
+        canBatoomerang = false;
+        canMissileLauncher = false;
+        canShatteringPunch = false;
+        canMobHit = false;
+        hasFreeKillRemaining = false;
+
+        needsCleesh = false;
+        ravedNirvana = false;
+        ravedConcentration = false;
+        canPocketCrumb = HaveEquipment(pantsGiving);
+    }
 
     void CheckPostCombat(string pageResult, string combatFilter)
     {
@@ -731,11 +792,7 @@
         //}
         if (attunement.have_effect() > 0 && pageResult.contains_text("fight.php")) // Eldritch attunement means an extra combat
         {
-            canJokesterGun = false;
-            canBatoomerang = false;
-            canMissileLauncher = false;
-            canShatteringPunch = false;
-            canMobHit = false;
+            DisableFreeKills();
             visit_url("fight.php");
             run_combat(combatFilter);
         }
@@ -747,8 +804,9 @@
     }
     void RunAdventure(location loc, string filter)
     {
-        string page = visit_url(barfMountain.to_url().to_string());
-        RunCombat(filter);
+        string page = visit_url(loc.to_url().to_string());
+        string combatResult = run_combat(filter);
+        CheckPostCombat(combatResult, filter);
     }
 
     boolean CanDistention()
@@ -1296,6 +1354,41 @@
     }
 
 
+    void InitOutfit()
+    {
+        if (outfitInitialized)
+            return;
+        outfitInitialized = true;
+        foreach ix, it in outfit_pieces(defaultOutfit)
+        {
+            slot s = it.to_slot();
+            if (s == acc1 || s == acc2 || s == acc3)
+            {
+                if (defaultOutfitPieces[acc1].to_string() == "none")
+                    defaultOutfitPieces[acc1] = it;
+                else if (defaultOutfitPieces[acc2].to_string() == "none")
+                    defaultOutfitPieces[acc2] = it;
+                else if (defaultOutfitPieces[acc3].to_string() == "none")
+                    defaultOutfitPieces[acc3] = it;
+                else
+                    abort("Not enough slots for accessory " + it);
+            }
+            else
+                defaultOutfitPieces[s] = it;
+        }
+    }
+
+    void CheatKnifeIfNeeded()
+    {
+        if (OutfitContains(defaultOutfit, knife)
+            && !HaveEquipment(knife)
+            && deck.item_amount() > 0
+            && get_property("_deckCardsDrawn").to_int() <= 10)
+        {
+            cli_execute("cheat knife");
+        }
+    }
+
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus)
     {
         // snowsuit weight drops over time, once it gets too low, swap it out
@@ -1529,32 +1622,6 @@
         RemoveConfusionEffects(false);
     }
 
-    boolean outfitInitialized = false;
-    item[slot] defaultOutfitPieces;
-    item[slot] currentOutfitPieces;
-    void InitOutfit()
-    {
-        if (outfitInitialized)
-            return;
-        outfitInitialized = true;
-        foreach ix, it in outfit_pieces(defaultOutfit)
-        {
-            slot s = it.to_slot();
-            if (s == acc1 || s == acc2 || s == acc3)
-            {
-                if (defaultOutfitPieces[acc1].to_string() == "none")
-                    defaultOutfitPieces[acc1] = it;
-                else if (defaultOutfitPieces[acc2].to_string() == "none")
-                    defaultOutfitPieces[acc2] = it;
-                else if (defaultOutfitPieces[acc3].to_string() == "none")
-                    defaultOutfitPieces[acc3] = it;
-                else
-                    abort("Not enough slots for accessory " + it);
-            }
-            else
-                defaultOutfitPieces[s] = it;
-        }
-    }
 
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -1563,7 +1630,7 @@
         boolean protonEq = false;
         foreach s, i in defaultOutfitPieces
         {
-            currentOutfitPieces[s] = i;
+            barfOutfitPieces[s] = i;
             if (i == mayfly)
                 mayflyEq = true;
             if (i == protonPack)
@@ -1573,7 +1640,7 @@
         if (!hasFreeKillRemaining && HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
         {
             if (!mayflyEq)
-                currentOutfitPieces[acc1] = mayfly;
+                barfOutfitPieces[acc1] = mayfly;
             needsMayfly = true;
         }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
@@ -1581,17 +1648,11 @@
             if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
             {
                 if (!protonEq)
-                    currentOutfitPieces[back] = protonPack;
+                    barfOutfitPieces[back] = protonPack;
             }
         }
-        if (OutfitContains(defaultOutfit, knife)
-            && !HaveEquipment(knife)
-            && deck.item_amount() > 0
-            && get_property("_deckCardsDrawn").to_int() <= 10)
-        {
-            cli_execute("cheat knife");
-        }
-        foreach sl, it in currentOutfitPieces
+        CheatKnifeIfNeeded();
+        foreach sl, it in barfOutfitPieces
         {
             if (sl.equipped_item() != it && HaveEquipment(it))
             {
@@ -1599,26 +1660,8 @@
             }
         }
 
-        //if (!matchesOutfit)
-        //{
-        //    if (RequireOutfit)
-        //    {
-        //        outfit(defaultOutfit);
-        //    }
-        //    else
-        //    {
-        //        foreach ix,itm in outfit_pieces(defaultOutfit)
-        //        {
-        //            if (itm.to_string() != "none" && HaveEquipment(itm) && !itm.have_equipped())
-        //            {
-        //                itm.to_slot().equip(itm);
-        //            }
-        //        }
-        //    }
-        //}
         ChooseThrall(true);
         RemoveConfusionEffects(false);
-
 
     }
     boolean TryRunWitchess(string filter)
@@ -1638,17 +1681,248 @@
     boolean TryRunSnojo(string filter)
     {
         if (get_property("snojoAvailable").to_boolean()
-            && get_property("_snojoFreeFights").to_int() < 10
-            && get_property("snojoSetting") != "NONE")
+            && get_property("_snojoFreeFights").to_int() < 10)
         {
-            adv1(snojo, -1, filter);
+            if (get_property("snojoSetting") == "NONE")
+            {
+                print("Cannot run snojo because it hasn't been configured yet", "orange");
+                return false;
+            }
+            RunAdventure(snojo, filter);
             return true;
         }
         return false;
     }
+    boolean TryRunMachineTunnels(string filter)
+    {
+// todo
+        return false;
+    }
+
+    void RunWish(string wishFor)
+    {
+        if (get_property("_genieWishesUsed").to_int() >= 3
+            || genie.item_amount() == 0)
+        {
+            BuyItemIfNeeded(wish, 1, 55000);
+        }
+        cli_execute("genie wish " + wishFor);
+    }
+
+    void BuffForFreeCombats()
+    {
+        if (covetous.have_effect() == 0)
+            RunWish("I was Covetous Robbery");
+
+        // This is apparently impossible...unfortunately
+        //if (attunement.have_effect() == 0)
+        //    RunWish("I was Eldritch Attunement");
+
+        // This might be worthwhile if we could also get Eldritch Attunement:
+        //if (frosty.have_effect() == 0)
+        //    RunWish("I was frosty");
+    }
+    int CountFreeCombatsAvailable()
+    {
+        int count = 0;
+        if (get_property("snojoAvailable").to_boolean())
+            count += get_property("_snojoFreeFights").to_int();
+        if (get_campground() contains witchess)
+            count += get_property("_witchessFights").to_int();
+        count += 10 - get_property("_brickoFights").to_int();
+        count += 3 - get_property("_lynyrdSnareUses").to_int();
+        count += 11 - get_property("_drunkPygmyBanishes").to_int();
+
+        // strictly speaking, the following items should be worth half as much,
+        // since they won't trigger an extra free combat from Eldritch Attunement:
+        // edit:  nevermind, Eldritch Attunement isn't easily available
+
+        if (machineElf.have_familiar())
+            count += 5 - get_property("_machineTunnelsAdv").to_int();
+        if (get_property("_eldritchTentacleFought") == "false")
+            count += 1;
+        if (get_property("_eldritchHorrorEvoked") == "false")
+            count += 1;
+        if (my_class().to_string() == "Seal Clubber")
+        {
+            count += 5 - get_property("_sealsSummoned").to_int();
+            if (uraniumSeal.item_amount() > 0)
+                count += 5;
+        }
+        return count;
+    }
+    void PrepareFreeCombatResources()
+    {
+        BuyItemIfNeeded(lynyrdSnare, 3, 1000);
+        if (scorpions.item_amount() < 11)
+        {
+            buy(11 - scorpions.item_amount(), scorpions);
+        }
+        int brickosNeeded = 10 - brickoOoze.item_amount();
+        if (brickosNeeded > 0)
+        {
+            BuyItemIfNeeded(brickoBrick, 2 * brickosNeeded, 500);
+            BuyItemIfNeeded(brickoEye, brickosNeeded, 1000);
+        }
+        while (brickoOoze.item_amount() < 10 && brickoBrick.item_amount() >= 2 && brickoEye.item_amount() >= 1)
+        {
+            use(2, brickoBrick);
+        }
+    }
+    void PrepareFreeCombat(familiar chosenFamiliar)
+    {
+        if (my_familiar() != chosenFamiliar)
+            SwitchToFamiliar(chosenFamiliar);
+        InitOutfit();
+        CheatKnifeIfNeeded();
+        foreach sl, it in defaultOutfitPieces
+        {
+            if (sl.equipped_item() != it && HaveEquipment(it))
+            {
+                sl.equip(it);
+            }
+        }
+        SwapOutSunglasses();
+        ChooseBjornCrownFamiliars(false, true);
+        ChooseThrall(true);
+        RemoveConfusionEffects(false);
+        HealUp();
+    }
+    void PrepareFreeCombat()
+    {
+        PrepareFreeCombat(runFamiliar);
+    }
+    int snokebombTurn = 0;
+    int politicsTurn = 0;
+    int kgbDartTurn = 0;
+    int louderThanBombTurn = 0;
+    int tennisballTurn = 0;
+    boolean batterUpUsed = false;
+    boolean nanorhinoUsed = false;
+// todo: check if we actually have these skills/items
+    string Filter_BowlingAlley(int round, monster mon, string page)
+    {
+        if (mon == bowler || mon == orderlies || mon == janitor)
+        {
+            if (snokebombTurn < my_turnCount())
+            {
+                snokebombTurn = my_turnCount() + 30;
+                return "skill Snokebomb";
+            }
+            if (politicsTurn < my_turnCount())
+            {
+                politicsTurn = my_turnCount() + 30;
+                return "skill Talk About Politics";
+            }
+            if (kgbDartTurn < my_turnCount())
+            {
+                kgbDartTurn = my_turnCount() + 20;
+                return "skill KGB tranquilizer dart";
+            }
+            if (louderThanBombTurn < my_turnCount())
+            {
+                louderThanBombTurn = my_turnCount() + 20;
+                return "item " + louderThanBomb + ",none";
+            }
+            if (tennisballTurn < my_turnCount())
+            {
+                tennisballTurn = my_turnCount() + 30;
+                return "item " + tennisBall + ",none";
+            }
+        }
+        return Filter_Standard(round, mon, page);
+    }
+    boolean abstractioned = false;
+    string Filter_MachineTunnels(int round, monster mon, string page)
+    {
+        if (can_still_steal())
+        {
+            return "\"pickpocket\"";
+        }
+        if (!abstractioned)
+        {
+            if (mon == machineTriangle) // triangle monster
+            {
+                abstractioned = true;
+                if (abstrThought.item_amount() > 0)
+                    return "item " + abstrThought + ",none";
+            }
+            else if (mon == machineCircle) // circle monster
+            {
+                abstractioned = true;
+                if (abstrAction.item_amount() > 0)
+                    return "item " + abstrAction + ",none";
+            }
+            else if (mon == machineSquare) // square monster
+            {
+                abstractioned = true;
+                if (abstrSensation.item_amount() > 0)
+                    return "item " + abstrSensation + ",none";
+            }
+        }
+        return Filter_Standard(round, mon, page);
+    }
+    
+    void RunFreeCombats()
+    {
+        string filter = "Filter_Standard"; // this might need to change
+        while (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
+        {
+            PrepareFreeCombat(machineElf);
+            abstractioned = false;
+            RunAdventure(machineTunnels, "Filter_MachineTunnels");
+        }
+        while (get_property("_brickoFights").to_int() < 10 && brickoOoze.item_amount() > 0)
+        {
+            PrepareFreeCombat();
+            use(1, brickoOoze);
+            RunCombat(filter);
+        }
+        while (get_property("_lynyrdSnareUses").to_int() < 3 && lynyrdSnare.item_amount() > 0)
+        {
+            PrepareFreeCombat();
+            use(1, lynyrdSnare);
+            RunCombat(filter);
+        }
+        while (get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
+        {
+            PrepareFreeCombat();
+            if (bowlingBall.item_amount() > 0)
+                put_closet(bowlingBall.item_amount(), bowlingBall);
+            RunAdventure(bowlingAlley, "Filter_BowlingAlley");
+        }
+        while (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
+        {
+            PrepareFreeCombat();
+            if (!TryRunSnojo(filter))
+                break;
+        }
+        while (get_campground() contains witchess
+            && get_property("_witchessFights").to_int() < 4) // save one for manual running to cast duplicate
+        {
+            PrepareFreeCombat();
+            if (!TryRunWitchess(filter))
+                break;
+        }
+        // todo:
+// infernal seals
+// tentacles
+    }
+
+    void FreeCombatsForProfit()
+    {
+        if (covetous.have_effect() > 0)
+        {
+            PrepareFreeCombatResources();
+            RunFreeCombats();
+        }
+    }
+    
 
     boolean ChooseFreeCombat(string filter)
     {
+        if (TryRunMachineTunnels(filter))
+            return true;
         if (TryRunWitchess(filter))
             return true;
         if (TryRunSnojo(filter))
@@ -2015,17 +2289,6 @@
     }
 
 
-    void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
-    {
-        int mallPrice = itm.mall_price();
-        if (mallPrice <= maxPrice && (itm.item_amount() < numberRequested || mallPrice < 500))
-        {
-            int buyCount = numberRequested;
-            if (buyCount < 1)
-                buyCount = 1;
-            buy(buyCount, itm);
-        }
-    }
 
     void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerItem, int maxPrice) // turnsPerItem should be overestimated, not underestimated, if the expected count varies
     {
@@ -2772,6 +3035,12 @@
         {
             use(1, gameToken);
         }
+        int freeCombats = CountFreeCombatsAvailable();
+        if (freeCombats > 20)
+        {
+            print("Buffing specifically for free combats, expect approximately " + freeCombats * 2, "orange");
+            BuffForFreeCombats();
+        }
 
         // want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
         if (bagOtricks.item_amount() > 0 && get_property("_bagOTricksUsed") == "false")
@@ -3512,7 +3781,10 @@
     void RunTurns(int turnCount)
     {
         if (turnCount != 0)
+        {
+            FreeCombatsForProfit();
             RunawayGingerbread();
+        }
         for (int i = 0; i < turnCount || (turnCount < 0); i++)
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
