@@ -9,15 +9,16 @@ My design philosophy:  I want the script to be resilient, but I don't want it do
 My scripts will pop up warning messages to continue or abort in certain situations.  It will not change your workshed item, it won't run your Robortender without drinks, it won't buy a day pass, it won't drink without Ode to Booze, it won't eat without Mayo clinic installed, it won't run the gingerbread city, it won't maximimize your Summon Resolutions, any of these things WITHOUT your permission.
 
 
+
 Usage:
 
 
  Prompts for:
- * number of turns to buff (-1 to buff with "night before" buffs, basically the minimum number of turns
+ * number of turns to buff (-1 to buff with "night before" buffs, basically the minimum number of turns because we're just doing free kills
  * number of turns to execute (-1 to only burn your free kills for the day)
  * which familiar to use (defaults to your current one unless you've fed Robortender a drive-by shooting already today)
 
- There are a number of prompts to warn you of important things, and give you a chance to cancel.  I recommend leaving them enabled at the beginning, but if you don't want interactivity, you can let the script use defaults by setting property LinknoidBarf.AutoConfirm=true
+ There are a number of prompts to warn you of important things, and give you a chance to cancel.  I recommend leaving them enabled at the beginning, but if you don't want interactivity, you can let the script use defaults by setting property "autoConfirmBarf" to true in the "data\linknoidfarm_USERNAME.txt" file.
 
  Auto-buy/use one-day ticket if you don't have charter
  Auto-buy a print screen button using 111 BACON if available (assumes you have an infinite bacon machine)
@@ -27,7 +28,7 @@ Usage:
  If you specify a negative number turns of buff, it will provide minimum 1 turn of each buff, including some more expensive ones (like Mick's Inhaler) only used in this scenario. This is meant as "night before" buffing, when you still have a bunch of turn-free embezzlers to fight, and can then turn around the next day and use those same buffs on another set of free embezzlers, all without using any turns.
 
 
- Standard buff package (you're responsible for having a stockpile of stuff like Nasal Spray, Pet Buffing Spray, Be Wealthier, etc.):
+ Standard buff package (you're responsible for having a stockpile of variable cost stuff like Be Wealthier, etc.):
  * Summon Preturnatural Greed demon
  * Concert Winklered buff
  * Game grid token
@@ -39,17 +40,20 @@ Usage:
  * Polka of Plenty
  * Leon's Phat Loot
  * The Ballad of Richie Thingfinder (if you're an AT with that skill, not from recording)
+ * The Chorale of Companionship (if you're an AT with that skill, not from recording)
  * Mad Hatter Dances With Tweedles
  * Source Terminal: Meat.enh
  * Glenn's Golden Dice
  * Incredible Self Esteem skill, only if "Always Be Collecting" buff is active
  * Flaskfull of Hollow (if half a purse is part of "Barf" outfit)
  * Leash of Linguini
- * Sweet Syntheses (+300% meat)
+ * Sweet Synthesis (+300% meat)
  * KGB "A View to Some Meat" buff (requires Ezandora's KGB control script), and the rest of clicks go to +item
  * Crazy Horse from horsery unless you already have a horse
  * Summon lasagna/spice ghost if a pastamancer, and the lasagna buff for embezzlers if you have the skill and mana (10 turns of 10% for 200 mana)
  * Use Bag O' Tricks, Yendorian Express card, License to Chill to increase buff lengths
+ * Clan pool table for familiar weight
+ * Clan fortune teller for meat buff
 
  * Eats optimized using Mayo Clinic (and with milk of magnesium):
  * Jumping Horseradish: Kicked in the Sinuses
@@ -61,8 +65,8 @@ Usage:
  * Wears Mafia Pinky Ring before drinking
  * If you don't have Ode to Booze, it will send Buffy 2000 meat and request Ode befure drinking
 
- If you specify more than 320 turns and have pantsgiving, it will run 5 adventures and then use a distention pill to either time-spinner (if possible), or eat (if no time spinner) another serving of thanksgiving, for up to 340 turns of Thanksgetting buff.
- You can manually go up to 380 turns Thankgetting with Pantsgiving (stop and manually eat after 50 turns gives another fullness available), but it takes a cuppa Voracity, which is currently worth more than 40 turns of Thansgetting
+ If you specify more than 320 turns and have pantsgiving with standard 15 size stomach, it will run 5 adventures and then use a distention pill to either time-spinner (if possible), or eat (if no time spinner) another serving of thanksgiving, for up to 340 turns of Thanksgetting buff.
+ You can manually go up to 380 turns Thankgetting on a size 15 stomach with Pantsgiving (stop and manually eat after 50 turns gives another fullness available), but it takes a cuppa Voracity, which is currently worth more than 40 turns of Thansgetting
  It will use the Adson Martin instakill before switching to Mayo Clinic, and eat one last mayo and buy a sphygmayomonometer before swapping out the mayo clinic.
  It will make and use copies of Knob Goblin Embezzlers from the following sources:
  * Chateau (fight only, not make painting)
@@ -77,7 +81,7 @@ Wears scratch'n'sniff UPC codes if they're cost effective while fighting Embezzl
 Casts Meteor Storm on embezzlers for +20 familiar weight
 Increases monster level before initial embezzlers to try to stop them from dying prematurely
 
- It will also use free kills to extend the buff duration:
+ It will also use free kills to extend the buff duration: (THIS IS NOW DISABLED BECAUSE OF 1000 MEAT LIMIT FOR FREE COMBATS)
  * Jokester's Gun
  * Replica Bat-oomerang
  * Shattering Punch
@@ -126,6 +130,7 @@ Increases monster level before initial embezzlers to try to stop them from dying
 And restores mana using:
  * Free rests (using Pilgrim hat if available, else Chateau if available, else normal rest), wearing Pantsgiving if available
  * nuns
+ * Clan hot shower
  * oscus' soda
  * eternal car battery
  * Yendorian Express card
@@ -150,11 +155,11 @@ And restores mana using:
 
 LinknoidMine.ash:
 
-This is a 1970s volcano mining script.  There are others more advanced, but I just wanted something that would work.  The one I tried kept complaining about object detection not found.  I started from Smelltastic's hotmine, and added a bunch of automation to gear up, eat, drink, spleen, and borrow time before doing the mining.  It also gets a volcoino using the velvet outfit (if you have torso awareness), and tries to get a second one if it can buy (or has) the items for a bunker quest, and then buys another ticket if you have enough volcoinos.
+This is a 1970s volcano mining script.  There are others more advanced, but I just wanted something that would work.  The one I tried kept complaining about object detection not found.  I started from Smelltastic's hotmine, and added a bunch of automation to gear up, eat, drink, spleen, and borrow time before doing the mining.  It also gets a volcoino using the velvet outfit (if you have torso awareness), and tries to get a second volcoino if it can buy (or has) the items for a bunker quest, and then buys another ticket if you have enough volcoinos.
 
 You can skip the eat/drink/spleen part completely if you don't want it doing it.  Here's what it will do if you let it:
   * It will eat hi meins on Monday, and lasagna with field of gar the rest of the week.  With milk of magnesium.
-  * It will drink perfect ice drinks (by price) and then top off with cheapest robortender drinks, with Ode to booze, paying Buffy 2000 meat if you don't have the Ode skill.
+  * It will drink perfect ice drinks (by price) and then top off with cheapest robortender drinks, with Ode to booze, paying Buffy a 2000 meat gift if you don't have the Ode skill.
   * It will spleen using powdered gold, agua de vida, and carrot juice as a finisher
   * It will borrow time 20 turns from tomorrow (with your permission)
 
