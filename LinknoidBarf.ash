@@ -3645,7 +3645,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             freeCombats += CountFreeCombatsAvailable(true);
         print("Free combats = " + freeCombats);
         float expectedMeatPerAdventure = 100.0;
+        // modifier no longer matters much, since there's a 1000 limit
         float meatmodifier = 1 + (meat_drop_modifier() / 100.0);
+        if (meatModifier > 10)
+            meatModifier = 10;
         expectedMeatPerAdventure *= meatmodifier;
         expectedMeatPerAdventure -= 400; // subtract 400 for potential cost to get the adventure, particularly bricko and lynyrd
         float expectedMeat = freeCombats * expectedMeatPerAdventure;
@@ -3743,18 +3746,18 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
                 //TryBuffForFreeCombats(true);
-                if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
-                {
-                    // The test for this isn't a very accurate calculation, but it should get us in the
-                    // ballpark of whether these wishes are worthwhile or not.
-                    // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
-                    // but with free fights giving meat, it can beat break-even over 2 days, and come
-                    // out ahead when accounting for 20 turns of barf monsters (and more with buff extenders)
+                //if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
+                //{
+                //    // The test for this isn't a very accurate calculation, but it should get us in the
+                //    // ballpark of whether these wishes are worthwhile or not.
+                //    // 50k/wish > 2 days * 10 embezzlers/day * 1000 meat/embezzler * 200% multiplier,
+                //    // but with free fights giving meat, it can beat break-even over 2 days, and come
+                //    // out ahead when accounting for 20 turns of barf monsters (and more with buff extenders)
 
-                    // 2 +200% meat effects:
-                    WishForEffect(frosty);
-                    WishForEffect(braaaaaains);
-                }
+                //    // 2 +200% meat effects:
+                //    WishForEffect(frosty);
+                //    WishForEffect(braaaaaains);
+                //}
             }
         }
 
@@ -4267,6 +4270,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
         }
         universesLeft = get_property("_universeCalculated").to_int() < get_property("skillLevel144").to_int();
+        if (!universesLeft)
+            return;
         int desiredNumber;
         if (hippy_stone_broken() && preferCalcUniversePvP)
             desiredNumber = 37;
