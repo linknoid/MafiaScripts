@@ -51,8 +51,9 @@
 
     boolean autoConfirmBarf = false;
     string defaultOutfit = "barf";
-    string manaOutfit = "Max MP";
     string dropsOutfit = "drops";
+    string manaOutfit = "Max MP";
+    string weightOutfit = "Max Weight";
 
     string printColor = "orange";
 
@@ -72,8 +73,9 @@ void WriteSettings()
     file_to_map("linknoidfarm_" + my_name() + ".txt", map);
     map["autoConfirmBarf"] = autoConfirmBarf.to_string();
     map["defaultOutfit"] = defaultOutfit;
-    map["manaOutfit"] = manaOutfit;
     map["dropsOutfit"] = dropsOutfit;
+    map["manaOutfit"] = manaOutfit;
+    map["weightOutfit"] = weightOutfit;
     map["printColor"] = printColor;
     map["saveSpleen"] = saveSpleen.to_string();
     map["saveStomach"] = saveStomach.to_string();
@@ -95,8 +97,9 @@ void ReadSettings()
         {
             case "autoConfirmBarf": autoConfirmBarf = value == "true"; break;
             case "defaultOutfit": defaultOutfit = value; break;
-            case "manaOutfit": manaOutfit = value; break;
             case "dropsOutfit": dropsOutfit = value; break;
+            case "manaOutfit": manaOutfit = value; break;
+            case "weightOutfit": weightOutfit = value; break;
             case "saveSpleen": saveSpleen = value.to_int(); break;
             case "saveStomach": saveStomach = value.to_int(); break;
             case "saveLiver": saveLiver = value.to_int(); break;
@@ -260,6 +263,17 @@ void ReadSettings()
     item roboMana = ToItem("hell in a bucket");
     item roboMeat = ToItem("drive-by shooting");
     item roboHobo = ToItem("Newark");
+
+// random action familiars that give meat
+    familiar boa = ToFamiliar("Feather Boa Constrictor");
+    familiar npzr = ToFamiliar("Ninja Pirate Zombie Robot");
+    familiar stocking = ToFamiliar("Stocking Mimic");
+    familiar[int] freeCombatFamiliars = { 0 : boa, 1 : npzr, 2 : stocking };
+    item loathingLegionEqp = ToItem("Loathing Legion helicopter");
+    skill jingleBells = ToSkill("Jingle Bells");
+    effect jingleBellsEffect = ToEffect("Jingle Jangle Jingle");
+    item dictionary = ToItem("dictionary"); // for burning rounds for familiar to take actions
+    item faxdictionary = ToItem("facsimile dictionary"); // in case you already converted your dictionary
 
 // other familiars of interest
     familiar sandworm = ToFamiliar("Baby Sandworm");
@@ -682,6 +696,7 @@ void ReadSettings()
     boolean ravedNirvana = false;
     boolean ravedSteal = false;
     boolean ravedConcentration = false;
+    boolean timeSpinnered = false;
     skill summonCurrent = summonRes;
 
     int ghostShot = 0;
@@ -695,9 +710,10 @@ void ReadSettings()
     boolean noodled = false;
 
     boolean outfitInitialized = false;
-    item[slot] defaultOutfitPieces;
-    item[slot] barfOutfitPieces;
-    item[slot] dropsOutfitPieces;
+    item[slot] defaultOutfitPieces; // const outfit initialized on first use
+    item[slot] dropsOutfitPieces; // const outfit initialized on first use
+    item[slot] weightOutfitPieces; // const outfit initialized on first use
+    item[slot] barfOutfitPieces; // working outfit for barf mountain, modified by various constraints
 
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
@@ -992,6 +1008,7 @@ void ReadSettings()
         ravedNirvana = false;
         ravedSteal = false;
         ravedConcentration = false;
+        timeSpinnered = false;
         cursed = false;
         micrometeorited = false;
         extracted = false;
@@ -1302,6 +1319,14 @@ void ReadSettings()
             hadFuel = get_fuel();
         }
         return true;
+    }
+    item[slot] CopyOutfit(item[slot] o)
+    {
+        InitOutfit();
+        item[slot] eqSet;
+        foreach key, value in defaultOutfitPieces
+            eqSet[key] = value;
+        return eqSet;
     }
     item[slot] GetModifiableOutfit(boolean forDrops)
     {
@@ -1747,45 +1772,40 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return false;
     }
 
+    item[slot] InitOutfit(string outfitName)
+    {
+        item[slot] result;
+        foreach ix, it in outfit_pieces(outfitName)
+        {
+            slot s = it.to_slot();
+            if (s == acc1 || s == acc2 || s == acc3)
+            {
+                if (result[acc1].to_string() == "none")
+                    result[acc1] = it;
+                else if (result[acc2].to_string() == "none")
+                    result[acc2] = it;
+                else if (result[acc3].to_string() == "none")
+                    result[acc3] = it;
+                else
+                    abort("Not enough slots for accessory " + it);
+            }
+            else
+                result[s] = it;
+        }
+        return result;
+    }
 
     void InitOutfit()
     {
         if (outfitInitialized)
             return;
         outfitInitialized = true;
-        foreach ix, it in outfit_pieces(defaultOutfit)
+        defaultOutfitPieces = InitOutfit(defaultOutfit);
+        dropsOutfitPieces = InitOutfit(dropsOutfit);
+        weightOutfitPieces = InitOutfit(weightOutfit);
+        if (HaveEquipment(loathingLegionEqp))
         {
-            slot s = it.to_slot();
-            if (s == acc1 || s == acc2 || s == acc3)
-            {
-                if (defaultOutfitPieces[acc1].to_string() == "none")
-                    defaultOutfitPieces[acc1] = it;
-                else if (defaultOutfitPieces[acc2].to_string() == "none")
-                    defaultOutfitPieces[acc2] = it;
-                else if (defaultOutfitPieces[acc3].to_string() == "none")
-                    defaultOutfitPieces[acc3] = it;
-                else
-                    abort("Not enough slots for accessory " + it);
-            }
-            else
-                defaultOutfitPieces[s] = it;
-        }
-        foreach ix, it in outfit_pieces(dropsOutfit)
-        {
-            slot s = it.to_slot();
-            if (s == acc1 || s == acc2 || s == acc3)
-            {
-                if (dropsOutfitPieces[acc1].to_string() == "none")
-                    dropsOutfitPieces[acc1] = it;
-                else if (dropsOutfitPieces[acc2].to_string() == "none")
-                    dropsOutfitPieces[acc2] = it;
-                else if (dropsOutfitPieces[acc3].to_string() == "none")
-                    dropsOutfitPieces[acc3] = it;
-                else
-                    abort("Not enough slots for accessory " + it);
-            }
-            else
-                dropsOutfitPieces[s] = it;
+            weightOutfitPieces[famEqp] = loathingLegionEqp;
         }
     }
 
@@ -2215,8 +2235,44 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void PrepareFreeCombat(item[slot] selectedOutfit)
     {
-        PrepareFreeCombat(selectedOutfit, runFamiliar);
+        familiar fam = runFamiliar;
+        foreach ix, f in freeCombatFamiliars
+        {
+            if (f.have_familiar())
+            {
+                fam = f;
+                break;
+            }
+        }
+        PrepareFreeCombat(selectedOutfit, fam);
     }
+    string Filter_FreeCombat(int round, monster mon, string page)
+    {
+        if (round <= 10)
+        {
+            if (!timeSpinnered && timeSpinner.item_amount() > 0)
+            {
+                timeSpinnered = true;
+                return "item " + timeSpinner;
+            }
+            if (CanCast(micrometeorite) && !micrometeorited) // reduce damage taken
+            {
+                micrometeorited = true;
+                return "skill " + micrometeorite.to_string();
+            }
+            if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+            {
+                cursed = true;
+                return "skill " + curseOfWeaksauce.to_string();
+            }
+            if (dictionary.item_amount() > 0)
+                return "item " + dictionary;
+            else if (faxdictionary.item_amount() > 0)
+                return "item " + faxdictionary;
+        }
+        return "";
+    }
+
     int snokebombTurn = 0;
     int politicsTurn = 0;
     int kgbDartTurn = 0;
@@ -2411,12 +2467,12 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     boolean RunFreeCombat(item[slot] selectedOutfit)
     {
-        string filter = "Filter_Standard"; // this might need to change
+        string filter = "Filter_FreeCombat";
         return RunFreeCombat(selectedOutfit, filter);
     }
     boolean RunFreeCombat()
     {
-        return RunFreeCombat(GetModifiableOutfit(true));
+        return RunFreeCombat(CopyOutfit(weightOutfitPieces));
     }
 
     void FreeCombatsForProfit()
@@ -2516,7 +2572,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             return;
         if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
             return;
-        item[slot] eqSet = GetModifiableOutfit(covetous.have_effect() > 0);
+        item[slot] eqSet = CopyOutfit(defaultOutfitPieces);
         item oldOffhand = offhand.equipped_item();
         eqSet[offhand] = bagOtricks;
         if (eqSet[weapon].weapon_hands() >= 2)
@@ -2537,7 +2593,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (my_fullness() != fullness_limit())
             return false;
 
-        item[slot] eqSet = GetModifiableOutfit(covetous.have_effect() > 0);
+        item[slot] eqSet = CopyOutfit(defaultOutfitPieces);
         eqSet[pants] = pantsGiving;
         print("Trying to activate Pantsgiving to increase max fullness by 1", printColor);
         boolean first = true;
@@ -3745,7 +3801,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 {
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
-                //TryBuffForFreeCombats(true);
+                TryBuffForFreeCombats(true);
                 //if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
                 //{
                 //    // The test for this isn't a very accurate calculation, but it should get us in the
