@@ -709,7 +709,6 @@ void ReadSettings()
     boolean bubbled = false;
     boolean noodled = false;
 
-    boolean outfitInitialized = false;
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
     item[slot] dropsOutfitPieces; // const outfit initialized on first use
     item[slot] weightOutfitPieces; // const outfit initialized on first use
@@ -720,7 +719,6 @@ void ReadSettings()
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
-    void InitOutfit();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
@@ -1322,7 +1320,6 @@ void ReadSettings()
     }
     item[slot] CopyOutfit(item[slot] o)
     {
-        InitOutfit();
         item[slot] eqSet;
         foreach key, value in defaultOutfitPieces
             eqSet[key] = value;
@@ -1330,7 +1327,6 @@ void ReadSettings()
     }
     item[slot] GetModifiableOutfit(boolean forDrops)
     {
-        InitOutfit();
         item[slot] eqSet;
         if (covetous.have_effect() > 0)
         {
@@ -1601,14 +1597,14 @@ void ReadSettings()
         {
             return "skill " + olfaction.to_string();
         }
-if (false) // TODO: free kills are now worthless for farming, don't waste them here
-{
         if (canMissileLauncher && shouldMissileLauncher)
         {
             // if "shouldMissileLauncher" is true, takes precedence over jokester's gun
             canMissileLauncher = false;
             return "skill " + missileLauncher.to_string();
         }
+if (false) // TODO: free kills are now worthless for farming, don't waste them here
+{
         if (canJokesterGun)
         {
             canJokesterGun = false;
@@ -1795,11 +1791,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return result;
     }
 
-    void InitOutfit()
+    void InitOutfits()
     {
-        if (outfitInitialized)
-            return;
-        outfitInitialized = true;
         defaultOutfitPieces = InitOutfit(defaultOutfit);
         dropsOutfitPieces = InitOutfit(dropsOutfit);
         weightOutfitPieces = InitOutfit(weightOutfit);
@@ -2088,7 +2081,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 
     void PrepareBarf(boolean RequireOutfit)
     {
-        InitOutfit();
         boolean mayflyEq = false;
         boolean protonEq = false;
         foreach s, i in defaultOutfitPieces
@@ -2100,7 +2092,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 protonEq = true;
         }
 
-        if (!hasFreeKillRemaining && HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
+        if (HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
         {
             if (!mayflyEq)
                 barfOutfitPieces[acc1] = mayfly;
@@ -2225,7 +2217,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         if (my_familiar() != chosenFamiliar)
             SwitchToFamiliar(chosenFamiliar);
-        InitOutfit();
         WearOutfit(SwapOutSunglasses(selectedOutfit));
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
@@ -4755,6 +4746,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         ReadSettings();
         WriteSettings(); // in case there are new properties
+        InitOutfits();
         ChooseSummonType();
         SetRunFamiliar(familiarName, buffTurns);
 
