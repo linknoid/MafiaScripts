@@ -1,7 +1,7 @@
 // Credits:
 // Bale forum posts about url handling, witchess fights
 // VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
-// Ezandora's KGB.ash script for handling briefcase so I don't have to
+// Ezandora's KGB Briefcase.ash script for handling briefcase so I don't have to
 // Zarqon canadv.ash for how to check for access to purple light district
 
 
@@ -58,14 +58,16 @@
     string printColor = "orange";
 
 // Change these values to put limits on how much of certain resources to keep back:
-    int saveSpleen = 0;
-    int saveStomach = 0;
-    int saveLiver = 0;
-    int maxUsePrintScreens = 1;
-    int maxUseEnamorangs = 1;
-    boolean allowExpensiveBuffs = true;
-    boolean abortOnBeatenUp = false;
-    boolean preferCalcUniversePvP = false;
+    int saveSpleen = 0; // how many spleen points to save back
+    int saveStomach = 0; // how many stomach points to save back
+    int saveLiver = 0; // how many liver points to save back
+    int maxUsePrintScreens = 1; // how many print screens to use per day
+    int maxUseEnamorangs = 1; // how many lov enamorangs to throw per day
+    int turkeyLimit = 1; // how many ambitious turkeys to drink per day
+    boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
+    boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
+    boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
+    boolean autoVoraciThanksgetting = false; // eat a cuppa voraciti tea if there's 1 stomach free when ran out of thanksgetting to get more turns out of it (not generally worth the meat, but you can do it if you really want to)
 
 void WriteSettings()
 {
@@ -82,9 +84,11 @@ void WriteSettings()
     map["saveLiver"] = saveLiver.to_string();
     map["maxUsePrintScreens"] = maxUsePrintScreens.to_string();
     map["maxUseEnamorangs"] = maxUseEnamorangs.to_string();
+    map["turkeyLimit"] = turkeyLimit.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
     map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
+    map["autoVoraciThanksgetting"] = autoVoraciThanksgetting.to_string();
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -100,14 +104,17 @@ void ReadSettings()
             case "dropsOutfit": dropsOutfit = value; break;
             case "manaOutfit": manaOutfit = value; break;
             case "weightOutfit": weightOutfit = value; break;
+            case "printColor": printColor = value; break;
             case "saveSpleen": saveSpleen = value.to_int(); break;
             case "saveStomach": saveStomach = value.to_int(); break;
             case "saveLiver": saveLiver = value.to_int(); break;
             case "maxUsePrintScreens": maxUsePrintScreens = value.to_int(); break;
             case "maxUseEnamorangs": maxUseEnamorangs = value.to_int(); break;
+            case "turkeyLimit": turkeyLimit = value.to_int(); break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
             case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
+            case "autoVoraciThanksgetting": autoVoraciThanksgetting = value == "true"; break;
         }
     }
 }
@@ -234,6 +241,7 @@ void ReadSettings()
     item thanks8 = ToItem("thanksgiving turkey");
     item thanks9 = ToItem("warm gravy");
     item distention = ToItem("distention pill");
+    item voraciTea = ToItem("cuppa Voraci tea");
     item timeSpinner = ToItem("Time Spinner");
 
 // booze to drink
@@ -266,6 +274,10 @@ void ReadSettings()
     item roboMana = ToItem("hell in a bucket");
     item roboMeat = ToItem("drive-by shooting");
     item roboHobo = ToItem("Newark");
+    item peppermintSprig = ToItem("peppermint sprig");
+    item boxedWine = ToItem("boxed wine");
+    item mentholatedWine = ToItem("mentholated wine");
+    item orange = ToItem("orange");
 
 // random action familiars that give meat
     familiar boa = ToFamiliar("Feather Boa Constrictor");
@@ -1054,13 +1066,42 @@ void ReadSettings()
     void RunAdventure(location loc, string filter)
     {
         string page = visit_url(loc.to_url().to_string());
-        if (page.contains_text("choice.php") && page.contains_text("value=\"Tame it!\""))
+        if (page.contains_text("choice.php"))
         {
-            run_choice(1); // tame the turtle
-            return;
+            if (page.contains_text("value=\"Tame it!\""))
+            {
+                run_choice(1); // tame the turtle
+                return;
+            }
+            if (page.contains_text("Wooof! Wooooooof!"))
+            {
+                run_choice(3); // ghost dog chow
+                return;
+            }
+            if (page.contains_text("Playing Fetch"))
+            {
+                run_choice(1); // tennis ball
+                return;
+            }
+            if (page.contains_text("Your Dog Found Something Again"))
+            {
+                run_choice(2); // gimme booze
+                return;
+            }
         }
         string combatResult = run_combat(filter);
         CheckPostCombat(combatResult, filter);
+    }
+    boolean ActivateCopyItem(item copyItem, string filter)
+    {
+        print("Trying to activate copy " + copyItem.to_string(), printColor);
+        visit_url("inv_use.php?whichitem=" + copyItem.to_int());
+        RunCombat(filter);
+        return true;
+    }
+    boolean ActivateCopyItem(item copyItem)
+    {
+        return ActivateCopyItem(copyItem, "Filter_Stardard");
     }
 
     boolean CanDistention()
@@ -1384,7 +1425,7 @@ void ReadSettings()
 
 
 
-    void PrepareStandardFilter()
+    void PrepareFilterState()
     {
         needsCleesh = false; // always reset this, don't want to cleesh on accident
         ResetCombatState();
@@ -2255,19 +2296,21 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         PrepareFreeCombat(selectedOutfit, fam);
     }
 
-    string ChooseDictionaryCombat()
+    string ChooseDictionaryCombatAction()
     {
         if (dictionary.item_amount() > 0)
             return "item " + dictionary;
         else if (faxdictionary.item_amount() > 0)
             return "item " + faxdictionary;
-        print("Why don't you have at least dictionary?  Falling back on default combat filter", printColor);
+        abort("Why don't you have at least 1 dictionary?  Up to you to figure out how to handle this combat");
         return "";
     }
     int staggerOption;
     string Filter_ScalingFreeKill(int round, monster mon, string page)
     {
         if (my_hp() * 3 < my_maxhp()) // too low on health, end it
+            return ChooseFreeKillMethodForFilter();
+        if (monster_hp() < 350 || round > 22) // don't take a chance of it using up a turn
             return ChooseFreeKillMethodForFilter();
         if (staggerOption <= 1)
         {
@@ -2359,9 +2402,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             print("no shell up");
         }
-        if (monster_hp() < 350 || round > 22) // don't take a chance of it using up a turn
-            return ChooseFreeKillMethodForFilter();
-        return ChooseDictionaryCombat();
+        return ChooseDictionaryCombatAction();
     }
     string Filter_FreeCombat(int round, monster mon, string page)
     {
@@ -2382,7 +2423,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 cursed = true;
                 return "skill " + curseOfWeaksauce.to_string();
             }
-            return ChooseDictionaryCombat();
+            return ChooseDictionaryCombatAction();
         }
         return "";
     }
@@ -2465,6 +2506,13 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     
     boolean RunFreeCombat(item[slot] selectedOutfit, string filter)
     {
+        if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
+        {
+            PrepareFreeCombat(selectedOutfit, machineElf);
+            abstractioned = false;
+            RunAdventure(machineTunnels, "Filter_MachineTunnels");
+            return true;
+        }
         if (get_property("_eldritchTentacleFought") == "false")
         {
             PrepareFreeCombat(selectedOutfit);
@@ -2482,13 +2530,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             PrepareFreeCombat(selectedOutfit);
             use_skill(1, evokeHorror);
             RunCombat(filter);
-            return true;
-        }
-        if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
-        {
-            PrepareFreeCombat(selectedOutfit, machineElf);
-            abstractioned = false;
-            RunAdventure(machineTunnels, "Filter_MachineTunnels");
             return true;
         }
         if (get_property("_brickoFights").to_int() < 10)
@@ -2604,6 +2645,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             {
                 if (beatenUp.have_effect() > 0)
                     abort("Lost during free combat, do you need to adjust your combat parameters?");
+                BurnManaAndRestores(100, false);
             }
         }
     }
@@ -3229,7 +3271,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         chew(1, spleenItem);
     }
 
-    boolean ignoreOde = false;
     void TryDrink(item booze, effect desiredEffect, int providedDrunk, int turnLimit)
     {
         if (booze.item_amount() < 1)
@@ -3258,6 +3299,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                         break;
                     }
                 }
+                static boolean ignoreOde = false;
                 if (!ignoreOde
                     && odeToBoozeEffect.have_effect() < providedDrunk)
                 {
@@ -3632,6 +3674,79 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (booze.item_amount() > 0 && !InList(booze.to_string(), drinkList, ","))
             cli_execute("robo " + booze.name);
     }
+
+    item elfCopiedTo; // only copy once, after 2 drops, the robortender doesn't tend to drop any more
+    string Filter_Elvish(int round, monster mon, string page)
+    {
+        if (elfCopiedTo == "none".to_item())
+        {
+            if (needsSpookyPutty)
+            {
+                elfCopiedTo = usedSpookyPutty;
+                return "item " + spookyPutty.to_string();
+            }
+            if (needsRainDoh)
+            {
+                elfCopiedTo = usedRainDoh;
+                return "item " + rainDoh;
+            }
+            if (needsCamera)
+            {
+                elfCopiedTo = usedCamera;
+                return "item " + camera.to_string();
+            }
+            elfCopiedTo = deck; // dumb placeholder, so it's not none
+        }
+        if (round < 4)
+            return ChooseFreeKillMethodForFilter();
+        abort("Unexpected failure of combat in elvish fight, please run manually");
+        return "";
+    }
+    void TryElvishRobortender()
+    {
+        // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 turns and a copy to grab 2
+        if (deck.item_amount() == 0
+            || jokesterGun.item_amount() == 0
+            || get_property("_deckCardsDrawn").to_int() > 0)
+        {
+            return;
+        }
+        print("Prepping to fight elf as Robortender", printColor);
+        item[slot] jokeOutfit = CopyOutfit(dropsOutfitPieces);
+        jokeOutfit[weapon] = jokesterGun;
+        WearOutfit(jokeOutfit);
+        PrepareFilterState();
+        if (!jokesterGun.have_equipped())
+        {
+            print("Failure to equip jokester's gun", printColor);
+            return;
+        }
+        string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
+        if (page.contains_text("Christmas Card"))
+        {
+            page = visit_url("choice.php?whichchoice=1086&option=1&pwd=" + my_hash() + "&which=28"); // chrismas card
+            if (!page.contains_text("Also, what's Christmas?"))
+                abort("Debug: deck should have let me draw a christmas card");
+            visit_url("choice.php?whichchoice=1085&pwd=" + my_hash() + "&option=1"); // start the fight
+            RunCombat("Filter_Elvish");
+        }
+        if (elfCopiedTo != "none".to_item() && elfCopiedTo != deck)
+        {
+            print("Activating copy of elf for a second robortender drop", printColor);
+            PrepareFilterState();
+            ActivateCopyItem(elfCopiedTo);
+        }
+        int sprigCount = peppermintSprig.item_amount();
+        if (sprigCount > 2) // only craft the ones we just got, not our whole inventory worth
+            sprigCount = 2;
+        if (boxedWine.item_amount() < 2)
+            buy(2, boxedWine);
+        if (orange.item_amount() < 2)
+            buy(2, orange);
+        
+        craft("cocktail", sprigCount, peppermintSprig, boxedWine);
+        craft("cocktail", sprigCount, orange, mentholatedWine);
+    }
     void FeedRobotender()
     {
         if (!robort.have_familiar())
@@ -3651,8 +3766,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             FeedRobortender(roboItems, drinkList);
             FeedRobortender(roboMana, drinkList);
             FeedRobortender(roboHobo, drinkList);
+            if (roboCandy.item_amount() == 0)
+                TryElvishRobortender();
             FeedRobortender(roboCandy, drinkList);
         }
+        TryElvishRobortender(); // if it didn't happen because of a lack of feliz navidad, do it now
     }
     void DriveObservantly(int turns, boolean promptForActivate)
     {
@@ -4018,6 +4136,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         KGBBuff(turns);
 
         TryDrink(dirt, dirtEffect, 1, 1);
+        TryDrink(gingerWine, gingerWineEffect, 2, turns);
 
         BeforeSwapOutAsdon();
         if (nightBefore)
@@ -4027,10 +4146,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (expensiveBuffs || fistTurkey.have_familiar())
             {
                 TryDrink(turkey, turkeyEffect, 1, turns);
-            }
-            if (expensiveBuffs)
-            {
-                TryDrink(gingerWine, gingerWineEffect, 2, turns);
             }
             item bestThanks = ChooseCheapestThanksgetting();
             TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
@@ -4063,8 +4178,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             TryEat(thanks9, thanksgetting, 2, 0, turns, true);
             if (fistTurkey.have_familiar())
             {
-                int turkeyturns = turns > 110 ? 110 : turns; // limit to 5 turkeys a day, since that's all that can drop per day
-                for (int i = 0; i < 5; i++)
+                int turkeyturns = turns > 25 * turkeyLimit ? 25 * turkeyLimit : turns; // limit to 5 turkeys a day, since that's all that can drop per day
+                for (int i = 0; i < turkeyLimit; i++)
                     TryDrink(turkey, turkeyEffect, 1, turkeyturns);
             }
             if (CanDistention() // only worth doing a pantsgiving fullness run if we can get a second fullness point from distention pill
@@ -4359,13 +4474,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
-    boolean ActivateCopyItem(item copyItem)
-    {
-        print("Trying to activate " + copyItem.to_string() + " for embezzler", printColor);
-        visit_url("inv_use.php?whichitem=" + copyItem.to_int());
-        RunCombat("Filter_Standard");
-        return true;
-    }
     boolean MeatyScheduled()
     {
         if (my_turnCount() == digitizeCounter)
@@ -4422,12 +4530,12 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return false;
     }
 
-    int moonSignInt = -1;
-    boolean universesLeft = true;
     void TryCalculateUniverse()
     {
+        static boolean universesLeft = true;
         if (!universesLeft || my_mp() < 1)
             return;
+        static int moonSignInt = -1;
         if (moonSignInt < 0)
         {
             switch (my_sign()) // cache this value, it won't change while script is running
@@ -4769,7 +4877,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             print("Using Missile Launcher while Asdon Martin is active");
             shouldMissileLauncher = true;
             FuelAsdon(100);
-            PrepareStandardFilter();
+            PrepareFilterState();
             PrepareFamiliar(false);
             RunBarfMountain(false);
         }
@@ -4782,7 +4890,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             return;
         if (my_maxhp() < 1000)
             return; // don't want to mess around with this if we're not tough enough for scaling monsters to survive a good long while
-        PrepareStandardFilter();
+        PrepareFilterState();
         if (!hasFreeKillRemaining) // without free kills, no point
             return;
 print("Jokester = " + canJokesterGun);
@@ -4790,23 +4898,25 @@ print("batoom = " + canBatoomerang);
 print("missile = " + canMissileLauncher);
 print("punch = " + canShatteringPunch);
 print("mob = " + canMobHit);
-//abort("debug");
         if ( !UserConfirmDefault("Run all free kills in LT&T?", true) )
             return;
-        print("Checking for need telegram");
+        print("Checking for need telegram, count = " + telegram.item_amount(), printColor);
         string page;
-        if (telegram.item_amount() == 0)
+        //if (telegram.item_amount() == 0)
         {
+            //print("No telegram, checking LT&T office", printColor);
             page = visit_url("place.php?whichplace=town_right&action=townright_ltt");
             if (page.contains_text("(Hard)"))
             {
-                page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1171&option=3");
+                print("LT&T Hard quest available", printColor);
+                page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1171&option=3"); // grab the hard quest
                 if (telegram.item_amount() > 0)
                 {
-                    page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=8837");
+                    print("Got a telegram, using it", printColor);
+                    page = visit_url(telegramLoc.to_url().to_string());
                     if (page.contains_text("The Investigation Begins"))
                     {
-                        page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1172&option=1"); // Giddiup
+                        page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1172&option=1"); // Giddiup/Investigate the mine/
                     }
                 }
             }
@@ -4824,12 +4934,40 @@ print("mob = " + canMobHit);
             }
             int turnsBefore = my_turnCount();
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
-            PrepareStandardFilter();
+            PrepareFilterState();
             staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
             if (turnsBefore != turnsAfter)
                 abort("Free kill algorithm failed, please debug this script");
+            BurnManaAndRestores(100, false);
+        }
+    }
+
+    void TryAutoExtendThanksGetting(int turnsRemaining)
+    {
+        if (!autoVoraciThanksgetting || saveStomach > 0) // saving back stomach makes this pointless
+            return;
+        if (thanksgetting.have_effect() < turnsRemaining)
+            return;
+
+        if (my_fullness() + 1 != fullness_limit()) // need exactly 1 stomach remaining for this to trigger
+            return;
+        if (get_property("_voraciTeaUsed") != "false") // if it's already used, can't do it again
+            return;
+        if (voraciTea.item_amount() == 0) // no tea?  too bad
+            return;
+        static boolean voraciTeaChecked = false;
+        if (!voraciTeaChecked)
+        {
+            voraciTeaChecked = true;
+            if (UserConfirmDefault("Extend Thanksgetting buff length by consuming cuppa Voraci tea?", true))
+            {
+                use(1, voraciTea);
+                if (!(get_campground() contains mayoClinic))
+                    eatWithoutMayo = true;
+                TryBonusThanksgetting();
+            }
         }
     }
 
@@ -4848,12 +4986,13 @@ print("mob = " + canMobHit);
             TryCalculateUniverse();
             BurnManaAndRestores(20, false);
           
-            PrepareStandardFilter();
+            PrepareFilterState();
             if (turnCount < 0 && !hasFreeKillRemaining)
                 return;
             if (needBagOTricks)
                 TryActivateBagOTricks();
-            
+
+            TryAutoExtendThanksgetting(turnCount - i);
             SoulSauceToMana();
             if (spookyravenCounter == my_turnCount())
             {
@@ -4868,7 +5007,7 @@ print("mob = " + canMobHit);
                 RunSemiRare();
                 continue;
             }
-            if ((turnCount - i) % 10 == 1)  // only check every 10 turns
+            if ((turnCount - i) % 5 == 1)  // only check every 10 turns
             {
                 if (TryFightGhost())
                 {
