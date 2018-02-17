@@ -211,6 +211,9 @@ void ReadSettings()
     item breadFuel = ToItem("loaf of soda bread");
     item sphygmayo = ToItem("sphygmayomanometer");
 
+    item telegram = ToItem("plaintive telegram");
+    location telegramLoc = ToLocation("Investigating a Plaintive Telegram");
+
 // items for eating
     item milk = ToItem("milk of magnesium");
     effect gotmilk = ToEffect("Got Milk");
@@ -717,6 +720,7 @@ void ReadSettings()
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
+    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast);
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
@@ -1489,6 +1493,37 @@ void ReadSettings()
         RemoveConfusionEffects(false);
         HealUp();
     }
+
+    string ChooseFreeKillMethodForFilter()
+    {
+        if (canJokesterGun)
+        {
+            canJokesterGun = false;
+            return "skill " + fireJokester.to_string();
+        }
+        if (canMissileLauncher)
+        {
+            canMissileLauncher = false;
+            return "skill " + missileLauncher.to_string();
+        }
+        if (canShatteringPunch)
+        {
+            canShatteringPunch = false;
+            return "skill " + shatteringPunch.to_string();
+        }
+        if (canMobHit)
+        {
+            canMobHit = false;
+            return "skill " + gingerbreadMobHit.to_string();
+        }
+        if (canBatoomerang)
+        {
+            canBatoomerang = false;
+            return "item " + replicaBatoomerang.to_string();
+        }
+        return "";
+    }
+
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
@@ -1572,16 +1607,6 @@ void ReadSettings()
                     itemCount++;
                 }
             }
-            // free kill, needs to go last in the items.  Also Jokester's gun gets first
-            // priority because we don't want to equip that more than 1 turn
-            if (canBatoomerang && itemCount < maxItemUse && !canJokesterGun)
-            {
-                if (itemCount == 1)
-                    s += ",";
-                s += replicaBatoomerang.to_string();
-                canBatoomerang = false;
-                itemCount++;
-            }
             if (itemCount > 0)
             {
                 if (itemCount == 1)
@@ -1605,26 +1630,9 @@ void ReadSettings()
         }
 if (false) // TODO: free kills are now worthless for farming, don't waste them here
 {
-        if (canJokesterGun)
-        {
-            canJokesterGun = false;
-            return "skill " + fireJokester.to_string();
-        }
-        if (canMissileLauncher)
-        {
-            canMissileLauncher = false;
-            return "skill " + missileLauncher.to_string();
-        }
-        if (canShatteringPunch)
-        {
-            canShatteringPunch = false;
-            return "skill " + shatteringPunch.to_string();
-        }
-        if (canMobHit)
-        {
-            canMobHit = false;
-            return "skill " + gingerbreadMobHit.to_string();
-        }
+            string result = ChooseFreeKillMethodForFilter();
+            if (result != "")
+                return result;
 }
         if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
         {
@@ -1910,6 +1918,16 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    void TryUseMovableFeast()
+    {
+        if (moveableFeast.item_amount() > 0
+            && get_property("_feastUsed").to_int() < 5
+            && !get_property("_feastFamiliars").contains_text(runFamiliar.to_string()))
+        {
+            use(1, moveableFeast);
+        }
+    }
+
     void PrepareFamiliar(boolean forMeaty)
     {
         if (my_familiar() != runFamiliar)
@@ -1926,12 +1944,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         {
             // should use this during the most valuable times, when we're fighting a 1000 or 1500 base
             // monster, since it only last 20 combats, not 20 adventures
-            if (moveableFeast.item_amount() > 0
-                && get_property("_feastUsed").to_int() < 5
-                && !get_property("_feastFamiliars").contains_text(runFamiliar.to_string()))
-            {
-                use(1, moveableFeast);
-            }
+            TryUseMovableFeast();
         }
 
         if (HaveEquipment(snowSuit))
@@ -2217,6 +2230,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         if (my_familiar() != chosenFamiliar)
             SwitchToFamiliar(chosenFamiliar);
+        if (my_familiar() != runFamiliar)
+            TryUseMovableFeast();
+        if (jingleBells.have_skill())
+            CastSkill(jingleBells, jingleBellsEffect, 1, 7); // only need 1 turn of it
         WearOutfit(SwapOutSunglasses(selectedOutfit));
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
@@ -2237,6 +2254,115 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         PrepareFreeCombat(selectedOutfit, fam);
     }
+
+    string ChooseDictionaryCombat()
+    {
+        if (dictionary.item_amount() > 0)
+            return "item " + dictionary;
+        else if (faxdictionary.item_amount() > 0)
+            return "item " + faxdictionary;
+        print("Why don't you have at least dictionary?  Falling back on default combat filter", printColor);
+        return "";
+    }
+    int staggerOption;
+    string Filter_ScalingFreeKill(int round, monster mon, string page)
+    {
+        if (my_hp() * 3 < my_maxhp()) // too low on health, end it
+            return ChooseFreeKillMethodForFilter();
+        if (staggerOption <= 1)
+        {
+            ++staggerOption;
+            if (to_skill("Stealth Mistletoe").have_skill() && my_mp() > 10)
+            {
+                return "skill Stealth Mistletoe";
+            }
+            print("no mistletoe");
+        }
+        if (staggerOption == 2)
+        {
+            ++staggerOption;
+            if (to_skill("Curse of Weaksauce").have_skill() && my_mp() > 10)
+            {
+                return "skill Curse of Weaksauce";
+            }
+            print("no weaksauce");
+        }
+        if (staggerOption == 3)
+        {
+            ++staggerOption;
+            if (to_item("Time-Spinner").item_amount() > 0)
+            {
+                return "item Time-Spinner";
+            }
+            print("no time spinner");
+        }
+        if (staggerOption == 4)
+        {
+            ++staggerOption;
+            if (to_skill("Micrometeorite").have_skill())
+            {
+                return "skill Micrometeorite";
+            }
+            print("no micrometeorite");
+        }
+        if (staggerOption == 5)
+        {
+            ++staggerOption;
+            if (to_skill("Entangling Noodles").have_skill() && my_mp() > 10)
+            {
+                return "skill Entangling Noodles";
+            }
+            print("no entangling noodles");
+        }
+        if (staggerOption == 6)
+        {
+            ++staggerOption;
+            if (to_item("little red book").item_amount() > 0)
+            {
+                return "item little red book";
+            }
+            print("no little red book");
+        }
+        if (staggerOption == 7)
+        {
+            ++staggerOption;
+            if (to_item("beehive").item_amount() > 0)
+            {
+                return "item beehive";
+            }
+            print("no beehive");
+        }
+        if (staggerOption == 8)
+        {
+            ++staggerOption;
+            if (to_item("Rain-Doh blue balls").item_amount() > 0)
+            {
+                return "item Rain-Doh blue balls";
+            }
+            print("no rain doh");
+        }
+        if (staggerOption == 9)
+        {
+            ++staggerOption;
+            if (to_skill("Silent Knife").have_skill() && my_mp() > 10)
+            {
+                return "skill Silent Knife";
+            }
+            print("no silent knife");
+        }
+        if (staggerOption == 10)
+        {
+            ++staggerOption;
+            if (to_skill("Shell Up").have_skill() && my_mp() > 10)
+            {
+                return "skill Shell Up";
+            }
+            print("no shell up");
+        }
+        if (monster_hp() < 350 || round > 22) // don't take a chance of it using up a turn
+            return ChooseFreeKillMethodForFilter();
+        return ChooseDictionaryCombat();
+    }
     string Filter_FreeCombat(int round, monster mon, string page)
     {
         if (round <= 10)
@@ -2256,10 +2382,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 cursed = true;
                 return "skill " + curseOfWeaksauce.to_string();
             }
-            if (dictionary.item_amount() > 0)
-                return "item " + dictionary;
-            else if (faxdictionary.item_amount() > 0)
-                return "item " + faxdictionary;
+            return ChooseDictionaryCombat();
         }
         return "";
     }
@@ -2468,7 +2591,13 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 
     void FreeCombatsForProfit()
     {
-        if (covetous.have_effect() > 0)
+        boolean runFree = covetous.have_effect() > 0;
+        foreach ix, f in freeCombatFamiliars
+        {
+            if (f.have_familiar())
+                runFree = true;
+        }
+        if (runFree)
         {
             HealUp();
             while (RunFreeCombat())
@@ -4364,7 +4493,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 
         string page = visit_url("clan_viplounge.php?preaction=lovetester");
         if (!page.contains_text("Pick a Testee"))
+        {
+            page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1278&option=2"); // Nevermind
             return;
+        }
         page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1278&option=1&which=-3&q1=Pizza&q2=MadameZatara&q3=Hello");
     }
 
@@ -4643,15 +4775,74 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    void TryRunLTTFreeKills()
+    {
+
+        if (get_property("telegraphOfficeAvailable") != "true") // no telegraph office to run
+            return;
+        if (my_maxhp() < 1000)
+            return; // don't want to mess around with this if we're not tough enough for scaling monsters to survive a good long while
+        PrepareStandardFilter();
+        if (!hasFreeKillRemaining) // without free kills, no point
+            return;
+print("Jokester = " + canJokesterGun);
+print("batoom = " + canBatoomerang);
+print("missile = " + canMissileLauncher);
+print("punch = " + canShatteringPunch);
+print("mob = " + canMobHit);
+//abort("debug");
+        if ( !UserConfirmDefault("Run all free kills in LT&T?", true) )
+            return;
+        print("Checking for need telegram");
+        string page;
+        if (telegram.item_amount() == 0)
+        {
+            page = visit_url("place.php?whichplace=town_right&action=townright_ltt");
+            if (page.contains_text("(Hard)"))
+            {
+                page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1171&option=3");
+                if (telegram.item_amount() > 0)
+                {
+                    page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=8837");
+                    if (page.contains_text("The Investigation Begins"))
+                    {
+                        page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1172&option=1"); // Giddiup
+                    }
+                }
+            }
+        }
+        print("Trying free kills " + hasFreeKillRemaining + " difficulty " +  get_property("lttQuestDifficulty").to_int(), printColor);
+        while (hasFreeKillRemaining
+            && get_property("lttQuestDifficulty").to_int() > 0)
+        {
+            print("Attempting LT&T telegram turn", printColor);
+            int turnNum = get_property("lttQuestStageCount").to_int();
+            if (turnNum == 9 || turnNum == 19 || turnNum == 29)
+            {
+                print("Stopping LT&T free kills because next turn is an unskippable non-combat", printColor);
+                break;
+            }
+            int turnsBefore = my_turnCount();
+            PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
+            PrepareStandardFilter();
+            staggerOption = 0;
+            RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
+            int turnsAfter = my_turnCount();
+            if (turnsBefore != turnsAfter)
+                abort("Free kill algorithm failed, please debug this script");
+        }
+    }
 
     void RunTurns(int turnCount)
     {
-        if (turnCount != 0)
+        if (turnCount != 0) // things to do while familiar weight is maxxed
         {
-            //FreeCombatsForProfit();
+            TryRunLTTFreeKills();
+            FreeCombatsForProfit();
+
             RunawayGingerbread();
         }
-        for (int i = 0; i < turnCount || (turnCount < 0); i++)
+        for (int i = 0; i < turnCount; i++)
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
             TryCalculateUniverse();
