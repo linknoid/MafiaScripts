@@ -35,8 +35,6 @@
 
 // track candle/scroll drops from intergnat
 
-// print screen buttons seem broken currently
-
 
 // auto-craft  (umm, what was I thinking here?)
 
@@ -962,48 +960,48 @@ void ReadSettings()
 
 // more specific helper functions
 
-    boolean IsMeatyMonster(string monsterName)
+    boolean IsMeatyMonster(monster mon)
     {
-        return monsterName == embezzler.to_string();
-            //|| monsterName == mimeExecutive.to_string();
+        return mon == embezzler;
+            //|| mon == mimeExecutive;
     }
 
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
-        return IsMeatyMonster(capped)
+        return IsMeatyMonster(capped.to_monster())
             && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
     boolean MeatyCameraed()
     {
         string capped = get_property("cameraMonster");
-        return IsMeatyMonster(capped)
+        return IsMeatyMonster(capped.to_monster())
             && !get_property("_cameraUsed").to_boolean();
     }
     boolean MeatyRainDohed()
     {
         string capped = get_property("rainDohMonster");
-        return IsMeatyMonster(capped);
+        return IsMeatyMonster(capped.to_monster());
     }
     boolean MeatyPuttied()
     {
         string capped = get_property("spookyPuttyMonster");
-        return IsMeatyMonster(capped);
+        return IsMeatyMonster(capped.to_monster());
     }
     boolean MeatyEnamoranged()
     {
         string capped = get_property("enamorangMonster");
-        return IsMeatyMonster(capped);
+        return IsMeatyMonster(capped.to_monster());
     }
     boolean MeatyDigitized()
     {
         string capped = get_property("digitized");
-        return IsMeatyMonster(capped);
+        return IsMeatyMonster(capped.to_monster());
     }
     boolean MeatyChateaud()
     {
         string capped = get_property("chateauMonster");
-        return IsMeatyMonster(capped)
+        return IsMeatyMonster(capped.to_monster())
             && get_property("_chateauMonsterFought") == "false";
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
@@ -1101,7 +1099,7 @@ void ReadSettings()
     }
     boolean ActivateCopyItem(item copyItem)
     {
-        return ActivateCopyItem(copyItem, "Filter_Stardard");
+        return ActivateCopyItem(copyItem, "Filter_Standard");
     }
 
     boolean CanDistention()
@@ -4040,7 +4038,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     TrySpleen(egg3, eggEffect, 1, 1);
                 }
                 TryBuffForFreeCombats(true);
-                //if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 8)
+                //if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 4)
                 //{
                 //    // The test for this isn't a very accurate calculation, but it should get us in the
                 //    // ballpark of whether these wishes are worthwhile or not.
