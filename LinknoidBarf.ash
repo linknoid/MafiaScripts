@@ -4949,6 +4949,8 @@ print("mob = " + canMobHit);
             int turnsBefore = my_turnCount();
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
             PrepareFilterState();
+            if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
+                break;
             staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
