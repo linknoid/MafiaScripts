@@ -36,7 +36,6 @@
 // track candle/scroll drops from intergnat
 
 
-// auto-craft  (umm, what was I thinking here?)
 
 // Add for mana burning:
 // clara's bell and hobopolis if 20 hobo glyphs and have access
@@ -2178,8 +2177,25 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return false;
     }
+    boolean ValidateSnojoFreeFights()
+    {
+        if (get_property("snojoAvailable") != true)
+            return false;
+        if (get_property("_snojoFreeFights").to_int() >= 10)
+            return false;
+        string page = visit_url("place.php?whichplace=snojo");
+        if (page.contains_text("Fight the X-32-F Combat Training Snowman (1)")) // the pokefam path doesn't give free fights, make sure this is valid
+        {
+            print("Snojo fights aren't free in this path, skipping.", printColor);
+            return false;
+        }
+        return true;
+    }
+    boolean SnojoFreeFightsAllowed = ValidateSnojoFreeFights();
     boolean TryRunSnojo(string filter)
     {
+        if (!SnojoFreeFightsAllowed)
+            return false;
         if (get_property("snojoAvailable").to_boolean()
             && get_property("_snojoFreeFights").to_int() < 10)
         {
@@ -4946,7 +4962,7 @@ print("mob = " + canMobHit);
     {
         if (!autoVoraciThanksgetting || saveStomach > 0) // saving back stomach makes this pointless
             return;
-        if (thanksgetting.have_effect() < turnsRemaining)
+        if (turnsRemaining <= thanksgetting.have_effect() + 20)
             return;
 
         if (my_fullness() + 1 != fullness_limit()) // need exactly 1 stomach remaining for this to trigger
@@ -4956,16 +4972,16 @@ print("mob = " + canMobHit);
         if (voraciTea.item_amount() == 0) // no tea?  too bad
             return;
         static boolean voraciTeaChecked = false;
-        if (!voraciTeaChecked)
+        if (voraciTeaChecked)
+            return;
+
+        voraciTeaChecked = true;
+        if (UserConfirmDefault("Extend Thanksgetting buff length by consuming cuppa Voraci tea?", true))
         {
-            voraciTeaChecked = true;
-            if (UserConfirmDefault("Extend Thanksgetting buff length by consuming cuppa Voraci tea?", true))
-            {
-                use(1, voraciTea);
-                if (!(get_campground() contains mayoClinic))
-                    eatWithoutMayo = true;
-                TryBonusThanksgetting();
-            }
+            use(1, voraciTea);
+            if (!(get_campground() contains mayoClinic))
+                eatWithoutMayo = true;
+            TryBonusThanksgetting();
         }
     }
 
@@ -4982,6 +4998,7 @@ print("mob = " + canMobHit);
         {
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
             TryCalculateUniverse();
+            TryAutoExtendThanksGetting(turnCount - i);
             BurnManaAndRestores(20, false);
           
             PrepareFilterState();
