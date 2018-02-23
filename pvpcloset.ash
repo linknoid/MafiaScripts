@@ -1,3 +1,4 @@
+// adapted from http://kolmafia.us/showthread.php?10059-Save-items-from-pvp-theft
 
 void main(string Outfit)
 {

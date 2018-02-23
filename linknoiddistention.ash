@@ -1,3 +1,5 @@
+// converts Grimace Prime maps to distention pills
+
 void main()
 {
 	while ($Item[ Map to Safety Shelter Grimace Prime ].item_amount() > 0)

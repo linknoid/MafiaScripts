@@ -1,3 +1,4 @@
+// usage: type "breadcar 100" to generate 100 fuel from soda bread
 
 item water = to_item("soda water");
 item dough = to_item("wad of dough");
