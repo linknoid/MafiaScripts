@@ -61,6 +61,7 @@
     int maxUsePrintScreens = 1; // how many print screens to use per day
     int maxUseEnamorangs = 1; // how many lov enamorangs to throw per day
     int turkeyLimit = 1; // how many ambitious turkeys to drink per day
+    boolean combatUserScript = false; // in barf mountain fights, use the user's default combat script instead of the built in logic
     boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
     boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
@@ -82,6 +83,7 @@ void WriteSettings()
     map["maxUsePrintScreens"] = maxUsePrintScreens.to_string();
     map["maxUseEnamorangs"] = maxUseEnamorangs.to_string();
     map["turkeyLimit"] = turkeyLimit.to_string();
+    map["combatUserScript"] = combatUserScript.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
     map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
@@ -108,6 +110,7 @@ void ReadSettings()
             case "maxUsePrintScreens": maxUsePrintScreens = value.to_int(); break;
             case "maxUseEnamorangs": maxUseEnamorangs = value.to_int(); break;
             case "turkeyLimit": turkeyLimit = value.to_int(); break;
+            case "combatUserScript": combatUserScript = value == "true"; break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
             case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
@@ -366,6 +369,7 @@ void ReadSettings()
     skill accordionBash = ToSkill("Accordion Bash");
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
+    item carpe = ToItem("carpe");
     item snowglobe = ToItem("KoL Con 13 snowglobe");
     item screege = ToItem("Mr. Screege's spectacles");
     item cheeng = ToItem("Mr. Cheeng's spectacles");
@@ -410,6 +414,7 @@ void ReadSettings()
 
 // items for +meat bonus
     item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
+    item floundry = ToItem("Clan Floundry"); // for carpe
     item poolTable = ToItem("Clan Pool Table");
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
@@ -911,7 +916,7 @@ void ReadSettings()
                 return true;
         return false;
     }
-    void CheatKnifeIfNeeded(item[slot] outfitDef)
+    void MakeMeltingGear(item[slot] outfitDef)
     {
         if (!HaveEquipment(knife)
             && OutfitContains(outfitDef, knife)
@@ -927,10 +932,20 @@ void ReadSettings()
         {
             cli_execute("cheat rope");
         }
+        if (!HaveEquipment(carpe)
+            && OutfitContains(outfitDef, carpe)
+            && vipKey.item_amount() > 0
+            && get_property("_floundryItemCreated") == "false"
+            && get_clan_lounge() contains floundry)
+        {
+            if (user_confirm("Spend 10 of your guild's fish to make a carpe?  (Make sure you refill it if you do.)"))
+                cli_execute("create carpe");
+        }
     }
+ 
     void WearOutfit(item[slot] outfitDef)
     {
-        CheatKnifeIfNeeded(outfitDef);
+        MakeMeltingGear(outfitDef);
         // remove wrong accessories, in case the slots don't match up
         foreach sl, it in outfitDef
         {
@@ -1065,7 +1080,7 @@ void ReadSettings()
         string page = visit_url(loc.to_url().to_string());
         if (page.contains_text("choice.php"))
         {
-            if (page.contains_text("value=\"Tame it!\""))
+            if (page.contains_text("Tame it"))
             {
                 run_choice(1); // tame the turtle
                 return;
@@ -1564,6 +1579,8 @@ void ReadSettings()
 
     string Filter_Standard(int round, monster mon, string page)
     {
+        if (combatUserScript)
+            return "";
         if (round == 0)
             print("using Filter_Standard", printColor);
 
