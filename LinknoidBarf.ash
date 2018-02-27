@@ -1579,8 +1579,6 @@ void ReadSettings()
 
     string Filter_Standard(int round, monster mon, string page)
     {
-        if (combatUserScript)
-            return "";
         if (round == 0)
             print("using Filter_Standard", printColor);
 
@@ -1669,6 +1667,8 @@ void ReadSettings()
                 return "item " + s;
             }
         }
+        if (combatUserScript)
+            return "";
         if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
         {
             return "\"pickpocket\"";
