@@ -422,6 +422,8 @@ void ReadSettings()
     item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
     item rope = ToItem("rope"); // from deck of every card
+    item haikuKatana = ToItem("haiku katana"); // IotM weapon with guaranteed crit
+    skill haikuCrit = ToSkill("Summer Siesta"); // guaranteed critical hit skill from haiku katana
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
@@ -725,6 +727,7 @@ void ReadSettings()
     boolean bashed = false;
     boolean bubbled = false;
     boolean noodled = false;
+    boolean haikuCritted = false;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
     item[slot] dropsOutfitPieces; // const outfit initialized on first use
@@ -1773,6 +1776,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         {
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
+        }
+        if (haikuKatana.have_equipped() && !haikuCritted)
+        {
+            return "skill " + haikuCrit.to_string();
         }
 
         if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
