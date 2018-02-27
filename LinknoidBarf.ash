@@ -3784,6 +3784,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             return;
 
         string drinkList = get_property("_roboDrinks");
+        if (InList(roboMeat.to_string(), drinkList, ",")) // already fed robortender, don't check again
+            return;
 
         ValidateRobortender(roboMeat, drinkList, "meat");
         ValidateRobortender(roboItems, drinkList, "item");
