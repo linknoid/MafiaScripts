@@ -1023,10 +1023,12 @@ void ReadSettings()
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
     {
+        int buyCount = numberRequested - itm.item_amount();
+        if (buyCount <= 0)
+            return;
         int mallPrice = itm.mall_price();
-        if (mallPrice <= maxPrice && (itm.item_amount() < numberRequested || mallPrice < 500))
+        if (mallPrice <= maxPrice)
         {
-            int buyCount = numberRequested;
             if (buyCount < 1)
                 buyCount = 1;
             buy(buyCount, itm);
@@ -2542,7 +2544,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return Filter_Standard(round, mon, page);
     }
     
-    boolean RunFreeCombat(item[slot] selectedOutfit, string filter)
+    boolean RunFreeCombat(item[slot] selectedOutfit, string filter, boolean forMeat)
     {
         if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
         {
@@ -2550,6 +2552,40 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             abstractioned = false;
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
             return true;
+        }
+        if (!forMeat || covetous.have_effect() > 0)
+        {
+            if (get_property("_brickoFights").to_int() < 10)
+            {
+                int brickosNeeded = 10 - brickoOoze.item_amount();
+                if (brickosNeeded > 0)
+                {
+                    BuyItemIfNeeded(brickoBrick, 2 * brickosNeeded, 500);
+                    BuyItemIfNeeded(brickoEye, brickosNeeded, 1000);
+                }
+                while (brickoOoze.item_amount() < 10 && brickoBrick.item_amount() >= 2 && brickoEye.item_amount() >= 1)
+                {
+                    use(2, brickoBrick);
+                }
+                if (brickoOoze.item_amount() > 0)
+                {
+                    PrepareFreeCombat(selectedOutfit);
+                    use(1, brickoOoze);
+                    RunCombat(filter);
+                    return true;
+                }
+            }
+            if (get_property("_lynyrdSnareUses").to_int() < 3)
+            {
+                BuyItemIfNeeded(lynyrdSnare, 3, 1000);
+                if (lynyrdSnare.item_amount() > 0)
+                {
+                    PrepareFreeCombat(selectedOutfit);
+                    use(1, lynyrdSnare);
+                    RunCombat(filter);
+                    return true;
+                }
+            }
         }
         if (get_property("_eldritchTentacleFought") == "false")
         {
@@ -2569,37 +2605,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             use_skill(1, evokeHorror);
             RunCombat(filter);
             return true;
-        }
-        if (get_property("_brickoFights").to_int() < 10)
-        {
-            int brickosNeeded = 10 - brickoOoze.item_amount();
-            if (brickosNeeded > 0)
-            {
-                BuyItemIfNeeded(brickoBrick, 2 * brickosNeeded, 500);
-                BuyItemIfNeeded(brickoEye, brickosNeeded, 1000);
-            }
-            while (brickoOoze.item_amount() < 10 && brickoBrick.item_amount() >= 2 && brickoEye.item_amount() >= 1)
-            {
-                use(2, brickoBrick);
-            }
-            if (brickoOoze.item_amount() > 0)
-            {
-                PrepareFreeCombat(selectedOutfit);
-                use(1, brickoOoze);
-                RunCombat(filter);
-                return true;
-            }
-        }
-        if (get_property("_lynyrdSnareUses").to_int() < 3)
-        {
-            BuyItemIfNeeded(lynyrdSnare, 3, 1000);
-            if (lynyrdSnare.item_amount() > 0)
-            {
-                PrepareFreeCombat(selectedOutfit);
-                use(1, lynyrdSnare);
-                RunCombat(filter);
-                return true;
-            }
         }
         if (attunement.have_effect() > 0 && get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
         {
@@ -2658,14 +2663,14 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return false;
     }
-    boolean RunFreeCombat(item[slot] selectedOutfit)
+    boolean RunFreeCombat(item[slot] selectedOutfit, boolean forMeat)
     {
         string filter = "Filter_FreeCombat";
-        return RunFreeCombat(selectedOutfit, filter);
+        return RunFreeCombat(selectedOutfit, filter, forMeat);
     }
-    boolean RunFreeCombat()
+    boolean RunFreeCombat(boolean forMeat)
     {
-        return RunFreeCombat(CopyOutfit(weightOutfitPieces));
+        return RunFreeCombat(CopyOutfit(weightOutfitPieces), forMeat);
     }
 
     void FreeCombatsForProfit()
@@ -2679,7 +2684,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (runFree)
         {
             HealUp();
-            while (RunFreeCombat())
+            while (RunFreeCombat(true)) // true = forMeat
             {
                 if (beatenUp.have_effect() > 0)
                     abort("Lost during free combat, do you need to adjust your combat parameters?");
@@ -2782,7 +2787,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         if (bagOtricks.have_equipped())
         {
-            RunFreeCombat(eqSet, "Filter_BagOTricks");
+            RunFreeCombat(eqSet, "Filter_BagOTricks", false);
         }
         offhand.equip(oldOffhand);
     }
@@ -2811,7 +2816,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             else
             {
-                if (!RunFreeCombat(eqSet))
+                if (!RunFreeCombat(eqSet, false))
                 {
                     abort("Failed to run free combat for Pantsgiving"); // todo: change this to a print once it's debugged
                     break;
