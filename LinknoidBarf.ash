@@ -588,6 +588,7 @@ void ReadSettings()
     item usedPrintScreen = ToItem("screencapped monster");
     item spookyPutty = ToItem("Spooky Putty sheet");
     item usedSpookyPutty = ToItem("Spooky Putty monster");
+    item unopenedRainDoh = ToItem("can of Rain-Doh");
     item rainDoh = ToItem("Rain-Doh black box");
     item usedRainDoh = ToItem("Rain-Doh box full of monster");
     skill digitize = ToSkill("Digitize");
@@ -1808,6 +1809,20 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 
     int PuttyCopiesRemaining()
     {
+        static boolean rainDohChecked = false;
+        if (!rainDohChecked)
+        {
+            rainDohChecked = true;
+            if (rainDoh.item_amount() == 0
+                && useRainDoh.item_amount() == 0
+                && unopenedRainDoh.item_amount() > 0)
+            {
+                if (UserConfirmDefault("Rain-doh hasn't been opened this ascension yet, do you wish to open it now?", true))
+                {
+                    use(1, unopenedRainDoh);
+                }
+            }
+        }
         int puttyAvailable = 0;
         boolean hasPutty = spookyPutty.item_amount() > 0;
         boolean hasRaindoh = rainDoh.item_amount() > 0;
