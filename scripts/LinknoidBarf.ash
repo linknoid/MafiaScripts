@@ -1814,7 +1814,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         {
             rainDohChecked = true;
             if (rainDoh.item_amount() == 0
-                && useRainDoh.item_amount() == 0
+                && usedRainDoh.item_amount() == 0
                 && unopenedRainDoh.item_amount() > 0)
             {
                 if (UserConfirmDefault("Rain-doh hasn't been opened this ascension yet, do you wish to open it now?", true))
