@@ -1,8 +1,18 @@
+Configuration:
+
+Both scripts share a common configuration file.  It will be created with the settings it cares about the first run the script.  The file can be found in the data folder:
+
+"data\linknoidfarm_USERNAME.txt"
+
+where USERNAME is the name of your current character.
+
+
+
 LinknoidBarf.ash:
 
 This is a meat farming script.  It's focused on running Barf Mountain and copying embezzlers, and providing the buffs to optimize doing so, especially the complicated eating that goes into a Thanksgetting feast.
 
-The Mayo Clinic is probably the single most important IotM for making this script work.  Without it, you're eating is going to be very less optimal.  Pantsgiving is also quite useful, but not so critical.
+The Mayo Clinic is probably the single most important IotM for making this script work.  Without it, your eating is going to be very less optimal.  Pantsgiving is also quite useful, but not so critical.
 
 My design philosophy:  I want the script to be resilient, but I don't want it doing stuff with my account without permission.  It's allowed to buy necessary resources from the mall or NPCs or coinmasters, but it will never auto-sell or put anything on the mall.  I'm something of a packrat (for example, I like collecting solid gold jewels, I don't want them used automatically).  If you want to automatically sell stuff, you'll need a separate script for that.
 
@@ -14,11 +24,11 @@ Usage:
 
 
  Prompts for:
- * number of turns to buff (-1 to buff with "night before" buffs, basically the minimum number of turns because we're just doing free kills
+ * number of turns to buff (-1 to buff with "night before" buffs, basically the minimum number of turns because we're just doing free kills)
  * number of turns to execute (-1 to only burn your free kills for the day)
  * which familiar to use (defaults to your current one unless you've fed Robortender a drive-by shooting already today)
 
- There are a number of prompts to warn you of important things, and give you a chance to cancel.  I recommend leaving them enabled at the beginning, but if you don't want interactivity, you can let the script use defaults by setting property "autoConfirmBarf" to true in the "data\linknoidfarm_USERNAME.txt" file.
+ There are a number of prompts to warn you of important things, and give you a chance to cancel.  I recommend leaving them enabled at the beginning, but if you don't want interactivity, you can let the script use defaults by setting property "autoConfirmBarf" to true in the configuration file (in the data directory, see above).
 
  Auto-buy/use one-day ticket if you don't have charter
  Auto-buy a print screen button using 111 BACON if available (assumes you have an infinite bacon machine)
@@ -58,8 +68,9 @@ Usage:
  * Eats optimized using Mayo Clinic (and with milk of magnesium):
  * Jumping Horseradish: Kicked in the Sinuses
  * Thanksgiving Feast (including buying and/or cooking)
- * Maximum of 5 Ambitious Turkey if you have Fist Turkey familiar (all drinking casts Ode To Booze first)
+ * Configurable number of Ambitious Turkey, defaults to 1
  * 1 Dirt Julep (low turn gen, but good buff)
+ * 1 Gingerbread wine if you have it (untradable booze from gingerbread city)
  * Fills rest of liver with Sacramento wine
  * Activates Shrine to the Barrel God before eating or drinking, if appropriate class
  * Wears Mafia Pinky Ring before drinking
@@ -71,8 +82,8 @@ Usage:
  It will make and use copies of Knob Goblin Embezzlers from the following sources:
  * Chateau (fight only, not make painting)
  * 4-d camera (1/day)
- * Rain Doh (untested)
- * Spooky Putty (5/day)
+ * Rain Doh (5/day)
+ * Spooky Putty (5/day) (or a total of 6 with Rain Doh/Spooky Putty combined)
  * LOV Enamorang (1/day)
  * Print Screen Button (1/day)
  * Digitize (re-digitize every 97 turns)
@@ -80,6 +91,12 @@ Usage:
 Wears scratch'n'sniff UPC codes if they're cost effective while fighting Embezzlers (not cost effective for Barf Mountain itself)
 Casts Meteor Storm on embezzlers for +20 familiar weight
 Increases monster level before initial embezzlers to try to stop them from dying prematurely
+
+
+ If you have a Robortender, it will try to fight an elf for the first fight, although there doesn't appear to be a way to find out if it's the Robortender's first fight of the day or not.  It will copy the elf and fight it a second time if possible, since there's a good chance of getting a second peppermint sprig on a the second kill.  Both should use free kills to not waste your existing buffs.
+
+ (Currently it only fights elves from the deck of every card, but may support more options in the future).
+
 
  It will also use free kills to extend the buff duration: (THIS IS NOW DISABLED BECAUSE OF 1000 MEAT LIMIT FOR FREE COMBATS)
  * Jokester's Gun
@@ -89,7 +106,15 @@ Increases monster level before initial embezzlers to try to stop them from dying
  * Asdon Martin: Missile Launcher
 
 
+ Since each person has different outfit names and such, those can be configured in the settings file (in the data directory).  By default, the outfit names it looks for are:
+ * Barf - should be your meat maximization outfit, it swaps out the cheap sunglasses when you're fighting embezzlers
+ * Max MP - maximize your MP for libram casting.  Which means it also gets worn in LOV tunnel, so be prepared.
+ * Max Weight - maximize your weight for NPRZ dancing, which might mean you need a bit of survivability in there
+ * Drops - an outfit which provides item drops in situations where the base monster provides no meat or need for +item%
+
+
  If outfit "Barf" contains an accordion and a bakelite backpack, it will execute accordion bash in each combat.
+ If outfit "Barf" contains a Haiku Katana, it will use the crit ability each combat
  It will replace accessory 1 with mayfly bait when visiting running barf mountain until the swarms are used up for the day
  Uses free combat (witchess or snojo) before each digitize to activate bag o' tricks "Badger Underfoot" buff.
  Optionally clear gingerbread to grab candies, and if you have the Gingerbread Best outfit, a chocolate sculpture (if you have 300 sprinkles) or gingerbread wine (if you don't have the sprinkles). Useful because you will normally have a large number of pet buffs. Requires Bandersnatch or Stomping Boots, or a supply of fish-oil smoke bombs from the AT nemesis quest.
@@ -138,10 +163,10 @@ And restores mana using:
  * and LOV tunnel
 
  Automatically goes to castle in the clouds top floor when semi-rare timer expires.  If last semi-rare was Mick's, it visits purple light district if available, or knob treasury if not.  Or billiards room if you haven't gotten your perm pool skill to 10.
- You must add a variable LinknoidBarf.HobopolisWhitelist=guildName if you want it to visit the purple light district (although maybe that's silly, you have to have gone through the sewers anyway to get there)
+ You must edit the settings file with hobopolisWhitelist=guildName if you want it to visit the purple light district (although maybe that's silly, you have to have gone through the sewers anyway to get there)
  Automatically removes effects and items which confuse KoLMafia.  Particularly, Papier Mitre gives +familiar weight, but it will cause all kinds of problems if you wear it while scripting.
 
- Accordion Buffs get shrugged if necessary to fit songs in head.  Unshruggable are Thingfinder, Polka, and Phat Loot.
+ Accordion Buffs get shrugged if necessary to fit songs in head.  Unshruggable are Thingfinder, Chorale, Polka, and Phat Loot.
  It will skip past Spookyraven quest if the counter is turned on, so it won't interrupt the script, but it will leave your Spookyraven setting alone
 
  In combat:
