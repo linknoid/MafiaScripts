@@ -1,5 +1,39 @@
 // code adapted from hotmine.ash by Smelltastic: https://svn.code.sf.net/p/smellomafia/svn/hotmine/code/
 
+boolean autoConfirmMine = false;
+string printColor = "orange";
+int saveSpleen = 0; // how many spleen points to save back
+int saveStomach = 0; // how many stomach points to save back
+int saveLiver = 0; // how many liver points to save back
+
+void WriteSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    map["autoConfirmMine"] = autoConfirmMine.to_string();
+    map["printColor"] = printColor;
+    map["saveSpleen"] = saveSpleen.to_string();
+    map["saveStomach"] = saveStomach.to_string();
+    map["saveLiver"] = saveLiver.to_string();
+    map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
+}
+void ReadSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    foreach key,value in map
+    {
+        switch (key)
+        {
+            case "autoConfirmMine": autoConfirmMine = value == "true"; break;
+            case "printColor": printColor = value; break;
+            case "saveSpleen": saveSpleen = value.to_int(); break;
+            case "saveStomach": saveStomach = value.to_int(); break;
+            case "saveLiver": saveLiver = value.to_int(); break;
+        }
+    }
+}
+
 slot ToSlot(string s)
 {
 	slot result = s.to_slot();
@@ -128,38 +162,6 @@ item skeletonX = ToItem("X");
 item weirdness = ToItem("solid shifting time weirdness");
 
 
-boolean autoConfirmMine = false;
-string printColor = "orange";
-int saveSpleen = 0; // how many spleen points to save back
-int saveStomach = 0; // how many stomach points to save back
-int saveLiver = 0; // how many liver points to save back
-
-void WriteSettings()
-{
-    string[string] map;
-    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
-    map["autoConfirmMine"] = autoConfirmMine.to_string();
-    map["printColor"] = printColor;
-    map["saveSpleen"] = saveSpleen.to_string();
-    map["saveStomach"] = saveStomach.to_string();
-    map["saveLiver"] = saveLiver.to_string();
-    map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
-}
-void ReadSettings()
-{
-    string[string] map;
-    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
-    foreach key,value in map
-    {
-        switch (key)
-        {
-            case "autoConfirmMine": autoConfirmMine = value == "true"; break;
-            case "printColor": printColor = value; break;
-            case "saveSpleen": saveSpleen = value.to_int(); break;
-            case "saveStomach": saveStomach = value.to_int(); break;
-        }
-    }
-}
 
 
 boolean UserConfirmDefault(string message, boolean defaultValue)
@@ -582,7 +584,7 @@ void OdeUp(int size)
 
 void PrepareEat(int size)
 {
-	int remainingFull = fullness_limit() - my_fullness();
+	int remainingFull = fullness_limit() - saveStomach - my_fullness();
 	if (get_property("barrelShrineUnlocked") == "true"
 		&& my_class().to_string() == "Turtle Tamer"
 		&& get_property("_barrelPrayer") != "true"
@@ -641,9 +643,9 @@ void HandleEatDrinkSpleen()
 {
 	// Non-optimal algorithm for lazy eating and drinking that won't break
 	// the bank.  You can almost certainly do better manually.
-	int remainingFull = fullness_limit() - my_fullness();
-	int remainingDrunk = inebriety_limit() - my_inebriety();
-	int remainingSpleen = spleen_limit() - my_spleen_use();
+	int remainingFull = fullness_limit() - saveStomach - my_fullness();
+	int remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
+	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
 	boolean timeBorrowed = get_property("_borrowedTimeUsed") != "false";
 	if (remainingFull < 5 && remainingDrunk < 3 && remainingSpleen < 4)
 		return;
@@ -737,7 +739,7 @@ int GetAdventureGain(slot sl)
 
 void PrepTomorrow()
 {
-	int remainingDrunk = inebriety_limit() - my_inebriety();
+	int remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
 	WearSleepGear();
 	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40;
 	if (get_property("_borrowedTimeUsed") == "true")
@@ -754,7 +756,7 @@ void PrepTomorrow()
 	overnightAdventureGain += GetAdventureGain(famEqp);
 
         while (my_adventures() + overnightAdventureGain < 200
-		&& fullness_limit() - my_fullness() >= 3)
+		&& fullness_limit() - saveStomach - my_fullness() >= 3)
 	{
 		PrepareEat(3);
 		if (burrito1.item_amount() > 0)
@@ -779,7 +781,7 @@ void PrepTomorrow()
 			}
 		}
 	}
-	int remainingSpleen = spleen_limit() - my_spleen_use();
+	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
         while (my_adventures() + overnightAdventureGain < 200
 		&& remainingSpleen >= 3)
 	{
@@ -815,7 +817,7 @@ void PrepTomorrow()
 
 void main(int miningTurns)
 {
-	if (my_inebriety() > inebriety_limit())
+	if (my_inebriety() > inebriety_limit() - saveLiver)
 		abort("You are too drunk to continue.");
 
 	if (miningTurns == 0)
