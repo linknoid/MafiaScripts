@@ -4883,7 +4883,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
-        if (muscle.my_basestat() > mysticality.my_basestat())
+        if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
         {
             BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 5000);
         }
