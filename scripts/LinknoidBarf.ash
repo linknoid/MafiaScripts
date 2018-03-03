@@ -66,6 +66,7 @@
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
     boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
     boolean autoVoraciThanksgetting = false; // eat a cuppa voraciti tea if there's 1 stomach free when ran out of thanksgetting to get more turns out of it (not generally worth the meat, but you can do it if you really want to)
+    string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
 
 void WriteSettings()
 {
@@ -88,6 +89,7 @@ void WriteSettings()
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
     map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
     map["autoVoraciThanksgetting"] = autoVoraciThanksgetting.to_string();
+    map["hobopolisWhitelist"] = hobopolisWhitelist;
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -115,6 +117,7 @@ void ReadSettings()
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
             case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
             case "autoVoraciThanksgetting": autoVoraciThanksgetting = value == "true"; break;
+            case "hobopolisWhitelist": hobopolisWhitelist = value; break;
         }
     }
 }
@@ -728,7 +731,7 @@ void ReadSettings()
     boolean bashed = false;
     boolean bubbled = false;
     boolean noodled = false;
-    boolean haikuCritted = false;
+    boolean critted = false;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
     item[slot] dropsOutfitPieces; // const outfit initialized on first use
@@ -770,8 +773,13 @@ void ReadSettings()
     boolean UserConfirmDefault(string message, boolean defaultValue)
     {
         if (autoConfirmBarf)
+        {
+            print("Skipping confirmation for request '" + message + "' with default value = " + defaultValue, printColor);
             return defaultValue;
-        return user_confirm(message);
+        }
+        boolean result = user_confirm(message);
+        print("User responded to query '" + message + "' with value = " + result, printColor);
+        return result;
     }
     int LastIndexOf(string page, string match, int beforeIndex) // this doesn't appear to be part of the ASH standard API, not sure why
     {
@@ -1047,6 +1055,7 @@ void ReadSettings()
         bashed = false;
         bubbled = false;
         noodled = false;
+        critted = false;
         canPocketCrumb = HaveEquipment(pantsGiving);
     }
     void DisableFreeKills()
@@ -1780,9 +1789,14 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
         }
-        if (haikuKatana.have_equipped() && !haikuCritted)
+        if (!critted)
         {
-            return "skill " + haikuCrit.to_string();
+            if (haikuKatana.have_equipped())
+            {
+                critted = true;
+                return "skill " + haikuCrit.to_string();
+            }
+            // todo: check for seal clubber rage and free crit ability
         }
 
         if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
@@ -1817,7 +1831,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 && usedRainDoh.item_amount() == 0
                 && unopenedRainDoh.item_amount() > 0)
             {
-                if (UserConfirmDefault("Rain-doh hasn't been opened this ascension yet, do you wish to open it now?", true))
+                if (UserConfirmDefault("Rain-doh hasn't been opened this ascension yet, do you wish to open it now for copying?", true))
                 {
                     use(1, unopenedRainDoh);
                 }
@@ -2424,11 +2438,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (staggerOption == 7)
         {
             ++staggerOption;
-            if (to_item("beehive").item_amount() > 0)
+            if (to_item("Rain-Doh indigo cup").item_amount() > 0)
             {
-                return "item beehive";
+                return "item Rain-Doh indigo cup";
             }
-            print("no beehive");
+            print("no rain doh");
         }
         if (staggerOption == 8)
         {
@@ -2442,11 +2456,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (staggerOption == 9)
         {
             ++staggerOption;
-            if (to_skill("Silent Knife").have_skill() && my_mp() > 10)
+            if (to_item("beehive").item_amount() > 0)
             {
-                return "skill Silent Knife";
+                return "item beehive";
             }
-            print("no silent knife");
+            print("no beehive");
         }
         if (staggerOption == 10)
         {
@@ -2456,6 +2470,15 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 return "skill Shell Up";
             }
             print("no shell up");
+        }
+        if (staggerOption == 11)
+        {
+            ++staggerOption;
+            if (to_skill("Silent Knife").have_skill() && my_mp() > 10)
+            {
+                return "skill Silent Knife";
+            }
+            print("no silent knife");
         }
         return ChooseDictionaryCombatAction();
     }
@@ -3764,21 +3787,28 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 turns and a copy to grab 2
         if (deck.item_amount() == 0
-            || jokesterGun.item_amount() == 0
             || get_property("_deckCardsDrawn").to_int() > 0)
         {
             return;
         }
         print("Prepping to fight elf as Robortender", printColor);
-        item[slot] jokeOutfit = CopyOutfit(dropsOutfitPieces);
-        jokeOutfit[weapon] = jokesterGun;
-        WearOutfit(jokeOutfit);
-        PrepareFilterState();
-        if (!jokesterGun.have_equipped())
+        if (HaveEquipment(jokesterGun))
         {
-            print("Failure to equip jokester's gun", printColor);
+            item[slot] jokeOutfit = CopyOutfit(dropsOutfitPieces);
+            jokeOutfit[weapon] = jokesterGun;
+            WearOutfit(jokeOutfit);
+            if (!jokesterGun.have_equipped())
+            {
+                print("Failure to equip jokester's gun", printColor);
+            }
+        }
+        PrepareFilterState();
+        if (!hasFreeKillRemaining)
+        {
+            print("No free kills remain, skipping first peppermint sprig", printColor);
             return;
         }
+
         string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
         if (page.contains_text("Christmas Card"))
         {
@@ -3792,7 +3822,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         {
             print("Activating copy of elf for a second robortender drop", printColor);
             PrepareFilterState();
-            ActivateCopyItem(elfCopiedTo);
+            ActivateCopyItem(elfCopiedTo, "Filter_Elvish");
         }
         int sprigCount = peppermintSprig.item_amount();
         if (sprigCount > 2) // only craft the ones we just got, not our whole inventory worth
@@ -4332,7 +4362,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
       
     boolean IsPurpleLightAvailable()
     {
-        if (!get_property("LinknoidBarf.HobopolisWhitelist").contains_text(get_clan_name()))
+        if (!hobopolisWhitelist.contains_text(get_clan_name()))
             return false;
         
         matcher imgNum = create_matcher("purplelightdistrict(\\d+)\\.gif", visit_url("clan_hobopolis.php?place=8"));
@@ -4853,7 +4883,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
-        if (muscle.my_basestat() > mysticality.my_basestat())
+        if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
         {
             BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 5000);
         }
@@ -4987,12 +5017,17 @@ print("mob = " + canMobHit);
         {
             print("Attempting LT&T telegram turn", printColor);
             int turnNum = get_property("lttQuestStageCount").to_int();
-            if (turnNum == 9 || turnNum == 19 || turnNum == 29)
-            {
-                print("Stopping LT&T free kills because next turn is an unskippable non-combat", printColor);
-                break;
-            }
             int turnsBefore = my_turnCount();
+            if (turnNum == 9 || turnNum == 19)
+            {
+                if (!UserConfirmDefault("Skip LT&T free kills because next turn is an unskippable non-combat?", true))
+                    break;
+                turnsBefore++;
+            }
+            else if (turnNum == 29)
+            {
+                print("Skipping LT&T because you're already at the boss", printColor);
+            }
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
             PrepareFilterState();
             if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
@@ -5070,7 +5105,7 @@ print("mob = " + canMobHit);
                 RunSemiRare();
                 continue;
             }
-            if ((turnCount - i) % 5 == 1)  // only check every 10 turns
+            if ((turnCount - i) % 5 == 1)  // only check every 5 turns
             {
                 if (TryFightGhost())
                 {
