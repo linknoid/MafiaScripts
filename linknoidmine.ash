@@ -128,9 +128,43 @@ item skeletonX = ToItem("X");
 item weirdness = ToItem("solid shifting time weirdness");
 
 
+boolean autoConfirmMine = false;
+string printColor = "orange";
+int saveSpleen = 0; // how many spleen points to save back
+int saveStomach = 0; // how many stomach points to save back
+int saveLiver = 0; // how many liver points to save back
+
+void WriteSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    map["autoConfirmMine"] = autoConfirmMine.to_string();
+    map["printColor"] = printColor;
+    map["saveSpleen"] = saveSpleen.to_string();
+    map["saveStomach"] = saveStomach.to_string();
+    map["saveLiver"] = saveLiver.to_string();
+    map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
+}
+void ReadSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    foreach key,value in map
+    {
+        switch (key)
+        {
+            case "autoConfirmMine": autoConfirmMine = value == "true"; break;
+            case "printColor": printColor = value; break;
+            case "saveSpleen": saveSpleen = value.to_int(); break;
+            case "saveStomach": saveStomach = value.to_int(); break;
+        }
+    }
+}
+
+
 boolean UserConfirmDefault(string message, boolean defaultValue)
 {
-	if (get_property("LinknoidMine.AutoConfirm") == "true")
+	if (autoConfirmMine)
 		return defaultValue;
 	return user_confirm(message);
 }
