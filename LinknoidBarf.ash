@@ -3,6 +3,7 @@
 // VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
 // Ezandora's KGB Briefcase.ash script for handling briefcase so I don't have to
 // Zarqon canadv.ash for how to check for access to purple light district
+// lostcalpolydude for answering various questions
 
 
 // Costs:
@@ -3178,9 +3179,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             return;
         if (regenMP)
             TryReduceManaCost(sk);
+        int keepMP = 20;
         while (resultingEffect.have_effect() < requestedTurns && sk.have_skill())
         {
-            if (sk.mp_cost() > my_mp())
+            if (sk.mp_cost() > my_mp() - keepMP)
             {
                 if (!regenMP && resultingEffect.have_effect() > 0)
                 {
@@ -3192,8 +3194,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     if (FreeDailyManaRestore()) // this can change equipment, so need to swap back
                         TryReduceManaCost(sk);
                 }
-                if (sk.mp_cost() > my_mp())
-                    restore_mp(sk.mp_cost() - my_mp());
+                if (sk.mp_cost() > my_mp() - keepMP)
+                    restore_mp(sk.mp_cost() - (my_mp() - keepMP));
             }
             int beforeTurns = resultingEffect.have_effect();
             int timesCast = (requestedTurns - resultingEffect.have_effect() + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
@@ -3201,9 +3203,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             {
                 break;
             }
-            if (sk.mp_cost() * timesCast > my_mp())
+            if (sk.mp_cost() * timesCast > my_mp() - keepMP)
             {
-                timesCast = my_mp() / sk.mp_cost();
+                timesCast = (my_mp() - keepMP) / sk.mp_cost();
             }
             if (timesCast <= 0) // sanity check, should not hit this unless we don't have enough mp
                 timesCast = 1;
@@ -4334,6 +4336,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
         TryBuffForFreeCombats(false);
         MaxManaSummons();
+        TryReduceManaCost(leer);
         BuffInRun(turns, false);
 
         if (needWeightBuffs)
@@ -5004,7 +5007,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
-    void TryRunLTTFreeKills()
+    void TryRunLTTFreeKills(int turns)
     {
 
         if (get_property("telegraphOfficeAvailable") != "true") // no telegraph office to run
@@ -5069,6 +5072,7 @@ print("mob = " + canMobHit);
             int turnsAfter = my_turnCount();
             if (turnsAfter > turnsBefore)
                 abort("Free kill algorithm failed, please debug this script");
+            BuffInRun(turns, false);
             BurnManaAndRestores(100, false);
         }
     }
@@ -5104,7 +5108,7 @@ print("mob = " + canMobHit);
     {
         if (turnCount != 0) // things to do while familiar weight is maxxed
         {
-            TryRunLTTFreeKills();
+            TryRunLTTFreeKills(turnCount);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
