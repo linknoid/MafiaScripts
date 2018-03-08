@@ -3,6 +3,7 @@
 // VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
 // Ezandora's KGB Briefcase.ash script for handling briefcase so I don't have to
 // Zarqon canadv.ash for how to check for access to purple light district
+// lostcalpolydude for answering various questions
 
 
 // Costs:
@@ -34,6 +35,8 @@
 // duplicate witchess knight
 
 // track candle/scroll drops from intergnat
+
+// maybe do faxing/wishing of black crayon elf if deck isn't available
 
 
 
@@ -741,7 +744,7 @@ void ReadSettings()
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
-    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast);
+    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast, boolean regenMP);
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
@@ -755,6 +758,7 @@ void ReadSettings()
     void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops);
     void ActivateChibiBuddy();
     void ActivateFortuneTeller();
+    void BuffInRun(int turns, boolean restoreMP);
 
 
 // general utility functions
@@ -2343,7 +2347,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (my_familiar() != runFamiliar)
             TryUseMovableFeast();
         if (jingleBells.have_skill())
-            CastSkill(jingleBells, jingleBellsEffect, 1, 7); // only need 1 turn of it
+            CastSkill(jingleBells, jingleBellsEffect, 1, 7, true); // only need 1 turn of it
         WearOutfit(SwapOutSunglasses(selectedOutfit));
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
@@ -3169,28 +3173,39 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
-    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast)
+    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast, boolean regenMP)
     {
         if (resultingEffect.have_effect() >= requestedTurns || !sk.have_skill())
             return;
-        TryReduceManaCost(sk);
+        if (regenMP)
+            TryReduceManaCost(sk);
+        int keepMP = 20;
         while (resultingEffect.have_effect() < requestedTurns && sk.have_skill())
         {
-            if (sk.mp_cost() > my_mp())
+            if (sk.mp_cost() > my_mp() - keepMP)
             {
-                if (FreeDailyManaRestore()) // this can change equipment, so need to swap back
-                    TryReduceManaCost(sk);
-                if (sk.mp_cost() > my_mp())
-                    restore_mp(sk.mp_cost() - my_mp());
+                if (!regenMP && resultingEffect.have_effect() > 0)
+                {
+                    print("Not extending " + sk + " because not enough MP", printColor);
+                    break;
+                }
+                if (regenMP)
+                {
+                    if (FreeDailyManaRestore()) // this can change equipment, so need to swap back
+                        TryReduceManaCost(sk);
+                }
+                if (sk.mp_cost() > my_mp() - keepMP)
+                    restore_mp(sk.mp_cost() - (my_mp() - keepMP));
             }
             int beforeTurns = resultingEffect.have_effect();
             int timesCast = (requestedTurns - resultingEffect.have_effect() + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
             if (timesCast <= 0)
             {
+                break;
             }
-            if (sk.mp_cost() * timesCast > my_mp())
+            if (sk.mp_cost() * timesCast > my_mp() - keepMP)
             {
-                timesCast = my_mp() / sk.mp_cost();
+                timesCast = (my_mp() - keepMP) / sk.mp_cost();
             }
             if (timesCast <= 0) // sanity check, should not hit this unless we don't have enough mp
                 timesCast = 1;
@@ -3364,7 +3379,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
             if (odeToBooze.have_skill())
-                CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25);
+                CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25, true);
             else
             {
                 print("Requesting Ode to Booze buff from Buffy the buff bot", printColor);
@@ -4057,14 +4072,33 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             && limitedSkill.have_skill()
             && get_property(castProperty).to_int() < 10)
         {
-            CastSkill(limitedSkill, limitedEffect, turns, 25);
+            CastSkill(limitedSkill, limitedEffect, turns, 25, true);
         }
     }
 
+    boolean needWeightBuffs = true;
+ 
+    void BuffInRun(int turns, boolean restoreMP)
+    {
+        if (polkad.have_effect() > 0 || EnsureOneSongSpace())
+        {
+            CastSkill(polka, polkad, turns, 25, restoreMP);
+        }
+        CastSkill(leer, leering, turns, 10, restoreMP);
+        if (needWeightBuffs)
+        {
+            CastSkill(leash, leashEffect, turns, 10, restoreMP);
+            CastSkill(empathy, empathyEffect, turns, 35, restoreMP);
+        }
+        if (phatLooted.have_effect() > 0 ||  EnsureOneSongSpace())
+        {
+            CastSkill(phatLoot, phatLooted, turns, 25, restoreMP);
+        }
+    }
 
     void BuffTurns(int turns)
     {
-        boolean needWeightBuffs = true;
+        needWeightBuffs = true;
 // special case, if we're buffing in preparation for the next day, don't do all the thanksgarden eating and such, just buff for minimum number of turns
 // so we can copy some embezzlers before sleep and have buffs ready to go the next day
         boolean nightBefore = turns < 0;
@@ -4164,14 +4198,14 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
             UseOneTotal(begpwnia, begpwniaEffect);
         UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
-        CastSkill(leer, leering, quietJudgement.have_skill() ? 1 : turns, 10);
-        CastSkill(polka, polkad, turns, 25);
+        CastSkill(leer, leering, quietJudgement.have_skill() ? 1 : turns, 10, true);
+        CastSkill(polka, polkad, 10, 25, true);
         RentAHorse();
 
         if (needWeightBuffs)
         {
-            CastSkill(leash, leashEffect, turns, 10);
-            CastSkill(empathy, empathyEffect, turns, 35);
+            CastSkill(leash, leashEffect, 10, 10, true);
+            CastSkill(empathy, empathyEffect, 10, 35, true);
             TrySpleen(joy, joyEffect, 1, 1);
 
             if (vipKey.item_amount() > 0 && get_clan_lounge() contains poolTable)
@@ -4226,13 +4260,13 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         KGBBuff(turns);
 
         TryDrink(dirt, dirtEffect, 1, 1);
-        TryDrink(gingerWine, gingerWineEffect, 2, turns);
+        TryDrink(gingerWine, gingerWineEffect, 2, 1);
 
         BeforeSwapOutAsdon();
         if (nightBefore)
         {
             TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
-            TryEat(foodCone, foodConeEffect, 2, 0, turns, false); // thanksgetting 
+            TryEat(foodCone, foodConeEffect, 2, 0, turns, false);
             if (expensiveBuffs || fistTurkey.have_familiar())
             {
                 TryDrink(turkey, turkeyEffect, 1, turns);
@@ -4296,14 +4330,14 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 
         if (EnsureOneSongSpace())
         {
-            CastSkill(phatLoot, phatLooted, turns, 25);
+            CastSkill(phatLoot, phatLooted, 10, 25, true);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
         TryBuffForFreeCombats(false);
         MaxManaSummons();
-        // switching from Quiet Judgement +MP to Disco Leer +meat
-        CastSkill(leer, leering, turns, 10);
+        TryReduceManaCost(leer);
+        BuffInRun(turns, false);
 
         if (needWeightBuffs)
         {
@@ -4349,7 +4383,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         else if (bandersnatch.have_familiar())
         {
             SwitchToFamiliar(stompingBoots);
-            CastSkill(odeToBooze, odeToBoozeEffect, 1, 25); // only need 1 turn of it
+            CastSkill(odeToBooze, odeToBoozeEffect, 1, 25, true); // only need 1 turn of it
         }
         if (GetFreeRunaways() > 0)
         {
@@ -4973,7 +5007,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
-    void TryRunLTTFreeKills()
+    void TryRunLTTFreeKills(int turns)
     {
 
         if (get_property("telegraphOfficeAvailable") != "true") // no telegraph office to run
@@ -5020,13 +5054,14 @@ print("mob = " + canMobHit);
             int turnsBefore = my_turnCount();
             if (turnNum == 9 || turnNum == 19)
             {
-                if (!UserConfirmDefault("Skip LT&T free kills because next turn is an unskippable non-combat?", true))
+                if (UserConfirmDefault("Skip LT&T free kills because next turn is an unskippable non-combat?", true))
                     break;
                 turnsBefore++;
             }
             else if (turnNum == 29)
             {
                 print("Skipping LT&T because you're already at the boss", printColor);
+                break;
             }
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
             PrepareFilterState();
@@ -5035,8 +5070,9 @@ print("mob = " + canMobHit);
             staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
-            if (turnsBefore != turnsAfter)
+            if (turnsAfter > turnsBefore)
                 abort("Free kill algorithm failed, please debug this script");
+            BuffInRun(turns, false);
             BurnManaAndRestores(100, false);
         }
     }
@@ -5072,7 +5108,7 @@ print("mob = " + canMobHit);
     {
         if (turnCount != 0) // things to do while familiar weight is maxxed
         {
-            TryRunLTTFreeKills();
+            TryRunLTTFreeKills(turnCount);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
@@ -5082,6 +5118,7 @@ print("mob = " + canMobHit);
             print("LinknoidBarf Turns remaining = " + (turnCount - i));
             TryCalculateUniverse();
             TryAutoExtendThanksGetting(turnCount - i);
+            BuffInRun(turnCount - i, false);
             BurnManaAndRestores(20, false);
           
             PrepareFilterState();
