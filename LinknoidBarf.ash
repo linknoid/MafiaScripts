@@ -2308,36 +2308,108 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         WishFor("I was " + e);
     }
 
-    int CountFreeCombatsAvailable(boolean nextDay)
+    int CountBrickoFights(boolean nextDay)
+    {
+        int count = 10; // brickos
+        if (!nextDay)
+            count -= get_property("_brickoFights").to_int();
+        return count;
+    }
+    int CountLynyrdFights(boolean nextDay)
+    {
+        int count = 3;  // lynyrds
+        if (!nextDay)
+            count -= get_property("_lynyrdSnareUses").to_int();
+        return count;
+    }
+    int CountSealFights(boolean nextDay)
+    {
+        int count = 0;
+        if (my_class().to_string() == "Seal Clubber")
+        {
+            count += 5;
+            if (uraniumSeal.item_amount() > 0)
+                count += 5;
+            if (!nextDay)
+                count -= get_property("_sealsSummoned").to_int();
+        }
+        return count;
+    }
+    int CountWitchessFights(boolean nextDay)
+    {
+        int count = 0;
+        if (get_campground() contains witchess)
+        {
+            count += 4; // reserve one witchess fight for other stuff
+            if (!nextDay)
+                count -= get_property("_witchessFights").to_int();
+            if (count < 0)
+                count = 0;
+        }
+        return count;
+    }
+    int CountSnojoFights(boolean nextDay)
     {
         int count = 0;
         if (get_property("snojoAvailable").to_boolean())
-            count += 10 - get_property("_snojoFreeFights").to_int();
-        if (get_campground() contains witchess)
-            count += 5 - get_property("_witchessFights").to_int();
-        count += 10 - get_property("_brickoFights").to_int();
-        count += 3 - get_property("_lynyrdSnareUses").to_int();
-        if (my_class().to_string() == "Seal Clubber")
         {
-            count += 5 - get_property("_sealsSummoned").to_int();
-            if (uraniumSeal.item_amount() > 0)
-                count += 5;
+            count += 10; // snojo
+            if (!nextDay)
+                count -= get_property("_snojoFreeFights").to_int();
         }
+        return count;
+    }
+    int CountMachineTunnelFights(boolean nextDay)
+    {
+        int count = 0;
         if (machineElf.have_familiar())
-            count += 5 - get_property("_machineTunnelsAdv").to_int();
+        {
+            count += 5;
+            if (!nextDay)
+                count -= get_property("_machineTunnelsAdv").to_int();
+            if (attunement.have_effect() > 0) // but the 5th fight will trigger another eldritch fight, so you'll get 6
+                count += 1;
+        }
+        return 0;
+    }
+    int CountEldritchFights(boolean nextDay)
+    {
+        int count = 0;
+        if (nextDay || (get_property("_eldritchTentacleFought") == "false"))
+            count += 1;
+        if (evokeHorror.have_skill())
+            if (nextDay || (get_property("_eldritchHorrorEvoked") == "false"))
+                count += 1;
+        return count;
+    }
+
+    int EstimateFreeFightCost(boolean nextDay)
+    {
+        return 800 * (CountBrickoFights(nextDay) + CountLynyrdFights(nextDay))
+            + 400 * (CountSealFights(nextDay));
+    }
+
+    int CountFreeCombatsAvailable(boolean nextDay)
+    {
+        int count = 0;
+        count += CountSnojoFights(nextDay);
+        count += CountWitchessFights(nextDay);
+        count += CountBrickoFights(nextDay);
+        count += CountLynyrdFights(nextDay);
+        count += CountSealFights(nextDay);
 
         if (attunement.have_effect() > 0) // if we have Eldritch attunement, get an extra free fight after each
         {
             count *= 2;
-            count += 11 - get_property("_drunkPygmyBanishes").to_int();
+            count += 11; // drunk pygmy
+            if (!nextDay)
+                count -= get_property("_drunkPygmyBanishes").to_int();
         }
 
-        // the remaining free fights don't trigger eldritch attunement:
+        count += CountMachineTunnelFights(nextDay); // eldritch attunement fights count against free fights here, so don't double them
 
-        if (get_property("_eldritchTentacleFought") == "false")
-            count += 1;
-        if (evokeHorror.have_skill() && get_property("_eldritchHorrorEvoked") == "false")
-            count += 1;
+        // the eldritch free fights don't trigger eldritch attunement:
+        count += CountEldritchFights(nextDay);
         return count;
     }
     void PrepareFreeCombat(item[slot] selectedOutfit, familiar chosenFamiliar)
@@ -4049,8 +4121,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (meatModifier > 10)
             meatModifier = 10;
         expectedMeatPerAdventure *= meatmodifier;
-        expectedMeatPerAdventure -= 400; // subtract 400 for potential cost to get the adventure, particularly bricko and lynyrd
-        float expectedMeat = freeCombats * expectedMeatPerAdventure;
+        float expectedMeat = freeCombats * expectedMeatPerAdventure - EstimateFreeFightCost(false);
+        if (nightBefore)
+            expectedMeat -= EstimateFreeFightCost(true);
         print("Expected meat from free combats = " + expectedMeat, printColor);
         if (expectedMeat > 55000) // will buy wishes up to 55000 meat
         {
@@ -5066,7 +5139,10 @@ print("mob = " + canMobHit);
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
             PrepareFilterState();
             if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
+            {
+                print("Out of free kills, stopping LT&T", printColor);
                 break;
+            }
             staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
