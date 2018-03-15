@@ -1112,6 +1112,15 @@ void ReadSettings()
                 run_choice(1); // tame the turtle
                 return;
             }
+            if (page.contains_text("A little") && page.contains_text(", familiar, beckoning"))
+            {
+                if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
+                    abort("Aborting so you can choose whether to duplicate an item");
+            }
+            if (page.contains_text("A path away. ALl ways. Always."))
+            {
+                run_choice(6); // skip the adventure
+            }
             if (page.contains_text("Wooof! Wooooooof!"))
             {
                 run_choice(3); // ghost dog chow
@@ -2159,14 +2168,16 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     void PrepareMeaty()
     {
         WearOutfit(SwapOutSunglasses(defaultOutfitPieces));
-        if (HaveEquipment(jokesterGun)
-            && jokesterGun.can_equip()
-            && get_property("_firedJokestersGun") == "false")
-        {
-            weapon.equip(jokesterGun);
-            canJokesterGun = true;
-        }
-        else if (!TryScratchNSniff())
+// free kills bad for meaty
+//        if (HaveEquipment(jokesterGun)
+//            && jokesterGun.can_equip()
+//            && get_property("_firedJokestersGun") == "false")
+//        {
+//            weapon.equip(jokesterGun);
+//            canJokesterGun = true;
+//        }
+//        else
+        if (!TryScratchNSniff())
         {
         }
 
@@ -5147,6 +5158,12 @@ print("mob = " + canMobHit);
                 }
             }
         }
+        if (HaveEquipment(jokesterGun)
+            && jokesterGun.can_equip()
+            && get_property("_firedJokestersGun") == "false")
+        {
+            hasFreeKillRemaining = true;
+        }
         print("Trying free kills " + hasFreeKillRemaining + " difficulty " +  get_property("lttQuestDifficulty").to_int(), printColor);
         while (hasFreeKillRemaining
             && get_property("lttQuestDifficulty").to_int() > 0)
@@ -5166,6 +5183,13 @@ print("mob = " + canMobHit);
                 break;
             }
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
+            if (HaveEquipment(jokesterGun)
+                && jokesterGun.can_equip()
+                && get_property("_firedJokestersGun") == "false")
+            {
+                weapon.equip(jokesterGun);
+                canJokesterGun = true;
+            }
             PrepareFilterState();
             if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
             {
