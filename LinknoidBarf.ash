@@ -64,13 +64,14 @@
     int maxUsePrintScreens = 1; // how many print screens to use per day
     int maxUseEnamorangs = 1; // how many lov enamorangs to throw per day
     int turkeyLimit = 1; // how many ambitious turkeys to drink per day
+    int sacramentoLimit = 0; // how many sacramento wines to drink per day
+    int thanksgettingFoodCostLimit = 15000; // Don't thanksgetting foods that cost more than this
     boolean combatUserScript = false; // in barf mountain fights, use the user's default combat script instead of the built in logic
     boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
     boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
     boolean autoVoraciThanksgetting = false; // eat a cuppa voraciti tea if there's 1 stomach free when ran out of thanksgetting to get more turns out of it (not generally worth the meat, but you can do it if you really want to)
     string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
-    int[int] cashewPriceLimit = { { 1, 4000 }, { 2, 6000 }, { 3, 8000 } }; // Don't buy cashews or cornucopias once they get above this price per cashew
 
 void WriteSettings()
 {
@@ -88,6 +89,8 @@ void WriteSettings()
     map["maxUsePrintScreens"] = maxUsePrintScreens.to_string();
     map["maxUseEnamorangs"] = maxUseEnamorangs.to_string();
     map["turkeyLimit"] = turkeyLimit.to_string();
+    map["sacramentoLimit"] = sacramentoLimit.to_string();
+    map["thanksgettingFoodCostLimit"] = thanksgettingFoodCostLimit.to_string();
     map["combatUserScript"] = combatUserScript.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
@@ -116,6 +119,8 @@ void ReadSettings()
             case "maxUsePrintScreens": maxUsePrintScreens = value.to_int(); break;
             case "maxUseEnamorangs": maxUseEnamorangs = value.to_int(); break;
             case "turkeyLimit": turkeyLimit = value.to_int(); break;
+            case "sacramentoLimit": sacramentoLimit = value.to_int(); break;
+            case "thanksgettingFoodCostLimit": thanksgettingFoodCostLimit = value.to_int(); break;
             case "combatUserScript": combatUserScript = value == "true"; break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
@@ -256,6 +261,8 @@ void ReadSettings()
     item dirt = ToItem("dirt julep"); // booze from plants with robortender
     item gingerWine = ToItem("high-end ginger wine"); // from gingertown
     item turkey = ToItem("Ambitious Turkey"); // from hand turkey
+    item sacramento = ToItem("Sacramento wine"); // from witchess
+    effect sacramentoEffect = ToEffect("Sacré Mental");
     item pinkyRing = ToItem("mafia pinky ring"); // increases adventure yield from wine
     effect beerPolka = ToEffect("Beer Barrel Polka"); // increases adventure yield for up to 10 drunk, but only once a day
 
@@ -317,7 +324,7 @@ void ReadSettings()
     familiar happyMedium = ToFamiliar("Happy Medium"); // 25% meat
     familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
     familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
-    familiar garbageFire = ToFamiliar("Garbage Fire"); // drops abstractions
+    familiar garbageFire = ToFamiliar("Garbage Fire"); // drops burning newspaper
     familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
     familiar grue = ToFamiliar("Grue"); // +15% myst
 
@@ -3310,7 +3317,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
-    boolean BuyCashews(int count, boolean preferCashews, int costLimit)
+    boolean BuyCashews(int count, boolean preferCashews, int costLimitPerCashew)
     {
         if (count <= 0)
             return true;
@@ -3327,12 +3334,12 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             return true;
         if (preferCashews)
         {
-            if (buy(count, cashew, costLimit))
+            if (buy(count, cashew, costLimitPerCashew) == count)
                 return true;
         }
         while (count > 0)
         {
-            if (!buy(1, cornucopia, costLimit * 3))
+            if (buy(1, cornucopia, costLimitPerCashew * 3) < 1)
                 return false;
             use(1, cornucopia);
             if (cashew.item_amount() == oldCashewCount)
@@ -3383,9 +3390,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         int cashewPrice = cashew.mall_price() * cashewCost + foodIngredient.mall_price();
         int cornucopiaPrice = cornucopia.mall_price() * cashewCost / 3; // assume average of 3 cashews per cornucopia
-        if (cashewPrice > cashewPriceLimit && cornucopiaPrice > cashPriceLimit)
+        if (cashewPrice > thanksgettingFoodCostLimit
+            && cornucopiaPrice > thanksgettingFoodCostLimit)
         {
-            print("Thanksgetting feast cost exceeds " + cashewPriceLimit + ", skipping", "red");
+            print("Thanksgetting feast cost exceeds " + thanksgettingFoodCostLimit + ", skipping", "red");
             return false;
         }
         int ingredientPrice = cashewIngredient.mall_price() + foodIngredient.mall_price();
@@ -3403,7 +3411,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         if (cashewIngredient.item_amount() == 0)
         {
-            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, cashewPriceLimit[cashewCost]))
+            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, thanksgettingFoodCostLimit / cashewCost))
                 return false;
             if (!cashewIngredient.seller.buy(1, cashewIngredient))
                 return false;
@@ -4407,8 +4415,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     break;
             }
 
+            for (int i = 0; i < sacramentoLimit; i++) // drink sacramento wine for +item buff
+                TryDrink(sacramento, sacramentoEffect, 1, turns);
+
             while (RoomToDrink(1)
-                && (my_adventures() < buffTurns || beerPolka.have_effect() >= 5)
+                && (my_adventures() < turns || beerPolka.have_effect() >= 5)
                 && elementalCaip.item_amount() > 0)
             {
                 TryDrink(elementalCaip, "none".to_effect(), 1, 1000000);
