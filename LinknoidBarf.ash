@@ -322,6 +322,7 @@ void ReadSettings()
     familiar bandersnatch = ToFamiliar("Frumious Bandersnatch");
     familiar obtuseAngel = ToFamiliar("Obtuse Angel");
     familiar reanimator = ToFamiliar("Reanimated Reanimator");
+    familiar cornbeefadon = ToFamiliar("Cornbeefadon");
 
 // Bjorn/crown familiars:
     item bjorn = ToItem("Buddy Bjorn");
@@ -348,6 +349,16 @@ void ReadSettings()
     item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
     item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
     item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
+// melting familiar gear from pokegarden
+    item pokeEqpBlock = ToItem("razor fang");
+    item pokeEqpMeat = ToItem("amulet coin");
+//    item pokeEqpItem = ToItem("luck incense");
+    item pokeEqpItem = pokeEqpMeat; // todo: Mafia isn't recognizing this
+    item pokeEqpDamage = ToItem("muscle band");
+    item pokeEqpHeal = ToItem("shell bell");
+    item pokeEqpRun = ToItem("smoke ball");
+    item familiarJacks = ToItem("box of Familiar Jacks"); // to create familiar equipment
+    skill clipArt = ToSkill("Summon Clip Art"); // to summon familiar jacks
 
 // pasta thralls
     thrall lasagnaThrall = ToThrall("Lasagmbie"); // for meat
@@ -449,8 +460,14 @@ void ReadSettings()
     item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
     item rope = ToItem("rope"); // from deck of every card
+
+    item mafiaPointerRing = ToItem("mafia pointer finger ring"); // gets +200% base meat from crits
+    skill furiousWallop = ToSkill("Furious Wallop"); // seal clubber skill with guaranteed crit
     item haikuKatana = ToItem("haiku katana"); // IotM weapon with guaranteed crit
     skill haikuCrit = ToSkill("Summer Siesta"); // guaranteed critical hit skill from haiku katana
+    item patriotShield = ToItem("Operation Patriot Shield"); // IotM offhand with guaranteed crit
+    skill patriotCrit = ToSkill("Throw Shield"); // guaranteed critical hit skill from haiku katana
+
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
@@ -758,6 +775,9 @@ void ReadSettings()
     boolean bubbled = false;
     boolean noodled = false;
     boolean critted = false;
+    boolean shielded = false;
+    boolean abstractioned = false;
+    int staggerOption = 0;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
     item[slot] meatyOutfitPieces; // const outfit initialized on first use
@@ -1087,7 +1107,10 @@ void ReadSettings()
         bubbled = false;
         noodled = false;
         critted = false;
+        shielded = false;
         canPocketCrumb = HaveEquipment(pantsGiving);
+        staggerOption = 0;
+        abstractioned = false;
     }
     void DisableFreeKills()
     {
@@ -1516,6 +1539,8 @@ void ReadSettings()
             && runFamiliar != orphan
             && get_property("_meteorShowerUses").to_int() < 5;
 
+        needsCrit = mafiaPointerRing.have_equipped();
+
         if (!needsSpookyPutty)
         {
             needsSpookyPutty = spookyPutty.item_amount() > 0
@@ -1657,12 +1682,26 @@ void ReadSettings()
     {
         if (!critted)
         {
+            if (furiousWallop.have_skill() && my_fury() > 0)
+            {
+                critted = true;
+                return "skill " + furiousWallop.to_string();
+            }
             if (haikuKatana.have_equipped())
             {
                 critted = true;
                 return "skill " + haikuCrit.to_string();
             }
-            // todo: check for seal clubber rage and free crit ability
+            if (patriotShield.have_equipped())
+            {
+                if (!shielded)
+                {
+                    shielded = true;
+                    return "skill " + patriotCrit.to_string();
+                }
+                critted = true;
+                return "attack";
+            }
         }
         return "";
     }
@@ -2135,8 +2174,22 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             // mayflower drops take precedence over weight bonus unless embezzler
             return;
         }
+        if (TryEquipFamiliarEquipment(pokeEqpMeat, forMeaty ? 25 : 15))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpItem, 11))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpHeal, 10.1))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpBlock, 10.1))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpRun, 10.1))
+            return;
+
         if (TryEquipFamiliarEquipment(petSweater, 10))
             return;
+        if (TryEquipFamiliarEquipment(pokeEqpDamage, 9.9))
+            return;
+       
         if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
             return;
         if (TryEquipFamiliarEquipment(cufflinks, 6))
@@ -2188,6 +2241,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     boolean TryScratchNSniff()
     {
+        if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
+            return false; // +200% for katana is better than +75% for scratch and sniff stickers
+
         float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
         float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
         float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
@@ -2273,6 +2329,29 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         RemoveConfusionEffects(false);
     }
 
+    boolean IsLeprechaunType(familiar f)
+    {
+        return f == leprechaun; // todo: add others
+    }
+
+    int EstimateMeatBonusPercent(item eq)
+    {
+        if (eq == sunglasses)
+            return 60;
+        if (eq == mafiaPointerRing)
+            return 180;
+        int weight = eq.numeric_modifier("Familiar Weight");
+        int meat = eq.numeric_modifier("Meat Drop");
+        if (runFamiliar == orphan)
+            return meat;
+        else if (runFamiliar == robort)
+            meat += weight * 25; // just a rough estimate
+        else if (runFamiliar == hoboMonkey)
+            meat += weight * 17;
+        else if (IsLeprechaunType(runFamiliar))
+            meat += weight * 13;
+        return meat;
+    }
 
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -2290,7 +2369,17 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
         {
             if (!mayflyEq)
-                barfOutfitPieces[acc1] = mayfly;
+            {
+                int meat1 = EstimateMeatBonusPercent(barfOutfitPieces[acc1]);
+                int meat2 = EstimateMeatBonusPercent(barfOutfitPieces[acc2]);
+                int meat3 = EstimateMeatBonusPercent(barfOutfitPieces[acc3]);
+                if (meat1 < meat2 && meat1 < meat3)
+                    barfOutfitPieces[acc1] = mayfly;
+                else if (meat2 < meat1 && meat2 < meat3)
+                    barfOutfitPieces[acc2] = mayfly;
+                else
+                    barfOutfitPieces[acc3] = mayfly;
+            }
             needsMayfly = true;
         }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
@@ -2539,7 +2628,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         abort("Why don't you have at least 1 dictionary?  Up to you to figure out how to handle this combat");
         return "";
     }
-    int staggerOption;
     string Filter_ScalingFreeKill(int round, monster mon, string page)
     {
         if (my_hp() * 3 < my_maxhp()) // too low on health, end it
@@ -2714,7 +2802,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return Filter_Standard(round, mon, page);
     }
-    boolean abstractioned = false;
     string Filter_MachineTunnels(int round, monster mon, string page)
     {
         if (can_still_steal())
@@ -2755,7 +2842,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
         {
             PrepareFreeCombat(selectedOutfit, machineElf);
-            abstractioned = false;
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
             return true;
         }
@@ -4311,6 +4397,32 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    void AcquireAmuletCoin()
+    {
+        if (cornbeefadon.have_familiar() && !HaveEquipment(pokeEqpMeat))
+        {
+            if (familiarJacks.item_amount() == 0)
+            {
+                if (clipArt.have_skill() && get_property("_clipartSummons").to_int() < 3)
+                {
+                    print("Summoning kitten/kitten/kitten for familiar jacks", printColor);
+                    visit_url("campground.php?pwd=" + my_hash() + "&action=bookshelf&preaction=combinecliparts&clip1=03&clip2=03&clip3=03");
+                }
+                else
+                {
+                    buy(1, familiarJacks, 15000);
+                }
+            }
+            if (familiarJacks.item_amount() == 0)
+            {
+                print("Could not acquire familiar jacks for cornbeefadon", printColor);
+                return;
+            }
+            SwitchToFamiliar(cornbeefadon);
+            use(1, familiarJacks);
+        }
+    }
+
     void BuffTurns(int turns)
     {
         needWeightBuffs = true;
@@ -4344,6 +4456,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 FeedRobotender();
         }
         ActivateMumming();
+        if (turns > 100 && runFamiliar != orphan)
+            AcquireAmuletCoin();
 
         if (get_property("demonSummoned") != "true")
             AdventureEffect(summonGreed, preternatualGreed, turns);
@@ -5235,6 +5349,18 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    boolean CheckJokesterGunState()
+    {
+        if (HaveEquipment(jokesterGun)
+            && jokesterGun.can_equip()
+            && get_property("_firedJokestersGun") == "false")
+        {
+            hasFreeKillRemaining = true;
+            return true;
+        }
+        return false;
+    }
+
     void TryRunLTTFreeKills(int turns)
     {
 
@@ -5243,6 +5369,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (my_maxhp() < 1000)
             return; // don't want to mess around with this if we're not tough enough for scaling monsters to survive a good long while
         PrepareFilterState();
+        CheckJokesterGunState();
         if (!hasFreeKillRemaining) // without free kills, no point
             return;
 print("Jokester = " + canJokesterGun);
@@ -5273,12 +5400,7 @@ print("mob = " + canMobHit);
                 }
             }
         }
-        if (HaveEquipment(jokesterGun)
-            && jokesterGun.can_equip()
-            && get_property("_firedJokestersGun") == "false")
-        {
-            hasFreeKillRemaining = true;
-        }
+        CheckJokesterGunState();
         print("Trying free kills " + hasFreeKillRemaining + " difficulty " +  get_property("lttQuestDifficulty").to_int(), printColor);
         while (hasFreeKillRemaining
             && get_property("lttQuestDifficulty").to_int() > 0)
@@ -5298,20 +5420,14 @@ print("mob = " + canMobHit);
                 break;
             }
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
-            if (HaveEquipment(jokesterGun)
-                && jokesterGun.can_equip()
-                && get_property("_firedJokestersGun") == "false")
-            {
+            if (CheckJokesterGunState())
                 weapon.equip(jokesterGun);
-                canJokesterGun = true;
-            }
             PrepareFilterState();
             if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
             {
                 print("Out of free kills, stopping LT&T", printColor);
                 break;
             }
-            staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
             if (turnsAfter > turnsBefore)
