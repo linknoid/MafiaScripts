@@ -38,6 +38,8 @@
 
 // maybe do faxing/wishing of black crayon elf if deck isn't available
 
+// change filter to kill ticking modifier monsters immediately instead of dragging out combat
+
 
 
 // Add for mana burning:
@@ -51,6 +53,7 @@
 
     boolean autoConfirmBarf = false;
     string defaultOutfit = "barf";
+    string meatyOutfit = "";
     string dropsOutfit = "drops";
     string manaOutfit = "Max MP";
     string weightOutfit = "Max Weight";
@@ -79,6 +82,7 @@ void WriteSettings()
     file_to_map("linknoidfarm_" + my_name() + ".txt", map);
     map["autoConfirmBarf"] = autoConfirmBarf.to_string();
     map["defaultOutfit"] = defaultOutfit;
+    map["meatyOutfit"] = meatyOutfit;
     map["dropsOutfit"] = dropsOutfit;
     map["manaOutfit"] = manaOutfit;
     map["weightOutfit"] = weightOutfit;
@@ -109,6 +113,7 @@ void ReadSettings()
         {
             case "autoConfirmBarf": autoConfirmBarf = value == "true"; break;
             case "defaultOutfit": defaultOutfit = value; break;
+            case "meatyOutfit": meatyOutfit = value; break;
             case "dropsOutfit": dropsOutfit = value; break;
             case "manaOutfit": manaOutfit = value; break;
             case "weightOutfit": weightOutfit = value; break;
@@ -220,6 +225,7 @@ void ReadSettings()
 
 // campground items
     item witchess = ToItem("Witchess Set");
+    monster witchessKnight = ToMonster("Witchess Knight");
     item terminal = ToItem("Source terminal");
     item mayoClinic = ToItem("portable Mayo Clinic");
     item asdonMartin = ToItem("Asdon Martin keyfob");
@@ -292,6 +298,8 @@ void ReadSettings()
     item boxedWine = ToItem("boxed wine");
     item mentholatedWine = ToItem("mentholated wine");
     item orange = ToItem("orange");
+    monster crayonElf = ToMonster("Black Crayon Crimbo Elf");
+    item cigar = ToItem("exploding cigar");
 
 // random action familiars that give meat
     familiar boa = ToFamiliar("Feather Boa Constrictor");
@@ -355,6 +363,10 @@ void ReadSettings()
 // ghost busting
     item protonPack = ToItem("protonic accelerator pack");
     item talisman = ToItem("Talisman o' Namsilat");
+    item coldHead = ToItem("eXtreme scarf");
+    item coldPants = ToItem("snowboarder pants");
+    item coldAcc = ToItem("eXtreme mittens");
+    item aeroAccordion = ToItem("aerogel accordion");
     item antiqueAccordion = ToItem("Antique Accordion");
     location palindome = ToLocation("Inside the Palindome");
     location icyPeak = ToLocation("The Icy Peak");
@@ -390,6 +402,7 @@ void ReadSettings()
     item mayfly = ToItem("mayfly bait necklace");
     skill extractJelly = ToSkill("Extract Jelly");
     skill extract = ToSkill("Extract");
+    skill duplicate = ToSkill("Duplicate");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
     item bittyMeat = ToItem("BittyCar MeatCar");
 
@@ -706,6 +719,7 @@ void ReadSettings()
     boolean needsMayfly = false;
     boolean needsCleesh = false;
     boolean needsSmokeBomb = false;
+    boolean needsCrit = false;
     boolean canExtract = false;
     boolean canDuplicate = false;
     boolean canTurbo = false;
@@ -736,7 +750,8 @@ void ReadSettings()
     int ghostShot = 0;
     int stunRound = 0;
     boolean cursed = false;
-    boolean mortored = false;
+    boolean mortared = false;
+    boolean duplicated = false;
     boolean micrometeorited = false;
     boolean extracted = false;
     boolean bashed = false;
@@ -745,6 +760,7 @@ void ReadSettings()
     boolean critted = false;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
+    item[slot] meatyOutfitPieces; // const outfit initialized on first use
     item[slot] dropsOutfitPieces; // const outfit initialized on first use
     item[slot] weightOutfitPieces; // const outfit initialized on first use
     item[slot] barfOutfitPieces; // working outfit for barf mountain, modified by various constraints
@@ -767,6 +783,7 @@ void ReadSettings()
     void ActivateChibiBuddy();
     void ActivateFortuneTeller();
     void BuffInRun(int turns, boolean restoreMP);
+    item[slot] SwapOutSunglasses(item[slot] selectedOutfit);
 
 
 // general utility functions
@@ -1061,6 +1078,8 @@ void ReadSettings()
         ravedSteal = false;
         ravedConcentration = false;
         timeSpinnered = false;
+        mortared = false;
+        duplicated = false;
         cursed = false;
         micrometeorited = false;
         extracted = false;
@@ -1414,7 +1433,7 @@ void ReadSettings()
     item[slot] CopyOutfit(item[slot] o)
     {
         item[slot] eqSet;
-        foreach key, value in defaultOutfitPieces
+        foreach key, value in o
             eqSet[key] = value;
         return eqSet;
     }
@@ -1613,6 +1632,41 @@ void ReadSettings()
         return "";
     }
 
+    string Filter_Duplicate(int round, monster mon, string page)
+    {
+        if (canDuplicate && mon == witchessKnight)
+        {
+            if (canMortor && !mortared)
+            {
+                mortared = true;
+                return "skill " + mortarShell.to_string();
+            }
+            if (canDuplicate && !duplicated)
+            {
+                duplicated = true;
+                return "skill " + duplicate.to_string();
+            }
+            if (cigar.item_amount() > 0)
+            {
+                return "item " + cigar.to_string();
+            }
+        }
+        return "";
+    }
+    string Filter_ChooseCrit()
+    {
+        if (!critted)
+        {
+            if (haikuKatana.have_equipped())
+            {
+                critted = true;
+                return "skill " + haikuCrit.to_string();
+            }
+            // todo: check for seal clubber rage and free crit ability
+        }
+        return "";
+    }
+
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
@@ -1702,9 +1756,20 @@ void ReadSettings()
                     s += ",none";
                 return "item " + s;
             }
+            if (needsCrit)
+            {
+                string crit = Filter_ChooseCrit();
+                if (crit != "")
+                    return crit;
+            }
         }
         if (combatUserScript)
             return "";
+
+        string dup = Filter_Duplicate(round, mon, page);
+        if (dup != "")
+            return dup;
+
         if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
         {
             return "\"pickpocket\"";
@@ -1768,9 +1833,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (mon == mimeExecutive // tough scaling monster, don't want to dink around while getting beat up
             || round > 18) // maybe for a damage immune wandering monster?
         {
-            if (canMortor && !mortored)
+            if (canMortor && !mortared)
             {
-                mortored = true;
+                mortared = true;
                 return "skill " + mortarShell.to_string();
             }
             if (monster_hp() > 300)
@@ -1810,14 +1875,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
         }
-        if (!critted)
+        if (needsCrit)
         {
-            if (haikuKatana.have_equipped())
-            {
-                critted = true;
-                return "skill " + haikuCrit.to_string();
-            }
-            // todo: check for seal clubber rage and free crit ability
+            string crit = Filter_ChooseCrit();
+            if (crit != "")
+                return crit;
         }
 
         if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
@@ -1916,6 +1978,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     void InitOutfits()
     {
         defaultOutfitPieces = InitOutfit(defaultOutfit);
+        if (meatyOutfit != "")
+            meatyOutfitPieces = InitOutfit(meatyOutfit);
+        else
+            meatyOutfitPieces = SwapOutSunglasses(defaultOutfitPieces);
         dropsOutfitPieces = InitOutfit(dropsOutfit);
         weightOutfitPieces = InitOutfit(weightOutfit);
         if (HaveEquipment(loathingLegionEqp))
@@ -2064,15 +2130,15 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (HaveEquipment(snowSuit))
             snowSuitWeight = snowSuit.numeric_modifier("Familiar Weight");
 
-        if (TryEquipFamiliarEquipment(petSweater, 10))
-            return;
-        if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
-            return;
-        if (get_property("_mayflowerDrops").to_int() < 5 && !forMeaty && TryEquipFamiliarEquipment(mayflower, 6.1))
+        if (get_property("_mayflowerDrops").to_int() < 5 && !forMeaty && TryEquipFamiliarEquipment(mayflower, 11))
         {
             // mayflower drops take precedence over weight bonus unless embezzler
             return;
         }
+        if (TryEquipFamiliarEquipment(petSweater, 10))
+            return;
+        if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
+            return;
         if (TryEquipFamiliarEquipment(cufflinks, 6))
             return;
         if (get_property("_mayflowerDrops").to_int() < 5 && TryEquipFamiliarEquipment(mayflower, 5.1))
@@ -2167,7 +2233,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void PrepareMeaty()
     {
-        WearOutfit(SwapOutSunglasses(defaultOutfitPieces));
+        WearOutfit(meatyOutfitPieces);
 // free kills bad for meaty
 //        if (HaveEquipment(jokesterGun)
 //            && jokesterGun.can_equip()
@@ -2246,6 +2312,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (get_campground() contains witchess
             && get_property("_witchessFights").to_int() < 5)
         {
+            if (filter == "Filter_Standard" && cigar.item_amount() > 0)
+            {
+                ChooseEducate(true, false);
+            }
             visit_url("campground.php?action=witchess", false);
             run_choice(1);
             // fight the knight, because we eat a lot of horseradish
@@ -2598,6 +2668,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             return ChooseDictionaryCombatAction();
         }
+        string dup = Filter_Duplicate(round, mon, page);
+        if (dup != "")
+            return dup;
         return "";
     }
 
@@ -3000,25 +3073,33 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void EquipGhostGear(location loc)
     {
+        item[slot] gear = CopyOutfit(dropsOutfitPieces);
         if (loc == palindome)
         {
-            acc3.equip(talisman);
+            gear[acc3] = talisman;
         }
         else if (loc == icyPeak)
         {
-            outfit("eXtreme Cold-Weather Gear"); // need 5 resist to visit location
+            gear[head] = coldHead; // need 5 resist to visit location
+            gear[pants] = coldPants;
+            gear[acc3] = coldAcc;
         }
-        if (!protonPack.have_equipped())
+        gear[back] = protonPack;
+        if (accordionBash.have_skill())
         {
-            if (protonPack.item_amount() < 1)
-                return;
-            back.equip(protonPack);
+            if (aeroAccordion.item_amount() > 0)
+            {
+                gear[weapon] = aeroAccordion;
+                if (gear[offhand].to_slot() == weapon)
+                    gear[offhand] = "none".to_item();
+            }
+            else
+            {
+                gear[weapon] = antiqueAccordion;
+                gear[offhand] = "none".to_item();
+            }
         }
-        if (!IsAccordion(weapon.equipped_item())
-            && accordionBash.have_skill())
-        {
-            weapon.equip(antiqueAccordion);
-        }
+        WearOutfit(gear);
     }
     void ChooseDropsFamiliar(boolean isElemental)
     {
@@ -3890,6 +3971,16 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             elfCopiedTo = deck; // dumb placeholder, so it's not none
         }
+        if (mon == crayonElf) // don't waste free kills on Crayon Elf, it's already a free fight
+        {
+            if (cigar.item_amount() > 0)
+                return "item " + cigar.to_string();
+            else
+            {
+                print("No exploding cigar available, falling back on your character's combat filter.", printColor);
+                return "";
+            }
+        }
         if (round < 4)
             return ChooseFreeKillMethodForFilter();
         abort("Unexpected failure of combat in elvish fight, please run manually");
@@ -3897,14 +3988,21 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void TryElvishRobortender()
     {
+        monster chateauMon = get_property("chateauMonster").to_monster();
+        boolean chateauElf = chateauMon.phylum.to_string() == "elf";
+        if (chateauElf)
+        {
+            if (get_property("_chateauMonsterFought") != "false")
+                return;
+        }
         // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 turns and a copy to grab 2
-        if (deck.item_amount() == 0
+        else if (deck.item_amount() == 0
             || get_property("_deckCardsDrawn").to_int() > 0)
         {
             return;
         }
         print("Prepping to fight elf as Robortender", printColor);
-        if (HaveEquipment(jokesterGun))
+        if (chateauMon != crayonElf && HaveEquipment(jokesterGun))
         {
             item[slot] jokeOutfit = CopyOutfit(dropsOutfitPieces);
             jokeOutfit[weapon] = jokesterGun;
@@ -3915,20 +4013,37 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
         }
         PrepareFilterState();
-        if (!hasFreeKillRemaining)
+        if (chateauMon == crayonElf)
+        {
+            if (cigar.item_amount() < 2)
+            {
+                // hmm, what other preparation should be made here?
+            }
+        }
+        else if (!hasFreeKillRemaining)
         {
             print("No free kills remain, skipping first peppermint sprig", printColor);
             return;
         }
 
-        string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
-        if (page.contains_text("Christmas Card"))
+        if (chateauElf)
         {
-            page = visit_url("choice.php?whichchoice=1086&option=1&pwd=" + my_hash() + "&which=28"); // chrismas card
-            if (!page.contains_text("Also, what's Christmas?"))
-                abort("Debug: deck should have let me draw a christmas card");
-            visit_url("choice.php?whichchoice=1085&pwd=" + my_hash() + "&option=1"); // start the fight
+            print("Using Chateau painting " + chateauMon, printColor);
+            visit_url("place.php?whichplace=chateau&action=chateau_painting");
             RunCombat("Filter_Elvish");
+        }
+        else
+        {
+            print("Using deck of every card for elf", printColor);
+            string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
+            if (page.contains_text("Christmas Card"))
+            {
+                page = visit_url("choice.php?whichchoice=1086&option=1&pwd=" + my_hash() + "&which=28"); // chrismas card
+                if (!page.contains_text("Also, what's Christmas?"))
+                    abort("Debug: deck should have let me draw a christmas card");
+                visit_url("choice.php?whichchoice=1085&pwd=" + my_hash() + "&option=1"); // start the fight
+                RunCombat("Filter_Elvish");
+            }
         }
         if (elfCopiedTo != "none".to_item() && elfCopiedTo != deck)
         {
