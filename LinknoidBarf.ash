@@ -1,6 +1,6 @@
 // Credits:
-// Bale forum posts about url handling, witchess fights
-// VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
+// Bale forum posts about visit url handling, witchess fights
+// VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel and the proper way to request a fax
 // Ezandora's KGB Briefcase.ash script for handling briefcase so I don't have to
 // Zarqon canadv.ash for how to check for access to purple light district
 // lostcalpolydude for answering various questions
@@ -32,13 +32,15 @@
 
 // TODO:
 
-// duplicate witchess knight
+// duplicate witchess knight (code is partly there, but it's not actually firing)
 
 // track candle/scroll drops from intergnat
 
 // maybe do faxing/wishing of black crayon elf if deck isn't available
 
-// change filter to kill ticking modifier monsters immediately instead of dragging out combat
+// For dice gear:
+// Change filter to kill ticking modifier monsters immediately instead of dragging out combat
+// When fighting annoying/etc. monsters, detect that skill casting has failed
 
 
 
@@ -75,6 +77,8 @@
     boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
     boolean autoVoraciThanksgetting = false; // eat a cuppa voraciti tea if there's 1 stomach free when ran out of thanksgetting to get more turns out of it (not generally worth the meat, but you can do it if you really want to)
     string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
+    string executeBeforeEat = ""; // If you want another script or command to do your eating, put it here
+    string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
 
 void WriteSettings()
 {
@@ -101,6 +105,8 @@ void WriteSettings()
     map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
     map["autoVoraciThanksgetting"] = autoVoraciThanksgetting.to_string();
     map["hobopolisWhitelist"] = hobopolisWhitelist;
+    map["executeBeforeEat"] = executeBeforeEat;
+    map["executeAfterEat"] = executeAfterEat;
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -132,6 +138,8 @@ void ReadSettings()
             case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
             case "autoVoraciThanksgetting": autoVoraciThanksgetting = value == "true"; break;
             case "hobopolisWhitelist": hobopolisWhitelist = value; break;
+            case "executeBeforeEat": executeBeforeEat = value; break;
+            case "executeAfterEat": executeAfterEat = value; break;
         }
     }
 }
@@ -454,6 +462,7 @@ void ReadSettings()
     item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
     item floundry = ToItem("Clan Floundry"); // for carpe
     item poolTable = ToItem("Clan Pool Table");
+    item faxMachine = ToItem("deluxe fax machine");
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
@@ -628,6 +637,7 @@ void ReadSettings()
     item usedcamera = ToItem("Shaking 4-d camera");
     item enamorang = ToItem("LOV Enamorang");
     item BACON = ToItem("BACON");
+    item usedFax = ToItem("photocopied monster");
     item printScreen = ToItem("print screen button");
     item usedPrintScreen = ToItem("screencapped monster");
     item spookyPutty = ToItem("Spooky Putty sheet");
@@ -641,6 +651,7 @@ void ReadSettings()
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
     monster mimeExecutive = ToMonster("cheerless mime executive"); // this was 1500, now it's 500
+    monster meatyMonster = embezzler;
     monster tourist = ToMonster("garbage tourist");
     skill olfaction = ToSkill("Transcendent Olfaction");
     effect olfactionEffect = ToEffect("On the Trail");
@@ -1041,6 +1052,18 @@ void ReadSettings()
             //|| mon == mimeExecutive;
     }
 
+    boolean MeatyFaxable()
+    {
+        if (vipKey.item_amount() == 0 || !(get_clan_lounge() contains faxMachine))
+            return false;
+        if (get_property("_photocopyUsed") != "false")
+            return false;
+        if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+            return true;
+        if (!can_faxbot(embezzler))
+            return false;
+        return true;
+    }
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
@@ -2986,35 +3009,36 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     
 
-    void EnsureSingleHandedWeapon()
-    {
-        if (weapon.equipped_item().weapon_hands() < 2)
-            return;
-        weapon.equip("none".to_item());
-    }
-    void EquipDropsItems()
-    {
-        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
-        {
-            weapon.equip("none".to_item());
-            foreach ix,itm in outfit_pieces(defaultOutfit)
-            {
-                if (itm.to_slot() == weapon)
-                {
-                    weapon.equip(itm);
-                    break;
-                }
-            }
-        }
-        EnsureSingleHandedWeapon();
-        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well get a bonus item drop
-            offhand.equip(snowglobe);
-        if (screege.item_amount() > 0 && !screege.have_equipped())
-            acc1.equip(screege);
-        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
-            acc2.equip(cheeng);
-        ChooseBjornCrownFamiliars(false, true); // drops familiar
-    }
+// dead code, replaced with "drops" outfit:
+//    void EnsureSingleHandedWeapon()
+//    {
+//        if (weapon.equipped_item().weapon_hands() < 2)
+//            return;
+//        weapon.equip("none".to_item());
+//    }
+//    void EquipDropsItems()
+//    {
+//        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
+//        {
+//            weapon.equip("none".to_item());
+//            foreach ix,itm in outfit_pieces(defaultOutfit)
+//            {
+//                if (itm.to_slot() == weapon)
+//                {
+//                    weapon.equip(itm);
+//                    break;
+//                }
+//            }
+//        }
+//        EnsureSingleHandedWeapon();
+//        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well get a bonus item drop
+//            offhand.equip(snowglobe);
+//        if (screege.item_amount() > 0 && !screege.have_equipped())
+//            acc1.equip(screege);
+//        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
+//            acc2.equip(cheeng);
+//        ChooseBjornCrownFamiliars(false, true); // drops familiar
+//    }
 
     string AvailableSpellForBagOfTricks()
     {
@@ -3754,9 +3778,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         if (!RoomToEat(2))
             return true;
-// specifying number of turns of effect as basically infinite because we already did
-// an effect limit check before we got here, but didn't pass in the required number,
-// and this should buff exactly once
+        // specifying number of turns of effect as basically infinite because we already did
+        // an effect limit check before we got here, but didn't pass in the required number,
+        // and this should buff exactly once
         int infTurns = 10000;
         // specify a 2 fullness remaining because we don't want to convert to drunk
         if (RoomToEat(2)) { return TryEat(thanks1, thanksgetting, 2, 0, infTurns, unique); }
@@ -4035,7 +4059,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             cli_execute("robo " + booze.name);
     }
 
-    item elfCopiedTo; // only copy once, after 2 drops, the robortender doesn't tend to drop any more
+    item elfCopiedTo; // only copy once, after 2 drops, the drop rate quickly drops off
     string Filter_Elvish(int round, monster mon, string page)
     {
         if (elfCopiedTo == "none".to_item())
@@ -4074,6 +4098,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void TryElvishRobortender()
     {
+        // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 free kills and a copy to grab 2
+
         monster chateauMon = get_property("chateauMonster").to_monster();
         boolean chateauElf = chateauMon.phylum.to_string() == "elf";
         if (chateauElf)
@@ -4081,7 +4107,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (get_property("_chateauMonsterFought") != "false")
                 return;
         }
-        // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 turns and a copy to grab 2
         else if (deck.item_amount() == 0
             || get_property("_deckCardsDrawn").to_int() > 0)
         {
@@ -4208,6 +4233,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (effectTurns == observantly.have_effect()) // number of effect turns should have increased
             {
                 print("drive observantly failed to buff", "red");
+                waitq(10); // wait 10 seconds for user to see
                 return;
             }
             effectTurns = observantly.have_effect();
@@ -4225,6 +4251,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (effectTurns == kgbBuff.have_effect())
             {
                 print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?", "red");
+                waitq(10); // wait 10 seconds for user to see
                 return;
             }
             effectTurns = kgbBuff.have_effect();
@@ -4239,7 +4266,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         // code to control briefcase is too complex, we depend on Ezandora's briefcase script
         cli_execute("briefcase martinis"); // make sure to get martinis first
         KGBBuff(turns, kgbMeat, "meat");
-        KGBBuff(turns, kgbItems, "item");
+        KGBBuff(turns, kgbItems, "item"); // any leftover clicks after done buffing +meat go to +item
     }
     void RentAHorse()
     {
@@ -4588,6 +4615,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         SweetMeat(turns);
         KGBBuff(turns);
 
+        if (executeBeforeEat != "")
+        {
+            cli_execute(executeBeforeEat);
+        }
         TryDrink(dirt, dirtEffect, 1, 1);
         TryDrink(gingerWine, gingerWineEffect, 2, 1);
 
@@ -4655,6 +4686,13 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     break;
             }
 
+        }
+        if (executeAfterEat != "")
+        {
+            cli_execute(executeAfterEat);
+        }
+        if (!nightBefore)
+        {
             for (int i = 0; i < sacramentoLimit; i++) // drink sacramento wine for +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
 
@@ -4952,6 +4990,37 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return false;
     }
+
+    void TryPrepareFax(monster mon)
+    {
+        if (usedFax.item_amount() > 0) // must use existing copy before requesting a new one
+            return;
+        boolean chatWasOpen = false;
+        try
+        {
+            // this code pattern came from VMF, but there wasn't anything about a way to close chat afterwords if it wasn't
+            // already open
+            // chatWasOpen = ???
+            cli_execute("chat"); // apparently chat has to be open to receive a fax
+            waitq(5); // 5 seconds for chat to open
+            if (faxbot(meatyMonster))
+            {
+                if (usedFax.item_amount() > 0)
+                {
+                    print("Got fax of " + get_property("photocopyMonster"), printColor);
+                    return;
+                }
+            }
+            print("Fax failed for " + mon, printColor);
+        }
+        finally
+        {
+            // todo: shut chat if it wasn't already open
+            // if (!chatWasOpen)
+            //     cli_execute(close chat ???);
+        }
+    }
+
     boolean RunCopiedMeaty()
     {
         PrepareMeaty();
@@ -4959,6 +5028,18 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         // any copying item that we're using up should be set to "need to use" to
         // replenish the copy
 
+        if (MeatyFaxable())
+        {
+            TryPrepareFax(meatyMonster);
+            if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+            {
+                return ActivateCopyItem(usedFax);
+            }
+            else
+            {
+                print("Fax failed for " + meatyMonster);
+            }
+        }
         if (MeatyPuttied())
         {
             print("using spooky putty embezzler", printColor);
