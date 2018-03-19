@@ -1,6 +1,6 @@
 // Credits:
-// Bale forum posts about url handling, witchess fights
-// VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel
+// Bale forum posts about visit url handling, witchess fights
+// VeracityMeatFarm.ash for introduction to combat filters and getting started with LOV tunnel and the proper way to request a fax
 // Ezandora's KGB Briefcase.ash script for handling briefcase so I don't have to
 // Zarqon canadv.ash for how to check for access to purple light district
 // lostcalpolydude for answering various questions
@@ -32,11 +32,15 @@
 
 // TODO:
 
-// duplicate witchess knight
+// duplicate witchess knight (code is partly there, but it's not actually firing)
 
 // track candle/scroll drops from intergnat
 
 // maybe do faxing/wishing of black crayon elf if deck isn't available
+
+// For dice gear:
+// Change filter to kill ticking modifier monsters immediately instead of dragging out combat
+// When fighting annoying/etc. monsters, detect that skill casting has failed
 
 
 
@@ -51,6 +55,7 @@
 
     boolean autoConfirmBarf = false;
     string defaultOutfit = "barf";
+    string meatyOutfit = "";
     string dropsOutfit = "drops";
     string manaOutfit = "Max MP";
     string weightOutfit = "Max Weight";
@@ -72,6 +77,8 @@
     boolean preferCalcUniversePvP = false; // calculate the universe for pvp fights instead of adventures
     boolean autoVoraciThanksgetting = false; // eat a cuppa voraciti tea if there's 1 stomach free when ran out of thanksgetting to get more turns out of it (not generally worth the meat, but you can do it if you really want to)
     string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
+    string executeBeforeEat = ""; // If you want another script or command to do your eating, put it here
+    string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
 
 void WriteSettings()
 {
@@ -79,6 +86,7 @@ void WriteSettings()
     file_to_map("linknoidfarm_" + my_name() + ".txt", map);
     map["autoConfirmBarf"] = autoConfirmBarf.to_string();
     map["defaultOutfit"] = defaultOutfit;
+    map["meatyOutfit"] = meatyOutfit;
     map["dropsOutfit"] = dropsOutfit;
     map["manaOutfit"] = manaOutfit;
     map["weightOutfit"] = weightOutfit;
@@ -97,6 +105,8 @@ void WriteSettings()
     map["preferCalcUniversePvP"] = preferCalcUniversePvP.to_string();
     map["autoVoraciThanksgetting"] = autoVoraciThanksgetting.to_string();
     map["hobopolisWhitelist"] = hobopolisWhitelist;
+    map["executeBeforeEat"] = executeBeforeEat;
+    map["executeAfterEat"] = executeAfterEat;
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -109,6 +119,7 @@ void ReadSettings()
         {
             case "autoConfirmBarf": autoConfirmBarf = value == "true"; break;
             case "defaultOutfit": defaultOutfit = value; break;
+            case "meatyOutfit": meatyOutfit = value; break;
             case "dropsOutfit": dropsOutfit = value; break;
             case "manaOutfit": manaOutfit = value; break;
             case "weightOutfit": weightOutfit = value; break;
@@ -127,6 +138,8 @@ void ReadSettings()
             case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
             case "autoVoraciThanksgetting": autoVoraciThanksgetting = value == "true"; break;
             case "hobopolisWhitelist": hobopolisWhitelist = value; break;
+            case "executeBeforeEat": executeBeforeEat = value; break;
+            case "executeAfterEat": executeAfterEat = value; break;
         }
     }
 }
@@ -220,6 +233,7 @@ void ReadSettings()
 
 // campground items
     item witchess = ToItem("Witchess Set");
+    monster witchessKnight = ToMonster("Witchess Knight");
     item terminal = ToItem("Source terminal");
     item mayoClinic = ToItem("portable Mayo Clinic");
     item asdonMartin = ToItem("Asdon Martin keyfob");
@@ -292,6 +306,8 @@ void ReadSettings()
     item boxedWine = ToItem("boxed wine");
     item mentholatedWine = ToItem("mentholated wine");
     item orange = ToItem("orange");
+    monster crayonElf = ToMonster("Black Crayon Crimbo Elf");
+    item cigar = ToItem("exploding cigar");
 
 // random action familiars that give meat
     familiar boa = ToFamiliar("Feather Boa Constrictor");
@@ -314,6 +330,7 @@ void ReadSettings()
     familiar bandersnatch = ToFamiliar("Frumious Bandersnatch");
     familiar obtuseAngel = ToFamiliar("Obtuse Angel");
     familiar reanimator = ToFamiliar("Reanimated Reanimator");
+    familiar cornbeefadon = ToFamiliar("Cornbeefadon");
 
 // Bjorn/crown familiars:
     item bjorn = ToItem("Buddy Bjorn");
@@ -340,6 +357,16 @@ void ReadSettings()
     item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
     item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
     item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
+// melting familiar gear from pokegarden
+    item pokeEqpBlock = ToItem("razor fang");
+    item pokeEqpMeat = ToItem("amulet coin");
+//    item pokeEqpItem = ToItem("luck incense");
+    item pokeEqpItem = pokeEqpMeat; // todo: Mafia isn't recognizing this
+    item pokeEqpDamage = ToItem("muscle band");
+    item pokeEqpHeal = ToItem("shell bell");
+    item pokeEqpRun = ToItem("smoke ball");
+    item familiarJacks = ToItem("box of Familiar Jacks"); // to create familiar equipment
+    skill clipArt = ToSkill("Summon Clip Art"); // to summon familiar jacks
 
 // pasta thralls
     thrall lasagnaThrall = ToThrall("Lasagmbie"); // for meat
@@ -355,6 +382,10 @@ void ReadSettings()
 // ghost busting
     item protonPack = ToItem("protonic accelerator pack");
     item talisman = ToItem("Talisman o' Namsilat");
+    item coldHead = ToItem("eXtreme scarf");
+    item coldPants = ToItem("snowboarder pants");
+    item coldAcc = ToItem("eXtreme mittens");
+    item aeroAccordion = ToItem("aerogel accordion");
     item antiqueAccordion = ToItem("Antique Accordion");
     location palindome = ToLocation("Inside the Palindome");
     location icyPeak = ToLocation("The Icy Peak");
@@ -390,6 +421,7 @@ void ReadSettings()
     item mayfly = ToItem("mayfly bait necklace");
     skill extractJelly = ToSkill("Extract Jelly");
     skill extract = ToSkill("Extract");
+    skill duplicate = ToSkill("Duplicate");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
     item bittyMeat = ToItem("BittyCar MeatCar");
 
@@ -430,14 +462,21 @@ void ReadSettings()
     item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
     item floundry = ToItem("Clan Floundry"); // for carpe
     item poolTable = ToItem("Clan Pool Table");
+    item faxMachine = ToItem("deluxe fax machine");
     item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
     item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
     item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
     item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
     item rope = ToItem("rope"); // from deck of every card
+
+    item mafiaPointerRing = ToItem("mafia pointer finger ring"); // gets +200% base meat from crits
+    skill furiousWallop = ToSkill("Furious Wallop"); // seal clubber skill with guaranteed crit
     item haikuKatana = ToItem("haiku katana"); // IotM weapon with guaranteed crit
     skill haikuCrit = ToSkill("Summer Siesta"); // guaranteed critical hit skill from haiku katana
+    item patriotShield = ToItem("Operation Patriot Shield"); // IotM offhand with guaranteed crit
+    skill patriotCrit = ToSkill("Throw Shield"); // guaranteed critical hit skill from haiku katana
+
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
@@ -598,6 +637,7 @@ void ReadSettings()
     item usedcamera = ToItem("Shaking 4-d camera");
     item enamorang = ToItem("LOV Enamorang");
     item BACON = ToItem("BACON");
+    item usedFax = ToItem("photocopied monster");
     item printScreen = ToItem("print screen button");
     item usedPrintScreen = ToItem("screencapped monster");
     item spookyPutty = ToItem("Spooky Putty sheet");
@@ -611,6 +651,7 @@ void ReadSettings()
 
     monster embezzler = ToMonster("Knob Goblin Embezzler");
     monster mimeExecutive = ToMonster("cheerless mime executive"); // this was 1500, now it's 500
+    monster meatyMonster = embezzler;
     monster tourist = ToMonster("garbage tourist");
     skill olfaction = ToSkill("Transcendent Olfaction");
     effect olfactionEffect = ToEffect("On the Trail");
@@ -706,6 +747,7 @@ void ReadSettings()
     boolean needsMayfly = false;
     boolean needsCleesh = false;
     boolean needsSmokeBomb = false;
+    boolean needsCrit = false;
     boolean canExtract = false;
     boolean canDuplicate = false;
     boolean canTurbo = false;
@@ -736,15 +778,20 @@ void ReadSettings()
     int ghostShot = 0;
     int stunRound = 0;
     boolean cursed = false;
-    boolean mortored = false;
+    boolean mortared = false;
+    boolean duplicated = false;
     boolean micrometeorited = false;
     boolean extracted = false;
     boolean bashed = false;
     boolean bubbled = false;
     boolean noodled = false;
     boolean critted = false;
+    boolean shielded = false;
+    boolean abstractioned = false;
+    int staggerOption = 0;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
+    item[slot] meatyOutfitPieces; // const outfit initialized on first use
     item[slot] dropsOutfitPieces; // const outfit initialized on first use
     item[slot] weightOutfitPieces; // const outfit initialized on first use
     item[slot] barfOutfitPieces; // working outfit for barf mountain, modified by various constraints
@@ -767,6 +814,7 @@ void ReadSettings()
     void ActivateChibiBuddy();
     void ActivateFortuneTeller();
     void BuffInRun(int turns, boolean restoreMP);
+    item[slot] SwapOutSunglasses(item[slot] selectedOutfit);
 
 
 // general utility functions
@@ -1004,6 +1052,18 @@ void ReadSettings()
             //|| mon == mimeExecutive;
     }
 
+    boolean MeatyFaxable()
+    {
+        if (vipKey.item_amount() == 0 || !(get_clan_lounge() contains faxMachine))
+            return false;
+        if (get_property("_photocopyUsed") != "false")
+            return false;
+        if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+            return true;
+        if (!can_faxbot(embezzler))
+            return false;
+        return true;
+    }
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
@@ -1061,6 +1121,8 @@ void ReadSettings()
         ravedSteal = false;
         ravedConcentration = false;
         timeSpinnered = false;
+        mortared = false;
+        duplicated = false;
         cursed = false;
         micrometeorited = false;
         extracted = false;
@@ -1068,7 +1130,10 @@ void ReadSettings()
         bubbled = false;
         noodled = false;
         critted = false;
+        shielded = false;
         canPocketCrumb = HaveEquipment(pantsGiving);
+        staggerOption = 0;
+        abstractioned = false;
     }
     void DisableFreeKills()
     {
@@ -1414,7 +1479,7 @@ void ReadSettings()
     item[slot] CopyOutfit(item[slot] o)
     {
         item[slot] eqSet;
-        foreach key, value in defaultOutfitPieces
+        foreach key, value in o
             eqSet[key] = value;
         return eqSet;
     }
@@ -1496,6 +1561,8 @@ void ReadSettings()
         needsMeteorShower = meteorShower.have_skill()
             && runFamiliar != orphan
             && get_property("_meteorShowerUses").to_int() < 5;
+
+        needsCrit = mafiaPointerRing.have_equipped();
 
         if (!needsSpookyPutty)
         {
@@ -1613,6 +1680,55 @@ void ReadSettings()
         return "";
     }
 
+    string Filter_Duplicate(int round, monster mon, string page)
+    {
+        if (canDuplicate && mon == witchessKnight)
+        {
+            if (canMortor && !mortared)
+            {
+                mortared = true;
+                return "skill " + mortarShell.to_string();
+            }
+            if (canDuplicate && !duplicated)
+            {
+                duplicated = true;
+                return "skill " + duplicate.to_string();
+            }
+            if (cigar.item_amount() > 0)
+            {
+                return "item " + cigar.to_string();
+            }
+        }
+        return "";
+    }
+    string Filter_ChooseCrit()
+    {
+        if (!critted)
+        {
+            if (furiousWallop.have_skill() && my_fury() > 0)
+            {
+                critted = true;
+                return "skill " + furiousWallop.to_string();
+            }
+            if (haikuKatana.have_equipped())
+            {
+                critted = true;
+                return "skill " + haikuCrit.to_string();
+            }
+            if (patriotShield.have_equipped())
+            {
+                if (!shielded)
+                {
+                    shielded = true;
+                    return "skill " + patriotCrit.to_string();
+                }
+                critted = true;
+                return "attack";
+            }
+        }
+        return "";
+    }
+
     string Filter_Standard(int round, monster mon, string page)
     {
         if (round == 0)
@@ -1702,9 +1818,20 @@ void ReadSettings()
                     s += ",none";
                 return "item " + s;
             }
+            if (needsCrit)
+            {
+                string crit = Filter_ChooseCrit();
+                if (crit != "")
+                    return crit;
+            }
         }
         if (combatUserScript)
             return "";
+
+        string dup = Filter_Duplicate(round, mon, page);
+        if (dup != "")
+            return dup;
+
         if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
         {
             return "\"pickpocket\"";
@@ -1768,9 +1895,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (mon == mimeExecutive // tough scaling monster, don't want to dink around while getting beat up
             || round > 18) // maybe for a damage immune wandering monster?
         {
-            if (canMortor && !mortored)
+            if (canMortor && !mortared)
             {
-                mortored = true;
+                mortared = true;
                 return "skill " + mortarShell.to_string();
             }
             if (monster_hp() > 300)
@@ -1810,14 +1937,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canPocketCrumb = false;
             return "skill " + pocketCrumbs.to_string();
         }
-        if (!critted)
+        if (needsCrit)
         {
-            if (haikuKatana.have_equipped())
-            {
-                critted = true;
-                return "skill " + haikuCrit.to_string();
-            }
-            // todo: check for seal clubber rage and free crit ability
+            string crit = Filter_ChooseCrit();
+            if (crit != "")
+                return crit;
         }
 
         if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
@@ -1916,6 +2040,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     void InitOutfits()
     {
         defaultOutfitPieces = InitOutfit(defaultOutfit);
+        if (meatyOutfit != "")
+            meatyOutfitPieces = InitOutfit(meatyOutfit);
+        else
+            meatyOutfitPieces = SwapOutSunglasses(defaultOutfitPieces);
         dropsOutfitPieces = InitOutfit(dropsOutfit);
         weightOutfitPieces = InitOutfit(weightOutfit);
         if (HaveEquipment(loathingLegionEqp))
@@ -2064,15 +2192,29 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (HaveEquipment(snowSuit))
             snowSuitWeight = snowSuit.numeric_modifier("Familiar Weight");
 
-        if (TryEquipFamiliarEquipment(petSweater, 10))
-            return;
-        if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
-            return;
-        if (get_property("_mayflowerDrops").to_int() < 5 && !forMeaty && TryEquipFamiliarEquipment(mayflower, 6.1))
+        if (get_property("_mayflowerDrops").to_int() < 5 && !forMeaty && TryEquipFamiliarEquipment(mayflower, 11))
         {
             // mayflower drops take precedence over weight bonus unless embezzler
             return;
         }
+        if (TryEquipFamiliarEquipment(pokeEqpMeat, forMeaty ? 25 : 15))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpItem, 11))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpHeal, 10.1))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpBlock, 10.1))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpRun, 10.1))
+            return;
+
+        if (TryEquipFamiliarEquipment(petSweater, 10))
+            return;
+        if (TryEquipFamiliarEquipment(pokeEqpDamage, 9.9))
+            return;
+       
+        if (forMeaty && TryEquipFamiliarEquipment(sugarShield, 10))
+            return;
         if (TryEquipFamiliarEquipment(cufflinks, 6))
             return;
         if (get_property("_mayflowerDrops").to_int() < 5 && TryEquipFamiliarEquipment(mayflower, 5.1))
@@ -2122,6 +2264,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     boolean TryScratchNSniff()
     {
+        if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
+            return false; // +200% for katana is better than +75% for scratch and sniff stickers
+
         float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
         float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
         float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
@@ -2167,7 +2312,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void PrepareMeaty()
     {
-        WearOutfit(SwapOutSunglasses(defaultOutfitPieces));
+        WearOutfit(meatyOutfitPieces);
 // free kills bad for meaty
 //        if (HaveEquipment(jokesterGun)
 //            && jokesterGun.can_equip()
@@ -2207,6 +2352,29 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         RemoveConfusionEffects(false);
     }
 
+    boolean IsLeprechaunType(familiar f)
+    {
+        return f == leprechaun; // todo: add others
+    }
+
+    int EstimateMeatBonusPercent(item eq)
+    {
+        if (eq == sunglasses)
+            return 60;
+        if (eq == mafiaPointerRing)
+            return 180;
+        int weight = eq.numeric_modifier("Familiar Weight");
+        int meat = eq.numeric_modifier("Meat Drop");
+        if (runFamiliar == orphan)
+            return meat;
+        else if (runFamiliar == robort)
+            meat += weight * 25; // just a rough estimate
+        else if (runFamiliar == hoboMonkey)
+            meat += weight * 17;
+        else if (IsLeprechaunType(runFamiliar))
+            meat += weight * 13;
+        return meat;
+    }
 
     void PrepareBarf(boolean RequireOutfit)
     {
@@ -2224,7 +2392,17 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (HaveEquipment(mayfly) && get_property("_mayflySummons").to_int() < 30)
         {
             if (!mayflyEq)
-                barfOutfitPieces[acc1] = mayfly;
+            {
+                int meat1 = EstimateMeatBonusPercent(barfOutfitPieces[acc1]);
+                int meat2 = EstimateMeatBonusPercent(barfOutfitPieces[acc2]);
+                int meat3 = EstimateMeatBonusPercent(barfOutfitPieces[acc3]);
+                if (meat1 < meat2 && meat1 < meat3)
+                    barfOutfitPieces[acc1] = mayfly;
+                else if (meat2 < meat1 && meat2 < meat3)
+                    barfOutfitPieces[acc2] = mayfly;
+                else
+                    barfOutfitPieces[acc3] = mayfly;
+            }
             needsMayfly = true;
         }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
@@ -2246,6 +2424,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (get_campground() contains witchess
             && get_property("_witchessFights").to_int() < 5)
         {
+            if (filter == "Filter_Standard" && cigar.item_amount() > 0)
+            {
+                ChooseEducate(true, false);
+            }
             visit_url("campground.php?action=witchess", false);
             run_choice(1);
             // fight the knight, because we eat a lot of horseradish
@@ -2469,7 +2651,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         abort("Why don't you have at least 1 dictionary?  Up to you to figure out how to handle this combat");
         return "";
     }
-    int staggerOption;
     string Filter_ScalingFreeKill(int round, monster mon, string page)
     {
         if (my_hp() * 3 < my_maxhp()) // too low on health, end it
@@ -2598,6 +2779,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             return ChooseDictionaryCombatAction();
         }
+        string dup = Filter_Duplicate(round, mon, page);
+        if (dup != "")
+            return dup;
         return "";
     }
 
@@ -2641,7 +2825,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return Filter_Standard(round, mon, page);
     }
-    boolean abstractioned = false;
     string Filter_MachineTunnels(int round, monster mon, string page)
     {
         if (can_still_steal())
@@ -2682,7 +2865,6 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (machineElf.have_familiar() && get_property("_machineTunnelsAdv").to_int() < 5)
         {
             PrepareFreeCombat(selectedOutfit, machineElf);
-            abstractioned = false;
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
             return true;
         }
@@ -2827,35 +3009,36 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     
 
-    void EnsureSingleHandedWeapon()
-    {
-        if (weapon.equipped_item().weapon_hands() < 2)
-            return;
-        weapon.equip("none".to_item());
-    }
-    void EquipDropsItems()
-    {
-        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
-        {
-            weapon.equip("none".to_item());
-            foreach ix,itm in outfit_pieces(defaultOutfit)
-            {
-                if (itm.to_slot() == weapon)
-                {
-                    weapon.equip(itm);
-                    break;
-                }
-            }
-        }
-        EnsureSingleHandedWeapon();
-        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well get a bonus item drop
-            offhand.equip(snowglobe);
-        if (screege.item_amount() > 0 && !screege.have_equipped())
-            acc1.equip(screege);
-        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
-            acc2.equip(cheeng);
-        ChooseBjornCrownFamiliars(false, true); // drops familiar
-    }
+// dead code, replaced with "drops" outfit:
+//    void EnsureSingleHandedWeapon()
+//    {
+//        if (weapon.equipped_item().weapon_hands() < 2)
+//            return;
+//        weapon.equip("none".to_item());
+//    }
+//    void EquipDropsItems()
+//    {
+//        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
+//        {
+//            weapon.equip("none".to_item());
+//            foreach ix,itm in outfit_pieces(defaultOutfit)
+//            {
+//                if (itm.to_slot() == weapon)
+//                {
+//                    weapon.equip(itm);
+//                    break;
+//                }
+//            }
+//        }
+//        EnsureSingleHandedWeapon();
+//        if (snowglobe.item_amount() > 0)  // don't benefit from meat drop, may as well get a bonus item drop
+//            offhand.equip(snowglobe);
+//        if (screege.item_amount() > 0 && !screege.have_equipped())
+//            acc1.equip(screege);
+//        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
+//            acc2.equip(cheeng);
+//        ChooseBjornCrownFamiliars(false, true); // drops familiar
+//    }
 
     string AvailableSpellForBagOfTricks()
     {
@@ -3000,25 +3183,33 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void EquipGhostGear(location loc)
     {
+        item[slot] gear = CopyOutfit(dropsOutfitPieces);
         if (loc == palindome)
         {
-            acc3.equip(talisman);
+            gear[acc3] = talisman;
         }
         else if (loc == icyPeak)
         {
-            outfit("eXtreme Cold-Weather Gear"); // need 5 resist to visit location
+            gear[head] = coldHead; // need 5 resist to visit location
+            gear[pants] = coldPants;
+            gear[acc3] = coldAcc;
         }
-        if (!protonPack.have_equipped())
+        gear[back] = protonPack;
+        if (accordionBash.have_skill())
         {
-            if (protonPack.item_amount() < 1)
-                return;
-            back.equip(protonPack);
+            if (aeroAccordion.item_amount() > 0)
+            {
+                gear[weapon] = aeroAccordion;
+                if (gear[offhand].to_slot() == weapon)
+                    gear[offhand] = "none".to_item();
+            }
+            else
+            {
+                gear[weapon] = antiqueAccordion;
+                gear[offhand] = "none".to_item();
+            }
         }
-        if (!IsAccordion(weapon.equipped_item())
-            && accordionBash.have_skill())
-        {
-            weapon.equip(antiqueAccordion);
-        }
+        WearOutfit(gear);
     }
     void ChooseDropsFamiliar(boolean isElemental)
     {
@@ -3587,9 +3778,9 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     {
         if (!RoomToEat(2))
             return true;
-// specifying number of turns of effect as basically infinite because we already did
-// an effect limit check before we got here, but didn't pass in the required number,
-// and this should buff exactly once
+        // specifying number of turns of effect as basically infinite because we already did
+        // an effect limit check before we got here, but didn't pass in the required number,
+        // and this should buff exactly once
         int infTurns = 10000;
         // specify a 2 fullness remaining because we don't want to convert to drunk
         if (RoomToEat(2)) { return TryEat(thanks1, thanksgetting, 2, 0, infTurns, unique); }
@@ -3868,7 +4059,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             cli_execute("robo " + booze.name);
     }
 
-    item elfCopiedTo; // only copy once, after 2 drops, the robortender doesn't tend to drop any more
+    item elfCopiedTo; // only copy once, after 2 drops, the drop rate quickly drops off
     string Filter_Elvish(int round, monster mon, string page)
     {
         if (elfCopiedTo == "none".to_item())
@@ -3890,6 +4081,16 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
             elfCopiedTo = deck; // dumb placeholder, so it's not none
         }
+        if (mon == crayonElf) // don't waste free kills on Crayon Elf, it's already a free fight
+        {
+            if (cigar.item_amount() > 0)
+                return "item " + cigar.to_string();
+            else
+            {
+                print("No exploding cigar available, falling back on your character's combat filter.", printColor);
+                return "";
+            }
+        }
         if (round < 4)
             return ChooseFreeKillMethodForFilter();
         abort("Unexpected failure of combat in elvish fight, please run manually");
@@ -3897,14 +4098,22 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     }
     void TryElvishRobortender()
     {
-        // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 turns and a copy to grab 2
-        if (deck.item_amount() == 0
+        // each peppermint sprig is worth like 40k+, so definitely worth the use of 2 free kills and a copy to grab 2
+
+        monster chateauMon = get_property("chateauMonster").to_monster();
+        boolean chateauElf = chateauMon.phylum.to_string() == "elf";
+        if (chateauElf)
+        {
+            if (get_property("_chateauMonsterFought") != "false")
+                return;
+        }
+        else if (deck.item_amount() == 0
             || get_property("_deckCardsDrawn").to_int() > 0)
         {
             return;
         }
         print("Prepping to fight elf as Robortender", printColor);
-        if (HaveEquipment(jokesterGun))
+        if (chateauMon != crayonElf && HaveEquipment(jokesterGun))
         {
             item[slot] jokeOutfit = CopyOutfit(dropsOutfitPieces);
             jokeOutfit[weapon] = jokesterGun;
@@ -3915,20 +4124,37 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             }
         }
         PrepareFilterState();
-        if (!hasFreeKillRemaining)
+        if (chateauMon == crayonElf)
+        {
+            if (cigar.item_amount() < 2)
+            {
+                // hmm, what other preparation should be made here?
+            }
+        }
+        else if (!hasFreeKillRemaining)
         {
             print("No free kills remain, skipping first peppermint sprig", printColor);
             return;
         }
 
-        string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
-        if (page.contains_text("Christmas Card"))
+        if (chateauElf)
         {
-            page = visit_url("choice.php?whichchoice=1086&option=1&pwd=" + my_hash() + "&which=28"); // chrismas card
-            if (!page.contains_text("Also, what's Christmas?"))
-                abort("Debug: deck should have let me draw a christmas card");
-            visit_url("choice.php?whichchoice=1085&pwd=" + my_hash() + "&option=1"); // start the fight
+            print("Using Chateau painting " + chateauMon, printColor);
+            visit_url("place.php?whichplace=chateau&action=chateau_painting");
             RunCombat("Filter_Elvish");
+        }
+        else
+        {
+            print("Using deck of every card for elf", printColor);
+            string page = visit_url("inv_use.php?cheat=1&pwd=" + my_hash() + "&whichitem=8382");
+            if (page.contains_text("Christmas Card"))
+            {
+                page = visit_url("choice.php?whichchoice=1086&option=1&pwd=" + my_hash() + "&which=28"); // chrismas card
+                if (!page.contains_text("Also, what's Christmas?"))
+                    abort("Debug: deck should have let me draw a christmas card");
+                visit_url("choice.php?whichchoice=1085&pwd=" + my_hash() + "&option=1"); // start the fight
+                RunCombat("Filter_Elvish");
+            }
         }
         if (elfCopiedTo != "none".to_item() && elfCopiedTo != deck)
         {
@@ -4007,6 +4233,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (effectTurns == observantly.have_effect()) // number of effect turns should have increased
             {
                 print("drive observantly failed to buff", "red");
+                waitq(10); // wait 10 seconds for user to see
                 return;
             }
             effectTurns = observantly.have_effect();
@@ -4024,6 +4251,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (effectTurns == kgbBuff.have_effect())
             {
                 print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?", "red");
+                waitq(10); // wait 10 seconds for user to see
                 return;
             }
             effectTurns = kgbBuff.have_effect();
@@ -4038,7 +4266,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         // code to control briefcase is too complex, we depend on Ezandora's briefcase script
         cli_execute("briefcase martinis"); // make sure to get martinis first
         KGBBuff(turns, kgbMeat, "meat");
-        KGBBuff(turns, kgbItems, "item");
+        KGBBuff(turns, kgbItems, "item"); // any leftover clicks after done buffing +meat go to +item
     }
     void RentAHorse()
     {
@@ -4196,6 +4424,32 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    void AcquireAmuletCoin()
+    {
+        if (cornbeefadon.have_familiar() && !HaveEquipment(pokeEqpMeat))
+        {
+            if (familiarJacks.item_amount() == 0)
+            {
+                if (clipArt.have_skill() && get_property("_clipartSummons").to_int() < 3)
+                {
+                    print("Summoning kitten/kitten/kitten for familiar jacks", printColor);
+                    visit_url("campground.php?pwd=" + my_hash() + "&action=bookshelf&preaction=combinecliparts&clip1=03&clip2=03&clip3=03");
+                }
+                else
+                {
+                    buy(1, familiarJacks, 15000);
+                }
+            }
+            if (familiarJacks.item_amount() == 0)
+            {
+                print("Could not acquire familiar jacks for cornbeefadon", printColor);
+                return;
+            }
+            SwitchToFamiliar(cornbeefadon);
+            use(1, familiarJacks);
+        }
+    }
+
     void BuffTurns(int turns)
     {
         needWeightBuffs = true;
@@ -4229,6 +4483,8 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 FeedRobotender();
         }
         ActivateMumming();
+        if (turns > 100 && runFamiliar != orphan)
+            AcquireAmuletCoin();
 
         if (get_property("demonSummoned") != "true")
             AdventureEffect(summonGreed, preternatualGreed, turns);
@@ -4359,6 +4615,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         SweetMeat(turns);
         KGBBuff(turns);
 
+        if (executeBeforeEat != "")
+        {
+            cli_execute(executeBeforeEat);
+        }
         TryDrink(dirt, dirtEffect, 1, 1);
         TryDrink(gingerWine, gingerWineEffect, 2, 1);
 
@@ -4426,6 +4686,13 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                     break;
             }
 
+        }
+        if (executeAfterEat != "")
+        {
+            cli_execute(executeAfterEat);
+        }
+        if (!nightBefore)
+        {
             for (int i = 0; i < sacramentoLimit; i++) // drink sacramento wine for +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
 
@@ -4723,6 +4990,37 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
         return false;
     }
+
+    void TryPrepareFax(monster mon)
+    {
+        if (usedFax.item_amount() > 0) // must use existing copy before requesting a new one
+            return;
+        boolean chatWasOpen = false;
+        try
+        {
+            // this code pattern came from VMF, but there wasn't anything about a way to close chat afterwords if it wasn't
+            // already open
+            // chatWasOpen = ???
+            cli_execute("chat"); // apparently chat has to be open to receive a fax
+            waitq(5); // 5 seconds for chat to open
+            if (faxbot(meatyMonster))
+            {
+                if (usedFax.item_amount() > 0)
+                {
+                    print("Got fax of " + get_property("photocopyMonster"), printColor);
+                    return;
+                }
+            }
+            print("Fax failed for " + mon, printColor);
+        }
+        finally
+        {
+            // todo: shut chat if it wasn't already open
+            // if (!chatWasOpen)
+            //     cli_execute(close chat ???);
+        }
+    }
+
     boolean RunCopiedMeaty()
     {
         PrepareMeaty();
@@ -4730,6 +5028,18 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         // any copying item that we're using up should be set to "need to use" to
         // replenish the copy
 
+        if (MeatyFaxable())
+        {
+            TryPrepareFax(meatyMonster);
+            if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+            {
+                return ActivateCopyItem(usedFax);
+            }
+            else
+            {
+                print("Fax failed for " + meatyMonster);
+            }
+        }
         if (MeatyPuttied())
         {
             print("using spooky putty embezzler", printColor);
@@ -5120,6 +5430,18 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         }
     }
 
+    boolean CheckJokesterGunState()
+    {
+        if (HaveEquipment(jokesterGun)
+            && jokesterGun.can_equip()
+            && get_property("_firedJokestersGun") == "false")
+        {
+            hasFreeKillRemaining = true;
+            return true;
+        }
+        return false;
+    }
+
     void TryRunLTTFreeKills(int turns)
     {
 
@@ -5128,6 +5450,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (my_maxhp() < 1000)
             return; // don't want to mess around with this if we're not tough enough for scaling monsters to survive a good long while
         PrepareFilterState();
+        CheckJokesterGunState();
         if (!hasFreeKillRemaining) // without free kills, no point
             return;
 print("Jokester = " + canJokesterGun);
@@ -5158,12 +5481,7 @@ print("mob = " + canMobHit);
                 }
             }
         }
-        if (HaveEquipment(jokesterGun)
-            && jokesterGun.can_equip()
-            && get_property("_firedJokestersGun") == "false")
-        {
-            hasFreeKillRemaining = true;
-        }
+        CheckJokesterGunState();
         print("Trying free kills " + hasFreeKillRemaining + " difficulty " +  get_property("lttQuestDifficulty").to_int(), printColor);
         while (hasFreeKillRemaining
             && get_property("lttQuestDifficulty").to_int() > 0)
@@ -5183,20 +5501,14 @@ print("mob = " + canMobHit);
                 break;
             }
             PrepareFreeCombat(CopyOutfit(weightOutfitPieces));
-            if (HaveEquipment(jokesterGun)
-                && jokesterGun.can_equip()
-                && get_property("_firedJokestersGun") == "false")
-            {
+            if (CheckJokesterGunState())
                 weapon.equip(jokesterGun);
-                canJokesterGun = true;
-            }
             PrepareFilterState();
             if (!hasFreeKillRemaining) // this gets re-calculated by PrepareFilterState
             {
                 print("Out of free kills, stopping LT&T", printColor);
                 break;
             }
-            staggerOption = 0;
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
             int turnsAfter = my_turnCount();
             if (turnsAfter > turnsBefore)
