@@ -32,6 +32,11 @@
 
 // TODO:
 
+// Reducing server hits:
+// buy consumables in larger quantities than 1
+// investigate ways to script combat as a macro instead of requiring a full consult for each round of combat
+// 
+
 // duplicate witchess knight (code is partly there, but it's not actually firing)
 
 // track candle/scroll drops from intergnat
@@ -222,6 +227,7 @@ void ReadSettings()
     slot acc1 = ToSlot("acc1");
     slot acc2 = ToSlot("acc2");
     slot acc3 = ToSlot("acc3");
+    int[slot] outfitSlots = { head:1, back:2, shirt:3, weapon:4, offhand:5, pants:6, acc1:7, acc2:8, acc3:9 };
     slot famEqp = ToSlot("familiar");
     slot sticker1 = ToSlot("sticker1");
     slot sticker2 = ToSlot("sticker2");
@@ -815,6 +821,8 @@ void ReadSettings()
     void ActivateFortuneTeller();
     void BuffInRun(int turns, boolean restoreMP);
     item[slot] SwapOutSunglasses(item[slot] selectedOutfit);
+    item[slot] InitOutfit(string outfitName);
+    item[slot] InitOutfit(string outfitName, item[slot] result);
 
 
 // general utility functions
@@ -1014,10 +1022,97 @@ void ReadSettings()
                 cli_execute("create carpe");
         }
     }
- 
+
+    item[slot] GetCurrentGear()
+    {
+        item[slot] result;
+        foreach sl,i in outfitSlots
+            if (sl.equipped_item() != "none".to_item())
+                result[sl] = sl.equipped_item();
+        return result;
+    }
+
+    int CountOutfitMatches(item[slot] outfitGoal, item[slot] swapGear)
+    {
+        int result = 0;
+        foreach sl,it in outfitGoal
+        {
+            if (swapGear[sl] == it
+                && (outfitSlots contains sl)) // don't count familiar equipment or stickers here
+            {
+                result++;
+            }
+        }
+        return result;
+    }
+
+    // lazy initialize, Mafia doesn't return the number of an outfit, so manually create the mapping
+    // from custom outfit name to outfit #
+    int[string] outfitsByNumber;
+    void CalcOutfitsByNumber()
+    {
+        static boolean outfitsByNumberInitialized = false;
+        if (outfitsByNumberInitialized)
+            return;
+        outfitsByNumberInitialized = true;
+        static string searchPattern = "#(\\d*).*?name=.*?value=\"(.*?)\"\\s*>";
+        string page = visit_url("account_manageoutfits.php");
+        
+        matcher m = searchPattern.create_matcher(page);
+        while (m.find())
+        {
+            outfitsByNumber[m.group(2)] = m.group(1).to_int();
+            //print("outfit # = '" + m.group(1) + "', name ='" + m.group(2) + "'", printColor); // DEBUG
+        }
+    }
+
     void WearOutfit(item[slot] outfitDef)
     {
         MakeMeltingGear(outfitDef);
+        boolean matches = true;
+        foreach sl,it in outfitDef
+        {
+            if (sl.equipped_item() != it)
+                matches = false;
+        }
+        if (matches)
+            return;
+        int maxMatches = 0;
+        string bestMatch = "";
+        foreach ignoreNumber,outfitName in get_custom_outfits()
+        {
+            //print("Checking outfit " + outfitName, printColor); // DEBUG
+            int matchCount = CountOutfitMatches(outfitDef, InitOutfit(outfitName, GetCurrentGear()));
+            if (matchCount > maxMatches)
+            {
+                print("Better outfit match with " + outfitName + " matches = " + matchCount, printColor);
+                maxMatches = matchCount;
+                bestMatch = outfitName;
+            }
+        }
+        foreach ignoreNumber,outfitName in get_outfits()
+        {
+            int matchCount = CountOutfitMatches(outfitDef, InitOutfit(outfitName, GetCurrentGear()));
+            if (matchCount > maxMatches)
+            {
+                print("Better outfit match with " + outfitName + " matches = " + matchCount, printColor);
+                maxMatches = matchCount;
+                bestMatch = outfitName;
+            }
+        }
+        int currentMatchCount = CountOutfitMatches(outfitDef, GetCurrentGear());
+        // has to be at least 2 closer to make an "outfit" command more efficient than swapping a single item
+        if (maxMatches >= currentMatchCount + 2)
+        {
+            print("Swapping outfit to " + bestMatch, printColor);
+            // if the outfit contains illegal items, mafia will refuse to even try to equip it on a call to "outfit", so
+            // manually call the url to equip the outfit closest to our goal:
+            CalcOutfitsByNumber();
+            if (outfitsByNumber contains bestMatch)
+                visit_url("inv_equip.php?action=outfit&which=2&whichoutfit=-" + outfitsByNumber[bestMatch]);
+            else
+                outfit(bestMatch);
+        }
         // remove wrong accessories, in case the slots don't match up
         foreach sl, it in outfitDef
         {
@@ -2014,20 +2109,29 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return false;
     }
 
-    item[slot] InitOutfit(string outfitName)
+    item[slot] InitOutfit(string outfitName, item[slot] result)
     {
-        item[slot] result;
+        boolean acc1Used = false, acc2Used = false, acc3USed = false;
         foreach ix, it in outfit_pieces(outfitName)
         {
             slot s = it.to_slot();
             if (s == acc1 || s == acc2 || s == acc3)
             {
-                if (result[acc1].to_string() == "none")
+                if (!acc1Used)
+                {
+                    acc1Used = true;
                     result[acc1] = it;
-                else if (result[acc2].to_string() == "none")
+                }
+                else if (!acc2Used)
+                {
+                    acc2Used = true;
                     result[acc2] = it;
-                else if (result[acc3].to_string() == "none")
+                }
+                else if (!acc3Used)
+                {
+                    acc3Used = true;
                     result[acc3] = it;
+                }
                 else
                     abort("Not enough slots for accessory " + it);
             }
@@ -2035,6 +2139,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 result[s] = it;
         }
         return result;
+    }
+    item[slot] InitOutfit(string outfitName)
+    {
+        item[slot] result;
+        return InitOUtfit(outfitName, result);
     }
 
     void InitOutfits()
