@@ -823,6 +823,7 @@ void ReadSettings()
     item[slot] SwapOutSunglasses(item[slot] selectedOutfit);
     item[slot] InitOutfit(string outfitName);
     item[slot] InitOutfit(string outfitName, item[slot] result);
+    void DebugOutfit(string name, item[slot] o);
 
 
 // general utility functions
@@ -1068,6 +1069,7 @@ void ReadSettings()
 
     void WearOutfit(item[slot] outfitDef)
     {
+DebugOutfit("Goal outfit", outfitDef);
         MakeMeltingGear(outfitDef);
         boolean matches = true;
         foreach sl,it in outfitDef
@@ -1226,7 +1228,7 @@ void ReadSettings()
         noodled = false;
         critted = false;
         shielded = false;
-        canPocketCrumb = HaveEquipment(pantsGiving);
+        canPocketCrumb = pantsGiving.have_equipped();
         staggerOption = 0;
         abstractioned = false;
     }
@@ -1647,7 +1649,7 @@ void ReadSettings()
                 canRaveSteal = get_property("raveCombo4") != "" && get_property("_raveStealCount").to_int() < 30;
             }
         }
-        canPocketCrumb = HaveEquipment(pantsGiving);
+        canPocketCrumb = pantsGiving.have_equipped();
 
         canAccordionBash = accordionBash.have_skill()
             && IsAccordion(weapon.equipped_item())
@@ -1803,19 +1805,20 @@ void ReadSettings()
             if (furiousWallop.have_skill() && my_fury() > 0)
             {
                 critted = true;
-                return "skill " + furiousWallop.to_string();
+                return "; skill " + furiousWallop.to_string();
             }
             if (haikuKatana.have_equipped())
             {
                 critted = true;
-                return "skill " + haikuCrit.to_string();
+                return "; skill " + haikuCrit.to_string();
             }
             if (patriotShield.have_equipped())
             {
                 if (!shielded)
                 {
                     shielded = true;
-                    return "skill " + patriotCrit.to_string();
+                    critted = true;
+                    return "; skill " + patriotCrit.to_string() + "; attack";
                 }
                 critted = true;
                 return "attack";
@@ -1927,19 +1930,21 @@ void ReadSettings()
         if (dup != "")
             return dup;
 
-        if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
-        {
-            return "\"pickpocket\"";
-        }
-        if (mon == tourist && olfaction.have_skill() && olfactionEffect.have_effect() == 0 && my_mp() > 50)
-        {
-            return "skill " + olfaction.to_string();
-        }
         if (canMissileLauncher && shouldMissileLauncher)
         {
             // if "shouldMissileLauncher" is true, takes precedence over jokester's gun
             canMissileLauncher = false;
             return "skill " + missileLauncher.to_string();
+        }
+
+        string result = "";
+        if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
+        {
+            result += "pickpocket";
+        }
+        if (mon == tourist && olfaction.have_skill() && olfactionEffect.have_effect() == 0 && my_mp() > 50)
+        {
+            result += "; skill " + olfaction.to_string();
         }
 if (false) // TODO: free kills are now worthless for farming, don't waste them here
 {
@@ -1950,30 +1955,30 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
         {
             cursed = true;
-            return "skill " + curseOfWeaksauce.to_string();
+            result += "; skill " + curseOfWeaksauce.to_string();
         }
         if (expected_damage() * 8 > my_hp())
         {
             if (CanCast(micrometeorite) && !micrometeorited) // reduce damage taken
             {
                 micrometeorited = true;
-                return "skill " + micrometeorite.to_string();
+                return result + "; skill " + micrometeorite.to_string();
             }
         }
         if (canAccordionBash)
         {
             canAccordionBash = false;
-            return "skill Accordion Bash";
+            result += "; skill Accordion Bash";
         }
         if (needsMayfly)
         {
             needsMayfly = false;
-            return "skill Summon Mayfly Swarm";
+            result += "; skill Summon Mayfly Swarm";
         }
         if (extractJelly.have_skill() && !extracted)
         {
             extracted = true;
-            return "skill " + extractJelly.to_string();
+            result += "; skill " + extractJelly.to_string();
         }
         boolean CanCombo = my_hp() > 100
             && (expected_damage() * 4 < my_hp()); // a combo will take 3 turns to execute, so make sure we can survive 4
@@ -1984,12 +1989,17 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (!ravedNirvana)
             {
                 ravedNirvana = true;
-                return "combo rave nirvana";
+                result += "; combo rave nirvana";
             }
         }
         if (mon == mimeExecutive // tough scaling monster, don't want to dink around while getting beat up
             || round > 18) // maybe for a damage immune wandering monster?
         {
+            if (result != "")
+            {
+print("Running filter = " + result, printColor);
+                return result;
+            }
             if (canMortor && !mortared)
             {
                 mortared = true;
@@ -2012,31 +2022,31 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         if (canTurbo) // bonus meat drops are higher priority than mana regen, but other combos are lower
         {
             canTurbo = false;
-            return "skill Turbo";
+            result += "; skill Turbo";
         }
         if (canRaveConcentration && CanCombo) // increase item drops
         {
             if (!ravedConcentration)
             {
                 ravedConcentration = true;
-                return "combo rave concentration";
+                result += "; combo rave concentration";
             }
         }
         if (canExtract && my_mp() > 10)
         {
             canExtract = false;
-            return "skill " + extract.to_string();
+            result += "; skill " + extract.to_string();
         }
         if (canPocketCrumb)
         {
             canPocketCrumb = false;
-            return "skill " + pocketCrumbs.to_string();
+            result += "; skill " + pocketCrumbs.to_string();
         }
         if (needsCrit)
         {
             string crit = Filter_ChooseCrit();
             if (crit != "")
-                return crit;
+                result += crit;
         }
 
         if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
@@ -2044,11 +2054,12 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             if (!ravedSteal)
             {
                 ravedSteal = true;
-                return "combo rave steal";
+                result += "; combo rave steal";
             }
         }
             
-        return "";
+print("Running filter = " + result, printColor);
+        return result;
     }
 
     string Filter_Seal(int round, monster mon, string page)
@@ -2109,9 +2120,21 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         return false;
     }
 
+    void DebugOutfit(string name, item[slot] o)
+    {
+        static boolean isDebug = false;
+        if (!isDebug)
+            return;
+        print("outfit " + name, printColor);
+        foreach sl,it in o
+        {
+            print("slot " + sl + " = " + it, printColor);
+        }
+    }
+
     item[slot] InitOutfit(string outfitName, item[slot] result)
     {
-        boolean acc1Used = false, acc2Used = false, acc3USed = false;
+        boolean acc1Used = false, acc2Used = false, acc3USed = false, mainHandUsed = false;
         foreach ix, it in outfit_pieces(outfitName)
         {
             slot s = it.to_slot();
@@ -2135,6 +2158,14 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
                 else
                     abort("Not enough slots for accessory " + it);
             }
+            else if (s == weapon)
+            {
+                if (mainHandUsed)
+                    result[offhand] = it;
+                else
+                    result[weapon] = it;
+                mainHandUsed = true;
+            }
             else
                 result[s] = it;
         }
@@ -2143,7 +2174,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
     item[slot] InitOutfit(string outfitName)
     {
         item[slot] result;
-        return InitOUtfit(outfitName, result);
+        return InitOutfit(outfitName, result);
     }
 
     void InitOutfits()
@@ -2159,6 +2190,10 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         {
             weightOutfitPieces[famEqp] = loathingLegionEqp;
         }
+        DebugOutfit(defaultOutfit, defaultOutfitPieces);
+        DebugOutfit(meatyOutfit, meatyOutfitPieces);
+        DebugOutfit(dropsOutfit, dropsOutfitPieces);
+        DebugOutfit(weightOutfit, weightOutfitPieces);
     }
 
 
@@ -2760,110 +2795,134 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
         abort("Why don't you have at least 1 dictionary?  Up to you to figure out how to handle this combat");
         return "";
     }
+    string WrapInSafetyCheck(string actionString)
+    {
+return actionString;
+return "; " + actionString;
+        return "; if !hppercentbelow 33; " + actionString + "; endif;";
+    }
+
     string Filter_ScalingFreeKill(int round, monster mon, string page)
     {
         if (my_hp() * 3 < my_maxhp()) // too low on health, end it
             return ChooseFreeKillMethodForFilter();
         if (monster_hp() < 350 || round > 22) // don't take a chance of it using up a turn
             return ChooseFreeKillMethodForFilter();
+        string result = "";
         if (staggerOption <= 1)
         {
             ++staggerOption;
             if (to_skill("Stealth Mistletoe").have_skill() && my_mp() > 10)
             {
-                return "skill Stealth Mistletoe";
+                return WrapInSafetyCheck("skill Stealth Mistletoe");
             }
-            print("no mistletoe");
+            else
+                print("no mistletoe");
         }
         if (staggerOption == 2)
         {
             ++staggerOption;
             if (to_skill("Curse of Weaksauce").have_skill() && my_mp() > 10)
             {
-                return "skill Curse of Weaksauce";
+                return WrapInSafetyCheck("skill Curse of Weaksauce");
             }
-            print("no weaksauce");
+            else
+                print("no weaksauce");
         }
         if (staggerOption == 3)
         {
             ++staggerOption;
             if (to_item("Time-Spinner").item_amount() > 0)
             {
-                return "item Time-Spinner";
+                return WrapInSafetyCheck("item Time-Spinner");
             }
-            print("no time spinner");
+            else
+                print("no time spinner");
         }
         if (staggerOption == 4)
         {
             ++staggerOption;
             if (to_skill("Micrometeorite").have_skill())
             {
-                return "skill Micrometeorite";
+                return WrapInSafetyCheck("skill Micrometeorite");
             }
-            print("no micrometeorite");
+            else
+                print("no micrometeorite");
         }
         if (staggerOption == 5)
         {
             ++staggerOption;
             if (to_skill("Entangling Noodles").have_skill() && my_mp() > 10)
             {
-                return "skill Entangling Noodles";
+                return WrapInSafetyCheck("skill Entangling Noodles");
             }
-            print("no entangling noodles");
+            else
+                print("no entangling noodles");
         }
         if (staggerOption == 6)
         {
             ++staggerOption;
             if (to_item("little red book").item_amount() > 0)
             {
-                return "item little red book";
+                return WrapInSafetyCheck("item little red book");
             }
-            print("no little red book");
+            else
+                print("no little red book");
         }
         if (staggerOption == 7)
         {
             ++staggerOption;
             if (to_item("Rain-Doh indigo cup").item_amount() > 0)
             {
-                return "item Rain-Doh indigo cup";
+                return WrapInSafetyCheck("item Rain-Doh indigo cup");
             }
-            print("no rain doh");
+            else
+                print("no rain doh");
         }
         if (staggerOption == 8)
         {
             ++staggerOption;
             if (to_item("Rain-Doh blue balls").item_amount() > 0)
             {
-                return "item Rain-Doh blue balls";
+                return WrapInSafetyCheck("item Rain-Doh blue balls");
             }
-            print("no rain doh");
+            else
+                print("no rain doh");
         }
         if (staggerOption == 9)
         {
             ++staggerOption;
             if (to_item("beehive").item_amount() > 0)
             {
-                return "item beehive";
+                return WrapInSafetyCheck("item beehive");
             }
-            print("no beehive");
+            else
+                print("no beehive");
         }
         if (staggerOption == 10)
         {
             ++staggerOption;
             if (to_skill("Shell Up").have_skill() && my_mp() > 10)
             {
-                return "skill Shell Up";
+                return WrapInSafetyCheck("skill Shell Up");
             }
-            print("no shell up");
+            else
+                print("no shell up");
         }
         if (staggerOption == 11)
         {
             ++staggerOption;
             if (to_skill("Silent Knife").have_skill() && my_mp() > 10)
             {
-                return "skill Silent Knife";
+                return WrapInSafetyCheck("skill Silent Knife");
             }
-            print("no silent knife");
+            else
+                print("no silent knife");
+        }
+        if (result != "")
+        {
+            print("Running macro: " + result, printColor);
+            return result;
         }
         return ChooseDictionaryCombatAction();
     }
