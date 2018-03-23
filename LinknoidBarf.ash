@@ -1118,21 +1118,45 @@ DebugOutfit("Goal outfit", outfitDef);
         // remove wrong accessories, in case the slots don't match up
         foreach sl, it in outfitDef
         {
-            if ((sl == acc1 || sl == acc2 || sl == acc3) && sl.equipped_item() != it)
+            if (sl == acc1 || sl == acc2 || sl == acc3)
+                continue;
+            if (sl.equipped_item() != it && HaveEquipment(it) && it.can_equip())
             {
-                sl.equip("none".to_item());
+                sl.equip(it);
             }
         }
-        foreach sl, it in outfitDef
+        slot[3] slots = { acc1, acc2, acc3 };
+        boolean[3] matchedItems;
+        boolean[3] matchedSlots;
+        for (int i = 0; i < 3; i++)
         {
-            if (sl.equipped_item() != it && HaveEquipment(it))
+            if (outfitDef[slots[i]] == "none".to_item())
             {
-                if (it.have_equipped())
+                matchedItems[i] = true;
+                continue;
+            }
+            for (int j = 0; j < 3; j++)
+            {
+                if (matchedItems[i])
+                    continue;
+                if (matchedSlots[j])
+                    continue;
+                if (outfitDef[slots[i]] == slots[j].equipped_item())
                 {
-                    if (sl == acc1 || sl == acc2 || sl == acc3) // in case it's in the wrong slot, and need to move it
-                        sl.equip("none".to_item());
+                    matchedItems[i] = true;
+                    matchedSlots[j] = true;
                 }
-                sl.equip(it);
+            }
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                if (matchedItems[i])
+                    continue;
+                if (matchedSlots[j])
+                    continue;
+                slots[j].equip(outfitDef[slots[i]]);
             }
         }
     }
@@ -2797,9 +2821,10 @@ print("Running filter = " + result, printColor);
     }
     string WrapInSafetyCheck(string actionString)
     {
+// still debugging:
 return actionString;
-return "; " + actionString;
-        return "; if !hppercentbelow 33; " + actionString + "; endif;";
+        //return "; " + actionString;
+        //return "; if !hppercentbelow 33; " + actionString + "; endif";
     }
 
     string Filter_ScalingFreeKill(int round, monster mon, string page)
@@ -2811,10 +2836,10 @@ return "; " + actionString;
         string result = "";
         if (staggerOption <= 1)
         {
-            ++staggerOption;
+            staggerOption = 2;
             if (to_skill("Stealth Mistletoe").have_skill() && my_mp() > 10)
             {
-                return WrapInSafetyCheck("skill Stealth Mistletoe");
+                return "skill Stealth Mistletoe";
             }
             else
                 print("no mistletoe");
@@ -2832,9 +2857,9 @@ return "; " + actionString;
         if (staggerOption == 3)
         {
             ++staggerOption;
-            if (to_item("Time-Spinner").item_amount() > 0)
+            if (timeSpinner.item_amount() > 0)
             {
-                return WrapInSafetyCheck("item Time-Spinner");
+                return WrapInSafetyCheck("item " + timeSpinner + ",none");
             }
             else
                 print("no time spinner");
@@ -2864,7 +2889,7 @@ return "; " + actionString;
             ++staggerOption;
             if (to_item("little red book").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item little red book");
+                return WrapInSafetyCheck("item little red book,none");
             }
             else
                 print("no little red book");
@@ -2874,7 +2899,7 @@ return "; " + actionString;
             ++staggerOption;
             if (to_item("Rain-Doh indigo cup").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item Rain-Doh indigo cup");
+                return WrapInSafetyCheck("item Rain-Doh indigo cup,none");
             }
             else
                 print("no rain doh");
@@ -2884,7 +2909,7 @@ return "; " + actionString;
             ++staggerOption;
             if (to_item("Rain-Doh blue balls").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item Rain-Doh blue balls");
+                return WrapInSafetyCheck("item Rain-Doh blue balls,none");
             }
             else
                 print("no rain doh");
@@ -2894,7 +2919,7 @@ return "; " + actionString;
             ++staggerOption;
             if (to_item("beehive").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item beehive");
+                return WrapInSafetyCheck("item beehive,none");
             }
             else
                 print("no beehive");
@@ -2912,7 +2937,7 @@ return "; " + actionString;
         if (staggerOption == 11)
         {
             ++staggerOption;
-            if (to_skill("Silent Knife").have_skill() && my_mp() > 10)
+            if (to_skill("Silent Knife").have_skill() && my_mp() > 20)
             {
                 return WrapInSafetyCheck("skill Silent Knife");
             }
@@ -2921,6 +2946,7 @@ return "; " + actionString;
         }
         if (result != "")
         {
+            result = result.substring(2);
             print("Running macro: " + result, printColor);
             return result;
         }
@@ -5678,6 +5704,7 @@ print("mob = " + canMobHit);
                 break;
             }
             RunAdventure(telegramLoc, "Filter_ScalingFreeKill");
+//waitq(5);
             int turnsAfter = my_turnCount();
             if (turnsAfter > turnsBefore)
                 abort("Free kill algorithm failed, please debug this script");
