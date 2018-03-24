@@ -154,6 +154,7 @@ item gar = ToItem("Potion of Field Gar");
 effect garEffect = ToEffect("Garish");
 skill odeToBooze = ToSkill("The Ode to Booze");
 effect odeToBoozeEffect = ToEffect("Ode to Booze");
+item shotglass = ToItem("mime army shotglass");
 
 item Xtattoo = ToItem("temporary X tattoos");
 effect straightEdge = ToEffect("Straight-Edgy");
@@ -737,6 +738,18 @@ void HandleEatDrinkSpleen()
 	}
 	if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
 		put_closet(swizzler.item_amount(), swizzler);
+	item bestRoboDrink;
+	if (get_property("_mimeArmyShotglassUsed") == "false" && shotglass.item_amount() > 0)
+	{
+		bestRoboDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
+		if (bestRoboDrink != noItem)
+		{
+			print("Drinking for shotglass", printColor);
+			OdeUp(1);
+			BuyItem(bestRoboDrink, 3);
+			drink(1, bestRoboDrink);
+		}
+	}
 	while (remainingDrunk >= 3)
 	{
 		item bestDrink = ChooseCheapest(5000, perfect1, perfect2, perfect3, perfect4, perfect5, perfect6);
@@ -750,13 +763,14 @@ void HandleEatDrinkSpleen()
 	}
 	while (remainingDrunk >= 1) // drunk available is not divisible by 3, so we'll have some leftovers to fill
 	{
-		item bestDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
-		print("cheapest drink = " + bestDrink.to_string(), printColor);
-		if (bestDrink == noItem)
+		if (bestRoboDrink == noItem)
+			bestRoboDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
+		print("cheapest drink = " + bestRoboDrink.to_string(), printColor);
+		if (bestRoboDrink == noItem)
 			break;
 		OdeUp(1);
-		BuyItem(bestDrink, remainingDrunk);
-		drink(1, bestDrink);
+		BuyItem(bestRoboDrink, remainingDrunk);
+		drink(1, bestRoboDrink);
 		// need a full recalculate because the mime shot glass might cause inebriety to not increment
 		remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
 	}
