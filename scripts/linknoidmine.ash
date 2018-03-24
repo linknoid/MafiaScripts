@@ -1,5 +1,39 @@
 // code adapted from hotmine.ash by Smelltastic: https://svn.code.sf.net/p/smellomafia/svn/hotmine/code/
 
+boolean autoConfirmMine = false;
+string printColor = "orange";
+int saveSpleen = 0; // how many spleen points to save back
+int saveStomach = 0; // how many stomach points to save back
+int saveLiver = 0; // how many liver points to save back
+
+void WriteSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    map["autoConfirmMine"] = autoConfirmMine.to_string();
+    map["printColor"] = printColor;
+    map["saveSpleen"] = saveSpleen.to_string();
+    map["saveStomach"] = saveStomach.to_string();
+    map["saveLiver"] = saveLiver.to_string();
+    map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
+}
+void ReadSettings()
+{
+    string[string] map;
+    file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+    foreach key,value in map
+    {
+        switch (key)
+        {
+            case "autoConfirmMine": autoConfirmMine = value == "true"; break;
+            case "printColor": printColor = value; break;
+            case "saveSpleen": saveSpleen = value.to_int(); break;
+            case "saveStomach": saveStomach = value.to_int(); break;
+            case "saveLiver": saveLiver = value.to_int(); break;
+        }
+    }
+}
+
 slot ToSlot(string s)
 {
 	slot result = s.to_slot();
@@ -46,6 +80,7 @@ item noItem = "none".to_item();
 // mining gear
 item mask = ToItem("high-temperature mining mask");
 item cloak = ToItem("Misty Cloak");
+item cloak2 = ToItem("Misty Cape");
 item drill = ToItem("high-temperature mining drill");
 item lavaPants = ToItem("lava-proof pants");
 item gloves = ToItem("heat-resistant gloves");
@@ -119,6 +154,7 @@ item gar = ToItem("Potion of Field Gar");
 effect garEffect = ToEffect("Garish");
 skill odeToBooze = ToSkill("The Ode to Booze");
 effect odeToBoozeEffect = ToEffect("Ode to Booze");
+item shotglass = ToItem("mime army shotglass");
 
 item Xtattoo = ToItem("temporary X tattoos");
 effect straightEdge = ToEffect("Straight-Edgy");
@@ -126,24 +162,43 @@ item skeletonX = ToItem("X");
 
 // sleep gear
 item weirdness = ToItem("solid shifting time weirdness");
+familiar stooper = "Stooper".to_familiar();
+
 
 
 boolean UserConfirmDefault(string message, boolean defaultValue)
 {
-	if (get_property("LinknoidMine.AutoConfirm") == "true")
+	if (autoConfirmMine)
 		return defaultValue;
 	return user_confirm(message);
 }
 boolean HaveItem(item i)
 {
-	return i.item_amount() > 0 || i.equipped_amount() > 0;
+	if ( i.item_amount() > 0 || i.equipped_amount() > 0)
+		return true;
+
+	if (i.to_slot() == famEqp)
+	{
+		foreach fam in $familiars[]
+		{
+			if (fam.have_familiar() && fam.familiar_equipped_equipment() == i)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+void BuyItem(item i, int count)
+{
+	if (!HaveItem(i))
+		buy(count, i);
+	if (!HaveItem(i))
+		abort("Could not acquire " + i.to_string());
 }
 void BuyItem(item i)
 {
-	if (!HaveItem(i))
-		buy(1, i);
-	if (!HaveItem(i))
-		abort("Could not acquire " + i.to_string());
+	BuyItem(i, 1);
 }
 void BuyAndWear(item i, slot s)
 {
@@ -160,6 +215,10 @@ void ClearAccessorySlots()
 }
 void WearSleepGear()
 {
+	if (stooper.have_familiar() && my_familiar() != stooper)
+	{
+		stooper.use_familiar();
+	}
 	if (my_familiar().to_string() != "none" && HaveItem(weirdness))
 	{
 		fameqp.equip(weirdness);
@@ -167,7 +226,7 @@ void WearSleepGear()
 	if (have_outfit("Sleep"))
 	{
 		outfit("Sleep");
-		print("Don't forget to nightcap");
+		print("Don't forget to nightcap", printColor);
 	}
 }
 
@@ -175,7 +234,7 @@ void WearMiningGear()
 {
 	while (!HaveItem(drill))
 	{
-		print("No high-temperature mining drill found, attempting to get one..");
+		print("No high-temperature mining drill found, attempting to get one..", printColor);
 		BuyItem(brokenDrill);
 		BuyItem(fixDrill);
 		use(1, fixDrill);
@@ -187,7 +246,10 @@ void WearMiningGear()
 		use(1, xibPuterCode);
 	}
 	BuyAndWear(mask, head); // heat resist
-	BuyAndWear(cloak, back); // mana regen
+	if (cloak.can_equip())
+		BuyAndWear(cloak, back); // hp regen
+	else if (cloak2.can_equip())
+		BuyAndWear(cloak2, back); // hp regen
 	BuyAndWear(drill, weapon); // heat resist
 	BuyAndWear(lavaPants, pants); // heat resist
 	ClearAccessorySlots();
@@ -260,7 +322,6 @@ void DoVelvet()
 
 }
 item bunker1 = ToItem("New Age healing crystal");
-item bunker2 = ToItem("superduperheated metal");
 item bunker3 = ToItem("gooey lava globs");
 item bunker4 = ToItem("Mr. Cheeng's 'stache");
 item bunker5 = ToItem("Lavalos core");
@@ -277,6 +338,7 @@ item bunker15 = ToItem("Pener's crisps");
 item bunker16 = ToItem("signed deuce");
 item bunker17 = ToItem("the tongue of Smimmons");
 item bunker18 = ToItem("Raul's guitar pick");
+item bunker2 = ToItem("superduperheated metal"); // this tends to be really expensive, so check it last
 int FindVariableChoice(string page, string match)
 {
 	int ix = page.index_of(match);
@@ -334,7 +396,6 @@ void DoBunker()
 	if (page.contains_text("You've already done your day's work"))
 		return;
 	if (	   !CheckForBunkerTurnin(page, bunker1, 5)
-		&& !CheckForBunkerTurnin(page, bunker2, 1)
 		&& !CheckForBunkerTurnin(page, bunker3, 5)
 		&& !CheckForBunkerTurnin(page, bunker4, 1)
 		&& !CheckForBunkerTurnin(page, bunker5, 1)
@@ -350,7 +411,8 @@ void DoBunker()
 		&& !CheckForBunkerTurnin(page, bunker15, 1)
 		&& !CheckForBunkerTurnin(page, bunker16, 1)
 		&& !CheckForBunkerTurnin(page, bunker17, 1)
-		&& !CheckForBunkerTurnin(page, bunker18, 1))
+		&& !CheckForBunkerTurnin(page, bunker18, 1)
+		&& !CheckForBunkerTurnin(page, bunker2, 1))
 	{
 		if (!UserConfirmDefault("Cannot acquire WLF bunker quest items.\r\n\r\nSkip getting that volcoino and start mining?", true))
 		{
@@ -381,7 +443,7 @@ string Dig(int x, int y)
 		cli_execute("restore hp");
 	if( my_hp() <= 0 )
 		abort("Could not heal up!");
-	print("Mining X: " + x + " Y: " + y);
+	print("Mining X: " + x + " Y: " + y, printColor);
 	turnsSpentMining++;
 	int idx = x + 8 * y;
 	return visit_url("mining.php?mine=6&which=" + idx + "&pwd=" + my_hash());
@@ -389,7 +451,7 @@ string Dig(int x, int y)
 
 void DoMining(int advToSpend)
 {
-	print("Spending " + advToSpend + " mining.");
+	print("Spending " + advToSpend + " mining.", printColor);
 
 	int crystalsThisRun = 0;
 	int velvetThisRun = 0;
@@ -412,7 +474,7 @@ void DoMining(int advToSpend)
 		if (!page.contains_text("value='Find New Cavern'") && !page.contains_text("Promising Chunk of Wall"))
 		{
 			// We cannot find a new cavern unless we've dug once, so if there are no sparklies, dig once
-			print("No shinies, digging X: 4 Y: 6");
+			print("No shinies, digging X: 4 Y: 6", printColor);
 			page = Dig(4,6);
 		}
 		
@@ -447,7 +509,7 @@ void DoMining(int advToSpend)
 		}
 		if (reset)
 		{
-			print("next mine");
+			print("next mine", printColor);
 			page = ResetMine();
 		}
 	}
@@ -457,12 +519,12 @@ void DoMining(int advToSpend)
 	if (turnsSpentMining > 0)
 		mpa = mpa / turnsSpentMining;
 		
-	print("Total spoils: ");
-	print("Spent " + turnsSpentMining + " adventures in " + totalMines + " mines.");
-	print("Mines without gold: " + badMines);
+	print("Total spoils: ", printColor);
+	print("Spent " + turnsSpentMining + " adventures in " + totalMines + " mines.", printColor);
+	print("Mines without gold: " + badMines, printColor);
 	print("Gold: " + goldThisRun + ", worth " + totalMeat + " meat, with " + mpa + " MPA","green");
-	print("Crystals: " + crystalsThisRun);
-	print("Velvet: " + velvetThisRun);
+	print("Crystals: " + crystalsThisRun, printColor);
+	print("Velvet: " + velvetThisRun, printColor);
 }
 
 item ChooseCheapest(int limit, item i1, item i2)
@@ -522,7 +584,7 @@ void OdeUp(int size)
 	}
 	else if (!ignoreOde)
 	{
-                print("Requesting Ode to Booze buff from Buffy the buff bot");
+                print("Requesting Ode to Booze buff from Buffy the buff bot", printColor);
                 cli_execute("/msg buffy ode");
                 for (int i = 0; i < 5; i++)
                 {
@@ -530,7 +592,7 @@ void OdeUp(int size)
                     refresh_status();
                     if (odeToBoozeEffect.have_effect() >= size)
                     {
-                        print("Got ode to booze from buffy, sending 2000 meat as thanks");
+                        print("Got ode to booze from buffy, sending 2000 meat as thanks", printColor);
                         cli_execute("csend 2000 meat to buffy");
                         break;
                     }
@@ -548,7 +610,7 @@ void OdeUp(int size)
 
 void PrepareEat(int size)
 {
-	int remainingFull = fullness_limit() - my_fullness();
+	int remainingFull = fullness_limit() - saveStomach - my_fullness();
 	if (get_property("barrelShrineUnlocked") == "true"
 		&& my_class().to_string() == "Turtle Tamer"
 		&& get_property("_barrelPrayer") != "true"
@@ -570,7 +632,7 @@ int FillSpleen(int remainingSpleen)
 	if (remainingSpleen >= 4)
 	{
 		item bestSpleen = ChooseCheapest(15000, spleen4_1, spleen4_2, spleen4_3, spleen4_4); // expect 5 turns at 3000 mpa
-		print("cheapest spleen = " + bestSpleen.to_string());
+		print("cheapest spleen = " + bestSpleen.to_string(), printColor);
 		if (bestSpleen != noItem)
 		{
 			BuyItem(bestSpleen);
@@ -581,7 +643,7 @@ int FillSpleen(int remainingSpleen)
 	if (remainingSpleen >= 3)
 	{
 		item bestSpleen = ChooseCheapest(9000, spleen3_1, spleen3_2); // expect 3 turns at 3000 mpa
-		print("cheapest spleen = " + bestSpleen.to_string());
+		print("cheapest spleen = " + bestSpleen.to_string(), printColor);
 		if (bestSpleen != noItem)
 		{
 			BuyItem(bestSpleen);
@@ -592,7 +654,7 @@ int FillSpleen(int remainingSpleen)
 	if (remainingSpleen >= 1)
 	{
 		item bestSpleen = ChooseCheapest(3000, spleen1_1, spleen1_2, spleen1_3, noItem); // expect 1.5 turns at 3000 mpa
-		print("cheapest spleen = " + bestSpleen.to_string());
+		print("cheapest spleen = " + bestSpleen.to_string(), printColor);
 		if (bestSpleen != noItem)
 		{
 			BuyItem(bestSpleen);
@@ -607,11 +669,11 @@ void HandleEatDrinkSpleen()
 {
 	// Non-optimal algorithm for lazy eating and drinking that won't break
 	// the bank.  You can almost certainly do better manually.
-	int remainingFull = fullness_limit() - my_fullness();
-	int remainingDrunk = inebriety_limit() - my_inebriety();
-	int remainingSpleen = spleen_limit() - my_spleen_use();
+	int remainingFull = fullness_limit() - saveStomach - my_fullness();
+	int remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
+	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
 	boolean timeBorrowed = get_property("_borrowedTimeUsed") != "false";
-	if (remainingFull < 5 && remainingDrunk < 3 && remainingSpleen < 4)
+	if (remainingFull < 5 && remainingDrunk < 1 && remainingSpleen < 3)
 		return;
 	if (!timeBorrowed && user_confirm("Do you wish to borrow 20 turns from tommorrow?"))
 	{
@@ -619,6 +681,8 @@ void HandleEatDrinkSpleen()
 		use(1, borrowedTime);
 	}
 
+	if (!user_confirm("Do you wish to automatically eat hi mein/lasagna/drink perfect/spleen?"))
+		return;
 	while (remainingSpleen >= 3)
 	{
 		int newSpleen = FillSpleen(remainingSpleen);
@@ -627,19 +691,17 @@ void HandleEatDrinkSpleen()
 		remainingSpleen = newSpleen;
 	}
 
-	if (!user_confirm("Do you wish to automatically eat hi mein/lasagna/drink perfect/spleen?"))
-		return;
 
         if (ruby.numeric_modifier("Muscle Percent") == 0) // can't use field gar on Monday
         {
 		while (remainingFull >= 3)
 		{
 			item bestFood = ChooseCheapest(7500, lasagna1, lasagna2, lasagna3, noItem);
-			print("cheapest food = " + bestFood.to_string());
+			print("cheapest food = " + bestFood.to_string(), printColor);
 			if (bestFood == noItem)
 				break;
-			BuyItem(bestFood);
-			BuyItem(gar);
+			BuyItem(bestFood, (remainingFull + 2) / 3);
+			BuyItem(gar, 3);
 			PrepareEat(3);
 			if (garEffect.have_effect() <= 0)
 				use(1, gar);
@@ -647,19 +709,23 @@ void HandleEatDrinkSpleen()
 			remainingFull -= 3;
 		}
         }
-	if (my_level() >= 13) // must be 13 to eat hi-mein
+	if (my_level() >= 12) // must be 12 to eat hi-mein
 	{
 		while (remainingFull >= 5)
 		{
 			item bestFood = ChooseCheapest(10000, himein1, himein2, himein3, himein4, himein5, noItem);
-			print("cheapest food = " + bestFood.to_string());
+			print("cheapest food = " + bestFood.to_string(), printColor);
 			if (bestFood == noItem)
 				break;
-			BuyItem(bestFood);
+			BuyItem(bestFood, (remainingFull + 4) / 5);
 			PrepareEat(5);
 			eat(1, bestFood);
 			remainingFull -= 5;
 		}
+	}
+	else if (remainingFull >= 5)
+	{
+		print("Cannot eat lasagna because it's monday, and not high enough level for hi-meins, you need to find an alternative to eat.", printColor);
 	}
 	if (remainingDrunk >= 10) // if there's not enough liver left to benefit, wait for nightcap
 	{
@@ -672,27 +738,41 @@ void HandleEatDrinkSpleen()
 	}
 	if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
 		put_closet(swizzler.item_amount(), swizzler);
+	item bestRoboDrink;
+	if (get_property("_mimeArmyShotglassUsed") == "false" && shotglass.item_amount() > 0)
+	{
+		bestRoboDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
+		if (bestRoboDrink != noItem)
+		{
+			print("Drinking for shotglass", printColor);
+			OdeUp(1);
+			BuyItem(bestRoboDrink, 3);
+			drink(1, bestRoboDrink);
+		}
+	}
 	while (remainingDrunk >= 3)
 	{
 		item bestDrink = ChooseCheapest(5000, perfect1, perfect2, perfect3, perfect4, perfect5, perfect6);
-		print("cheapest drink = " + bestDrink.to_string());
+		print("cheapest drink = " + bestDrink.to_string(), printColor);
 		if (bestDrink == noItem)
 			break;
 		OdeUp(3);
-		BuyItem(bestDrink);
+		BuyItem(bestDrink, (remainingDrunk + 2) / 3);
 		drink(1, bestDrink);
 		remainingDrunk -= 3;
 	}
 	while (remainingDrunk >= 1) // drunk available is not divisible by 3, so we'll have some leftovers to fill
 	{
-		item bestDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
-		print("cheapest drink = " + bestDrink.to_string());
-		if (bestDrink == noItem)
+		if (bestRoboDrink == noItem)
+			bestRoboDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
+		print("cheapest drink = " + bestRoboDrink.to_string(), printColor);
+		if (bestRoboDrink == noItem)
 			break;
 		OdeUp(1);
-		BuyItem(bestDrink);
-		drink(1, bestDrink);
-		remainingDrunk -= 3;
+		BuyItem(bestRoboDrink, remainingDrunk);
+		drink(1, bestRoboDrink);
+		// need a full recalculate because the mime shot glass might cause inebriety to not increment
+		remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
 	}
 }
 
@@ -703,9 +783,9 @@ int GetAdventureGain(slot sl)
 
 void PrepTomorrow()
 {
-	int remainingDrunk = inebriety_limit() - my_inebriety();
+	int remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
 	WearSleepGear();
-	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40;
+	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40; // 40 basic regen for all characters
 	if (get_property("_borrowedTimeUsed") == "true")
 		overnightAdventureGain -= 20;
 	overnightAdventureGain += GetAdventureGain(head);
@@ -719,8 +799,8 @@ void PrepTomorrow()
 	overnightAdventureGain += GetAdventureGain(acc3);
 	overnightAdventureGain += GetAdventureGain(famEqp);
 
-        while (my_adventures() + overnightAdventureGain < 200
-		&& fullness_limit() - my_fullness() >= 3)
+	while (my_adventures() + overnightAdventureGain < 200
+		&& fullness_limit() - saveStomach - my_fullness() >= 3)
 	{
 		PrepareEat(3);
 		if (burrito1.item_amount() > 0)
@@ -745,7 +825,7 @@ void PrepTomorrow()
 			}
 		}
 	}
-	int remainingSpleen = spleen_limit() - my_spleen_use();
+	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
         while (my_adventures() + overnightAdventureGain < 200
 		&& remainingSpleen >= 3)
 	{
@@ -781,6 +861,12 @@ void PrepTomorrow()
 
 void main(int miningTurns)
 {
+	ReadSettings();
+	WriteSettings();
+	if (stooper.have_familiar() && my_familiar() != stooper)
+	{
+		stooper.use_familiar();
+	}
 	if (my_inebriety() > inebriety_limit())
 		abort("You are too drunk to continue.");
 
