@@ -160,7 +160,7 @@ item skeletonX = ToItem("X");
 
 // sleep gear
 item weirdness = ToItem("solid shifting time weirdness");
-
+familiar stooper = "Stooper".to_familiar();
 
 
 
@@ -172,7 +172,20 @@ boolean UserConfirmDefault(string message, boolean defaultValue)
 }
 boolean HaveItem(item i)
 {
-	return i.item_amount() > 0 || i.equipped_amount() > 0;
+	if ( i.item_amount() > 0 || i.equipped_amount() > 0)
+		return true;
+
+	if (i.to_slot() == famEqp)
+	{
+		foreach fam in $familiars[]
+		{
+			if (fam.have_familiar() && fam.familiar_equipped_equipment() == i)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
 void BuyItem(item i)
 {
@@ -196,6 +209,10 @@ void ClearAccessorySlots()
 }
 void WearSleepGear()
 {
+	if (stooper.have_familiar() && my_familiar() != stooper)
+	{
+		stooper.use_familiar();
+	}
 	if (my_familiar().to_string() != "none" && HaveItem(weirdness))
 	{
 		fameqp.equip(weirdness);
@@ -647,7 +664,7 @@ void HandleEatDrinkSpleen()
 	int remainingDrunk = inebriety_limit() - saveLiver - my_inebriety();
 	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
 	boolean timeBorrowed = get_property("_borrowedTimeUsed") != "false";
-	if (remainingFull < 5 && remainingDrunk < 3 && remainingSpleen < 4)
+	if (remainingFull < 5 && remainingDrunk < 1 && remainingSpleen < 3)
 		return;
 	if (!timeBorrowed && user_confirm("Do you wish to borrow 20 turns from tommorrow?"))
 	{
@@ -728,7 +745,7 @@ void HandleEatDrinkSpleen()
 		OdeUp(1);
 		BuyItem(bestDrink);
 		drink(1, bestDrink);
-		remainingDrunk -= 3;
+		remainingDrunk -= 1;
 	}
 }
 
@@ -817,7 +834,7 @@ void PrepTomorrow()
 
 void main(int miningTurns)
 {
-	if (my_inebriety() > inebriety_limit() - saveLiver)
+	if (my_inebriety() > inebriety_limit())
 		abort("You are too drunk to continue.");
 
 	if (miningTurns == 0)
