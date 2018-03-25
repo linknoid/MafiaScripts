@@ -318,10 +318,17 @@ void ReadSettings()
     item cigar = ToItem("exploding cigar");
 
 // random action familiars that give meat
+    familiar unspeakachu = ToFamiliar("Unspeakachu"); // extends buffs
     familiar boa = ToFamiliar("Feather Boa Constrictor");
     familiar npzr = ToFamiliar("Ninja Pirate Zombie Robot");
     familiar stocking = ToFamiliar("Stocking Mimic");
-    familiar[int] freeCombatFamiliars = { 0 : boa, 1 : npzr, 2 : stocking };
+    familiar[int] freeCombatFamiliars =
+    {
+//        0 : unspeakachu, // small chance to increase 1/2 your buffs by 5 turn duration, not sure if this is better or not
+        1 : boa,
+        2 : npzr,
+        3 : stocking
+    };
     item loathingLegionEqp = ToItem("Loathing Legion helicopter");
     skill jingleBells = ToSkill("Jingle Bells");
     effect jingleBellsEffect = ToEffect("Jingle Jangle Jingle");
@@ -402,9 +409,17 @@ void ReadSettings()
 // survival
     skill curseOfIslands = ToSkill("Curse of the Thousand Islands");
     skill soulBubble = ToSkill("Soul Bubble");
+    skill stealthMistletoe = ToSkill("Stealth Mistletoe");
     skill entanglingNoodles = ToSkill("Entangling Noodles");
     skill curseOfWeaksauce = ToSkill("Curse of Weaksauce");
     skill micrometeorite = ToSkill("Micrometeorite");
+    skill loveGnats = ToSkill("Summon Love Gnats");
+    item littleRedBook = ToItem("little red book");
+    item indigoCup = ToItem("Rain-Doh indigo cup");
+    item blueBalls = ToItem("Rain-Doh blue balls");
+    item beehive = ToItem("beehive");
+    skill shellUp = ToSkill("Shell Up");
+    skill silentKnife = ToSkill("silentKnife");
 
 
 // Skills and items for extending buffs
@@ -574,6 +589,11 @@ void ReadSettings()
 // between turns skills
     skill summonRes = ToSkill("Summon Resolutions");
     skill summonTaffy = ToSkill("Summon Taffy");
+    skill summonCandy = ToSkill("Summon Candy Heart");
+    skill summonParty = ToSkill("Summon Party Favor");
+    skill summonLove = ToSkill("Summon Love Song");
+    skill summonBricko = ToSkill("Summon BRICKOs");
+    skill summonDice = ToSkill("Summon Dice");
     skill soulFood = ToSkill("Soul Food");
 // mana cost reduction
     item oscusWeapon = ToItem("Wand of Oscus");
@@ -768,7 +788,7 @@ void ReadSettings()
     boolean canMobHit = false;
     boolean hasFreeKillRemaining = false;
     boolean needBagOTricks = false;
-    boolean canMortor = mortarShell.have_skill();
+    boolean canMortar = mortarShell.have_skill();
     int digitizeCounter = 0;
     int enamorangCounter = 0;
     int fortuneCookieCounter = 0;
@@ -1239,7 +1259,7 @@ DebugOutfit("Goal outfit", outfitDef);
         {
             if (buyCount < 1)
                 buyCount = 1;
-            buy(buyCount, itm);
+            buy(buyCount, itm, maxPrice);
         }
     }
     void ResetCombatState()
@@ -1354,9 +1374,25 @@ DebugOutfit("Goal outfit", outfitDef);
         {
             summonCurrent = summonTaffy;
         }
+        else if (summonBricko.have_skill() && get_property("_brickoEyeSummons").to_int() < 3)
+        {
+            summonCurrent = summonBRICKO;
+        }
         else if (summonRes.have_skill())
         {
             summonCurrent = summonRes;
+        }
+        else if (summonDice.have_skill())
+        {
+            summonCurrent = summonDice;
+        }
+        else if (summonCandy.have_skill())
+        {
+            summonCurrent = summonCandy;
+        }
+        else if (summonParty.have_skill())
+        {
+            summonCurrent = summonParty;
         }
     }
     void BurnManaSummoning(int keepMana)
@@ -1520,7 +1556,7 @@ DebugOutfit("Goal outfit", outfitDef);
             BurnManaSummoning(keepMana);
         }
     }
-    void HealUp()
+    void HealUp(boolean HPOnly)
     {
         if (beatenUp.have_effect() > 0)
         {
@@ -1556,6 +1592,10 @@ DebugOutfit("Goal outfit", outfitDef);
         {
             restore_mp(20);
         }
+    }
+    void HealUp()
+    {
+        HealUp(false);
     }
     int GetFamiliarRunaways()
     {
@@ -1811,7 +1851,7 @@ DebugOutfit("Goal outfit", outfitDef);
     {
         if (canDuplicate && mon == witchessKnight)
         {
-            if (canMortor && !mortared)
+            if (canMortar && !mortared)
             {
                 mortared = true;
                 return "skill " + mortarShell.to_string();
@@ -2030,7 +2070,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 print("Running filter = " + result, printColor);
                 return result;
             }
-            if (canMortor && !mortared)
+            if (canMortar && !mortared)
             {
                 mortared = true;
                 return "skill " + mortarShell.to_string();
@@ -2829,7 +2869,31 @@ print("Running filter = " + result, printColor);
     {
 //return actionString;
 //return "; " + actionString;
-        return "; if !hppercentbelow 33; " + actionString + "; endif";
+        return "; if !hppercentbelow 33"
+        //return "; if monsterhpabove 350 && !hppercentbelow 33"
+            + "; " + actionString + "; endif";
+    }
+    string WrapInSafetyCheck(skill sk)
+    {
+        if (sk.have_skill())
+        {
+            if (sk.mp_cost() > my_mp())
+            {
+                print("Not enough MP for " + sk, printColor);
+                return "";
+            }
+            return WrapInSafetyCheck("skill " + sk);
+        }
+        print("no " + sk, printColor);
+        return "";
+    }
+    string WrapInSafetyCheck(item it)
+    {
+        if (it.item_amount() > 0)
+            return WrapInSafetyCheck("use " + it.to_int());
+            //return WrapInSafetyCheck("item " + it);
+        print("no " + it, printColor);
+        return "";
     }
 
     string Filter_ScalingFreeKill(int round, monster mon, string page)
@@ -2842,52 +2906,27 @@ print("Running filter = " + result, printColor);
         if (staggerOption < 1)
         {
             staggerOption = 1;
-            if (to_skill("Stealth Mistletoe").have_skill() && my_mp() > 10)
-            {
-                result += WrapInSafetyCheck("skill Stealth Mistletoe");
-            }
-            else
-                print("no mistletoe");
+            result += WrapInSafetyCheck(stealthMistletoe);
         }
         if (staggerOption < 2)
         {
             staggerOption = 2;
-            if (to_skill("Curse of Weaksauce").have_skill() && my_mp() > 10)
-            {
-                result += WrapInSafetyCheck("skill Curse of Weaksauce");
-            }
-            else
-                print("no weaksauce");
+            result += WrapInSafetyCheck(curseOfWeaksauce);
         }
         if (staggerOption < 3)
         {
             staggerOption = 3;
-            if (to_skill("Micrometeorite").have_skill())
-            {
-                result += WrapInSafetyCheck("skill Micrometeorite");
-            }
-            else
-                print("no micrometeorite");
+            result += WrapInSafetyCheck(micrometeorite);
         }
         if (staggerOption < 4)
         {
             staggerOption = 4;
-            if (to_skill("Summon Love Gnats").have_skill())
-            {
-                result += WrapInSafetyCheck("skill Summon Love Gnats");
-            }
-            else
-                print("no micrometeorite");
+            result += WrapInSafetyCheck(loveGnats);
         }
         if (staggerOption < 5)
         {
             staggerOption = 5;
-            if (to_skill("Entangling Noodles").have_skill() && my_mp() > 10)
-            {
-                result += WrapInSafetyCheck("skill Entangling Noodles");
-            }
-            else
-                print("no entangling noodles");
+            result += WrapInSafetyCheck(entanglingNoodles);
         }
         if (result != "")
         {
@@ -2898,72 +2937,37 @@ print("Running filter = " + result, printColor);
         if (staggerOption < 6)
         {
             staggerOption = 6;
-            if (timeSpinner.item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item Time-Spinner, none");
-            }
-            else
-                print("no time spinner");
+            result += WrapInSafetyCheck(timeSpinner);
         }
         if (staggerOption <= 6)
         {
             staggerOption = 7;
-            if (to_item("little red book").item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item little red book, none");
-            }
-            else
-                print("no little red book");
+            result += WrapInSafetyCheck(littleRedBook);
         }
         if (staggerOption <= 7)
         {
             staggerOption = 8;
-            if (to_item("Rain-Doh indigo cup").item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item Rain-Doh indigo cup, none");
-            }
-            else
-                print("no rain doh");
+            result += WrapInSafetyCheck(indigoCup);
         }
         if (staggerOption <= 8)
         {
             staggerOption = 9;
-            if (to_item("Rain-Doh blue balls").item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item Rain-Doh blue balls, none");
-            }
-            else
-                print("no rain doh");
+            result += WrapInSafetyCheck(blueBalls);
         }
         if (staggerOption <= 9)
         {
             staggerOption = 10;
-            if (to_item("beehive").item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item beehive, none");
-            }
-            else
-                print("no beehive");
+            result += WrapInSafetyCheck(beehive);
         }
         if (staggerOption <= 10)
         {
             staggerOption = 11;
-            if (to_skill("Shell Up").have_skill() && my_mp() > 10)
-            {
-                return WrapInSafetyCheck("skill Shell Up");
-            }
-            else
-                print("no shell up");
+            result += WrapInSafetyCheck(shellUp);
         }
         if (staggerOption <= 11)
         {
             staggerOption = 12;
-            if (to_skill("Silent Knife").have_skill() && my_mp() > 20)
-            {
-                return WrapInSafetyCheck("skill Silent Knife");
-            }
-            else
-                print("no silent knife");
+            result += WrapInSafetyCheck(silentKnife);
         }
         if (result != "")
         {
@@ -3022,15 +3026,15 @@ print("Running filter = " + result, printColor);
                 kgbDartTurn = my_turnCount() + 20;
                 return "skill KGB tranquilizer dart";
             }
-            if (louderThanBombTurn < my_turnCount())
-            {
-                louderThanBombTurn = my_turnCount() + 20;
-                return "item " + louderThanBomb + ", none";
-            }
             if (tennisballTurn < my_turnCount())
             {
                 tennisballTurn = my_turnCount() + 30;
                 return "item " + tennisBall + ", none";
+            }
+            if (louderThanBombTurn < my_turnCount())
+            {
+                louderThanBombTurn = my_turnCount() + 20;
+                return "item " + louderThanBomb + ", none";
             }
             if (politicsTurn < my_turnCount())
             {
@@ -3142,6 +3146,13 @@ print("Running filter = " + result, printColor);
             if (scorpions.item_amount() < 11)
             {
                 buy(11 - scorpions.item_amount(), scorpions);
+            }
+            if (HaveEquipment(kgb)
+                && selectedOutfit[acc1] != kgb
+                && selectedOutfit[acc2] != kgb
+                && selectedOutfit[acc3] != kgb)
+            {
+                selectedOutfit[acc1] = kgb;
             }
             PrepareFreeCombat(selectedOutfit);
             if (bowlingBall.item_amount() > 0)
@@ -3607,7 +3618,13 @@ print("Running filter = " + result, printColor);
             int useCount = (buffsNeeded + turnsPerItem - 1) / turnsPerItem; // round up to the nearest integer
             if (maxPrice > 0)
             {
-                BuyItemIfNeeded(itm, useCount - itm.item_amount(), maxPrice);
+                int buyCount = useCount - itm.item_amount();
+                if (buyCount > 0)
+                {
+                    if (buyCount < 5) // buy in groups of 5 to reduce server hits
+                        buyCount = 5;
+                    BuyItemIfNeeded(itm, buyCount, maxPrice);
+                }
             }
             if (useCount > itm.item_amount())
                 useCount = itm.item_amount();
@@ -4101,24 +4118,8 @@ print("Running filter = " + result, printColor);
         }
         return result;
     }
-    
-    void SweetMeat(int requestedTurns)
-    {
-        if (!sweetSynth.have_skill())
-            return;
 
-        if (synthGreed.have_effect() >= requestedTurns)
-            return;
-
-        print("Doing sweet synthesis for +300% meat", printColor);
-
-        // Since this is used for farming, don't want to waste irreplacible candy (even if it's
-        // temporarily cheaper).  Only use stuff which is relatively easy to replace.
-
-        string[] temp;
-
-        // pair 1: w&w/crimbo candied pecan/breath mint with itself
-        temp =
+    string[] candy1Str = 
         {
             "bag of W&Ws", // trick or treat
             "Crimbo Candied Pecan", // summon crimbo candy
@@ -4132,10 +4133,7 @@ print("Running filter = " + result, printColor);
             "Necbro wafers",
             "sugar shank",
         };
-        int[item] candy1_1 = ToItemAndCount(temp);
-
-        // pair 2: dweebs or crimbo fudge with peez or hoarded candy wad
-        temp =
+    string[] candy2Str =
         {
             "Dweebs", // trick or treat
             "Crimbo Fudge", // summon crimbo candy
@@ -4153,9 +4151,7 @@ print("Running filter = " + result, printColor);
             "irradiated candy cane",
             "bag of many confections",
         };
-
-        int[item] candy2_1 = ToItemAndCount(temp);
-        temp =
+    string[] candy3Str =
         {
             "Peez dispenser", // trick or treat
             "hoarded candy wad", // from buddy bjorn + orphan tot
@@ -4169,10 +4165,7 @@ print("Running filter = " + result, printColor);
             "sugar shirt",
             "strawberry-flavored Hob-O",
         };
-        int[item] candy2_2 = ToItemAndCount(temp); 
-
-        // pair 3: milk studs with swizzler
-        temp =
+    string[] candy4Str =
         {
             milkStud.to_string(), // trick or treat
             "frostbite-flavored Hob-O",
@@ -4182,8 +4175,7 @@ print("Running filter = " + result, printColor);
             "elderly jawbreaker",
            
         };
-        int[item] candy3_1 = ToItemAndCount(temp);
-        temp =
+    string[] candy5Str =
         {
             swizzler.to_string(),
             //"nasty gum", // does this drop from robortender?  Maybe I just bought a bunch on the market
@@ -4191,7 +4183,30 @@ print("Running filter = " + result, printColor);
             "sterno-flavored Hob-O",
             "Fudgie Roll",
         };
-        int[item] candy3_2 = ToItemAndCount(temp);
+    
+    void SweetMeat(int requestedTurns)
+    {
+        if (!sweetSynth.have_skill())
+            return;
+
+        if (synthGreed.have_effect() >= requestedTurns)
+            return;
+
+        print("Doing sweet synthesis for +300% meat", printColor);
+
+        // Since this is used for farming, don't want to waste irreplacible candy (even if it's
+        // temporarily cheaper).  Only use stuff which is relatively easy to replace.
+
+        // pair 1: w&w/crimbo candied pecan/breath mint with itself
+        int[item] candy1_1 = ToItemAndCount(candy1Str);
+
+        // pair 2: dweebs or crimbo fudge with peez or hoarded candy wad
+        int[item] candy2_1 = ToItemAndCount(candy2Str);
+        int[item] candy2_2 = ToItemAndCount(candy3Str); 
+
+        // pair 3: milk studs with swizzler
+        int[item] candy3_1 = ToItemAndCount(candy4Str);
+        int[item] candy3_2 = ToItemAndCount(candy5Str);
         candy3_2[swizzler] += swizzler.closet_amount();
         
 
@@ -5444,20 +5459,20 @@ print("Running filter = " + result, printColor);
         }
     }
 
-    int CanMortar = 0;
     string Filter_LOVTunnel(int round, monster mon, string page)
     {
+        string repeatAction = "";
         if (mon == LOVenforcer)
         {
-            return "attack";
+            repeatAction = "attack";
         }
         else if (mon == LOVengineer)
         {
             if (weaponPasta.have_skill() && my_mp() > weaponPasta.mp_cost())
-                return "skill " + weaponPasta.to_string();
-            if (CanMortar >= 2)
+                repeatAction = "skill " + weaponPasta.to_string();
+            if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
             {
-                CanMortar = 1;
+                mortared = true;
                 return "skill " + mortarShell.to_string();
             }
      
@@ -5468,21 +5483,28 @@ print("Running filter = " + result, printColor);
         {
             if (can_still_steal())
                 return "\"pickpocket\"";
-            if (CanMortar >= 1)
+            if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
             {
-                CanMortar = 0;
+                mortared = true;
                 return "skill " + mortarShell.to_string();
             }
         }
-        if (thrustSmack.have_skill() && my_mp() > thrustSmack.mp_cost())
-            return "skill " + thrustSmack.to_string();
-        if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
-            return "skill " + sauceStorm.to_string();
+        if (repeatAction == "" && sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost())
+            repeatAction = "skill " + sauceStorm.to_string();
+        if (repeatAction == "" && thrustSmack.have_skill() && my_mp() > thrustSmack.mp_cost())
+            repeatAction =  "skill " + thrustSmack.to_string();
+        if (repeatAction != "")
+        {
+            string result = "";
+            for (int i = 0; i < 24; i++)
+            {
+                result += "; " + repeatAction;
+            }
+            result = result.substring(2);
+            print("Running combat macro: " + result, printColor);
+            return result;
+        }
         return "";
-    }
-    void PrepareFilterLOV()
-    {
-        CanMortar = mortarShell.have_skill() ? 3 : 0;
     }
     
     void RunLOVTunnel()
@@ -5497,13 +5519,13 @@ print("Running filter = " + result, printColor);
             SwitchToFamiliar(jellyfish);
         else
             ChooseDropsFamiliar(false); // hmm tradeoff between familiar drops, familiar assist, or non-acting to get elixir...
-        print("Running LOV tunnel");
-        PrepareFilterLOV();
-        HealUp();
+        print("Running LOV tunnel", printColor);
+        HealUp(true); // true == HP only, no MP, since first round of combat involves only weapon attacks
     
         visit_url("place.php?whichplace=town_wrong");
         if (!LoadChoiceAdventure("place.php?whichplace=town_wrong&action=townwrong_tunnel", "LOV Tunnel", false))
             return;
+        ResetCombatState();
         run_choice(1); // Enter the tunnel
 
         // cannot use run_choice() to start the fight, or you won't get a combat filter? 
@@ -5512,11 +5534,13 @@ print("Running filter = " + result, printColor);
         LoadChoiceAdventure("choice.php", "Choose LOV gear", false);
         run_choice(3); // LOV Earrings, +50% meat
     
+        ResetCombatState();
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1225&option=1"); // Fight LOV Engineer
         RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV buff", false);
         run_choice(2); // open heart surgery, +10 pet weight
     
+        ResetCombatState();
         visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1227&option=1"); // Fight LOV Equivocator
         RunCombat("Filter_LOVTunnel");
         LoadChoiceAdventure("choice.php", "Choose LOV gift", false);
@@ -5544,7 +5568,9 @@ print("Running filter = " + result, printColor);
         if (sweetSynth.have_skill())
         {
             if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && RoomToSpleen(1))
+            {
                 sweet_synthesis(milkStud, seniorMint);
+            }
             if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && RoomToSpleen(1))
                 sweet_synthesis(milkStud, daffyTaffy);
         }
