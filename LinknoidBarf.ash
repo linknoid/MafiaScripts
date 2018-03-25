@@ -233,6 +233,8 @@ void ReadSettings()
     slot sticker2 = ToSlot("sticker2");
     slot sticker3 = ToSlot("sticker3");
 
+    item noItem = "none".to_item();
+    familiar noFamiliar = "none".to_familiar();
 
 // getting access to dinsey
     item dayPass = ToItem("one-day ticket to Dinseylandfill");
@@ -805,7 +807,7 @@ void ReadSettings()
 // forward declarations of functions:
     void ChooseDropsFamiliar(boolean isElemental);
     boolean TryEquipFamiliarEquipment(item eqp, float eqpBonus);
-    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast, boolean regenMP);
+    void CastSkill(skill sk, int requestedTurns, boolean regenMP);
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
@@ -1028,7 +1030,7 @@ void ReadSettings()
     {
         item[slot] result;
         foreach sl,i in outfitSlots
-            if (sl.equipped_item() != "none".to_item())
+            if (sl.equipped_item() != noItem)
                 result[sl] = sl.equipped_item();
         return result;
     }
@@ -1130,7 +1132,7 @@ DebugOutfit("Goal outfit", outfitDef);
         boolean[3] matchedSlots;
         for (int i = 0; i < 3; i++)
         {
-            if (outfitDef[slots[i]] == "none".to_item())
+            if (outfitDef[slots[i]] == noItem)
             {
                 matchedItems[i] = true;
                 continue;
@@ -1156,7 +1158,11 @@ DebugOutfit("Goal outfit", outfitDef);
                     continue;
                 if (matchedSlots[j])
                     continue;
-                slots[j].equip(outfitDef[slots[i]]);
+                item it = outfitDef[slots[i]];
+                if (it.can_equip())
+                    slots[j].equip(it);
+                matchedItems[i] = true;
+                matchedSlots[j] = true;
             }
         }
     }
@@ -1624,7 +1630,7 @@ DebugOutfit("Goal outfit", outfitDef);
     {
         if (i.have_equipped())
         {
-            i.to_slot().equip("none".to_item());
+            i.to_slot().equip(noItem);
             if (!firstCheck)
                 abort("Wearing " + i + " confuses KoLMafia, and therefore, this script, please remove that from your standard outfit");
         }
@@ -2250,7 +2256,7 @@ print("Running filter = " + result, printColor);
     };
     void EquipBjornCrownFamiliars(familiar first, familiar second)
     {
-        if (bjorn.have_equipped() && first.to_string() != "none")
+        if (bjorn.have_equipped() && first.to_string() != noFamiliar)
         {
             if (my_bjorned_familiar() != first)
             {
@@ -2258,7 +2264,7 @@ print("Running filter = " + result, printColor);
                 first = second;
             }
         }
-        if (crown.have_equipped() && first.to_string() != "none")
+        if (crown.have_equipped() && first.to_string() != noFamiliar)
         {
             if (my_enthroned_familiar() != first)
                 first.enthrone_familiar();
@@ -2313,7 +2319,7 @@ print("Running filter = " + result, printColor);
         {
             if (my_familiar() != runFamiliar)
                 SwitchToFamiliar(runFamiliar);
-            if (my_familiar().to_string() == "none")
+            if (my_familiar() == noFamiliar)
                 return;
             string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9592");
             if (page.contains_text("type=submit value=\"The Captain\""))
@@ -2406,7 +2412,7 @@ print("Running filter = " + result, printColor);
             matching = acc3;
         else
             return selectedOutfit;
-        item best = "none".to_item();
+        item best = noItem;
         float bestPercent = 0;
         foreach i in get_inventory()
         {
@@ -2447,9 +2453,9 @@ print("Running filter = " + result, printColor);
             eq = scratchXbow;
         else
             eq = scratchSword;
-        if (sticker1.equipped_item().to_string() == "none"
-            && sticker2.equipped_item().to_string() == "none"
-            && sticker3.equipped_item().to_string() == "none")
+        if (sticker1.equipped_item() == noItem
+            && sticker2.equipped_item() == noItem
+            && sticker3.equipped_item() == noItem)
         {
             if (scratchUPC.item_amount() < 3)
             {
@@ -2788,7 +2794,7 @@ print("Running filter = " + result, printColor);
         if (my_familiar() != runFamiliar)
             TryUseMovableFeast();
         if (jingleBells.have_skill())
-            CastSkill(jingleBells, jingleBellsEffect, 1, 7, true); // only need 1 turn of it
+            CastSkill(jingleBells, 1, true); // only need 1 turn of it
         WearOutfit(SwapOutSunglasses(selectedOutfit));
         ChooseBjornCrownFamiliars(false, true);
         ChooseThrall(true);
@@ -2821,10 +2827,9 @@ print("Running filter = " + result, printColor);
     }
     string WrapInSafetyCheck(string actionString)
     {
-// still debugging:
-return actionString;
-        //return "; " + actionString;
-        //return "; if !hppercentbelow 33; " + actionString + "; endif";
+//return actionString;
+//return "; " + actionString;
+        return "; if !hppercentbelow 33; " + actionString + "; endif";
     }
 
     string Filter_ScalingFreeKill(int round, monster mon, string page)
@@ -2834,99 +2839,115 @@ return actionString;
         if (monster_hp() < 350 || round > 22) // don't take a chance of it using up a turn
             return ChooseFreeKillMethodForFilter();
         string result = "";
-        if (staggerOption <= 1)
+        if (staggerOption < 1)
         {
-            staggerOption = 2;
+            staggerOption = 1;
             if (to_skill("Stealth Mistletoe").have_skill() && my_mp() > 10)
             {
-                return "skill Stealth Mistletoe";
+                result += WrapInSafetyCheck("skill Stealth Mistletoe");
             }
             else
                 print("no mistletoe");
         }
-        if (staggerOption == 2)
+        if (staggerOption < 2)
         {
-            ++staggerOption;
+            staggerOption = 2;
             if (to_skill("Curse of Weaksauce").have_skill() && my_mp() > 10)
             {
-                return WrapInSafetyCheck("skill Curse of Weaksauce");
+                result += WrapInSafetyCheck("skill Curse of Weaksauce");
             }
             else
                 print("no weaksauce");
         }
-        if (staggerOption == 3)
+        if (staggerOption < 3)
         {
-            ++staggerOption;
-            if (timeSpinner.item_amount() > 0)
-            {
-                return WrapInSafetyCheck("item " + timeSpinner + ",none");
-            }
-            else
-                print("no time spinner");
-        }
-        if (staggerOption == 4)
-        {
-            ++staggerOption;
+            staggerOption = 3;
             if (to_skill("Micrometeorite").have_skill())
             {
-                return WrapInSafetyCheck("skill Micrometeorite");
+                result += WrapInSafetyCheck("skill Micrometeorite");
             }
             else
                 print("no micrometeorite");
         }
-        if (staggerOption == 5)
+        if (staggerOption < 4)
         {
-            ++staggerOption;
+            staggerOption = 4;
+            if (to_skill("Summon Love Gnats").have_skill())
+            {
+                result += WrapInSafetyCheck("skill Summon Love Gnats");
+            }
+            else
+                print("no micrometeorite");
+        }
+        if (staggerOption < 5)
+        {
+            staggerOption = 5;
             if (to_skill("Entangling Noodles").have_skill() && my_mp() > 10)
             {
-                return WrapInSafetyCheck("skill Entangling Noodles");
+                result += WrapInSafetyCheck("skill Entangling Noodles");
             }
             else
                 print("no entangling noodles");
         }
-        if (staggerOption == 6)
+        if (result != "")
         {
-            ++staggerOption;
+            result = result.substring(2);
+            print("Running macro: " + result, printColor);
+            return result;
+        }
+        if (staggerOption < 6)
+        {
+            staggerOption = 6;
+            if (timeSpinner.item_amount() > 0)
+            {
+                return WrapInSafetyCheck("item Time-Spinner, none");
+            }
+            else
+                print("no time spinner");
+        }
+        if (staggerOption <= 6)
+        {
+            staggerOption = 7;
             if (to_item("little red book").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item little red book,none");
+                return WrapInSafetyCheck("item little red book, none");
             }
             else
                 print("no little red book");
         }
-        if (staggerOption == 7)
+        if (staggerOption <= 7)
         {
-            ++staggerOption;
+            staggerOption = 8;
             if (to_item("Rain-Doh indigo cup").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item Rain-Doh indigo cup,none");
+                return WrapInSafetyCheck("item Rain-Doh indigo cup, none");
             }
             else
                 print("no rain doh");
         }
-        if (staggerOption == 8)
+        if (staggerOption <= 8)
         {
-            ++staggerOption;
+            staggerOption = 9;
             if (to_item("Rain-Doh blue balls").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item Rain-Doh blue balls,none");
+                return WrapInSafetyCheck("item Rain-Doh blue balls, none");
             }
             else
                 print("no rain doh");
         }
-        if (staggerOption == 9)
+        if (staggerOption <= 9)
         {
-            ++staggerOption;
+            staggerOption = 10;
             if (to_item("beehive").item_amount() > 0)
             {
-                return WrapInSafetyCheck("item beehive,none");
+                return WrapInSafetyCheck("item beehive, none");
             }
             else
                 print("no beehive");
         }
-        if (staggerOption == 10)
+        if (staggerOption <= 10)
         {
-            ++staggerOption;
+            staggerOption = 11;
             if (to_skill("Shell Up").have_skill() && my_mp() > 10)
             {
                 return WrapInSafetyCheck("skill Shell Up");
@@ -2934,9 +2955,9 @@ return actionString;
             else
                 print("no shell up");
         }
-        if (staggerOption == 11)
+        if (staggerOption <= 11)
         {
-            ++staggerOption;
+            staggerOption = 12;
             if (to_skill("Silent Knife").have_skill() && my_mp() > 20)
             {
                 return WrapInSafetyCheck("skill Silent Knife");
@@ -3004,12 +3025,12 @@ return actionString;
             if (louderThanBombTurn < my_turnCount())
             {
                 louderThanBombTurn = my_turnCount() + 20;
-                return "item " + louderThanBomb + ",none";
+                return "item " + louderThanBomb + ", none";
             }
             if (tennisballTurn < my_turnCount())
             {
                 tennisballTurn = my_turnCount() + 30;
-                return "item " + tennisBall + ",none";
+                return "item " + tennisBall + ", none";
             }
             if (politicsTurn < my_turnCount())
             {
@@ -3036,19 +3057,19 @@ return actionString;
             {
                 abstractioned = true;
                 if (abstrThought.item_amount() > 0)
-                    return "item " + abstrThought + ",none";
+                    return "item " + abstrThought + ", none";
             }
             else if (mon == machineCircle) // circle monster
             {
                 abstractioned = true;
                 if (abstrAction.item_amount() > 0)
-                    return "item " + abstrAction + ",none";
+                    return "item " + abstrAction + ", none";
             }
             else if (mon == machineSquare) // square monster
             {
                 abstractioned = true;
                 if (abstrSensation.item_amount() > 0)
-                    return "item " + abstrSensation + ",none";
+                    return "item " + abstrSensation + ", none";
             }
         }
         return Filter_Standard(round, mon, page);
@@ -3208,13 +3229,13 @@ return actionString;
 //    {
 //        if (weapon.equipped_item().weapon_hands() < 2)
 //            return;
-//        weapon.equip("none".to_item());
+//        weapon.equip(noItem);
 //    }
 //    void EquipDropsItems()
 //    {
 //        if (scratchSword.have_equipped() || scratchXbow.have_equipped())
 //        {
-//            weapon.equip("none".to_item());
+//            weapon.equip(noItem);
 //            foreach ix,itm in outfit_pieces(defaultOutfit)
 //            {
 //                if (itm.to_slot() == weapon)
@@ -3293,7 +3314,7 @@ return actionString;
         if (eqSet[weapon].weapon_hands() >= 2)
         {
             // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
-            eqSet[weapon] = "none".to_item();
+            eqSet[weapon] = noItem;
         }
         if (bagOtricks.have_equipped())
         {
@@ -3395,12 +3416,12 @@ return actionString;
             {
                 gear[weapon] = aeroAccordion;
                 if (gear[offhand].to_slot() == weapon)
-                    gear[offhand] = "none".to_item();
+                    gear[offhand] = noItem;
             }
             else
             {
                 gear[weapon] = antiqueAccordion;
-                gear[offhand] = "none".to_item();
+                gear[offhand] = noItem;
             }
         }
         WearOutfit(gear);
@@ -3618,7 +3639,7 @@ return actionString;
             && HaveEquipment(oscusAccessory))
         {
             if (weapon_hands(weapon.equipped_item()) > 1)
-                weapon.equip("none".to_item());
+                weapon.equip(noItem);
             offhand.equip(oscusWeapon);
             pants.equip(oscusPants);
             acc1.equip(oscusAccessory);
@@ -3649,8 +3670,9 @@ return actionString;
         }
     }
 
-    void CastSkill(skill sk, effect resultingEffect, int requestedTurns, int maxExpectedTurnsPerCast, boolean regenMP)
+    void CastSkill(skill sk, int requestedTurns, boolean regenMP)
     {
+        effect resultingEffect = sk.to_effect();
         if (resultingEffect.have_effect() >= requestedTurns || !sk.have_skill())
             return;
         if (regenMP)
@@ -3674,7 +3696,7 @@ return actionString;
                     restore_mp(sk.mp_cost() - (my_mp() - keepMP));
             }
             int beforeTurns = resultingEffect.have_effect();
-            int timesCast = (requestedTurns - resultingEffect.have_effect() + maxExpectedTurnsPerCast - 1) / maxExpectedTurnsPerCast;
+            int timesCast = (requestedTurns - resultingEffect.have_effect() + turns_per_cast(sk) - 1) / turns_per_cast(sk);
             if (timesCast <= 0)
             {
                 break;
@@ -3771,8 +3793,8 @@ return actionString;
         if (food.item_amount() > 0)
             return true;
 
-        item cashewIngredient = "none".to_item();
-        item foodIngredient = "none".to_item();
+        item cashewIngredient = noItem;
+        item foodIngredient = noItem;
         foreach ingr in food.get_ingredients()
         {
             if (ingr.fullness > 0)
@@ -3861,7 +3883,7 @@ return actionString;
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
             if (odeToBooze.have_skill())
-                CastSkill(odeToBooze, odeToBoozeEffect, providedDrunk, 25, true);
+                CastSkill(odeToBooze, providedDrunk, true);
             else
             {
                 print("Requesting Ode to Booze buff from Buffy the buff bot", printColor);
@@ -4176,12 +4198,12 @@ return actionString;
         while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
         {
             print("Calculating candies...", printColor);
-            meatBuffCandy1 = "none".to_item();
-            meatBuffCandy2 = "none".to_item();
+            meatBuffCandy1 = noItem;
+            meatBuffCandy2 = noItem;
             ChooseSweetMeat(candy3_1, candy3_2);
             ChooseSweetMeat(candy2_1, candy2_2);
             ChooseSweetMeat(candy1_1, candy1_1);
-            if (meatBuffCandy1.to_string() == "none" || meatBuffCandy2.to_string() == "none")
+            if (meatBuffCandy1 == noItem || meatBuffCandy2 == noItem)
             {
                 print("Out of candy for sweet synthesis, skipping", printColor);
                 break;
@@ -4256,7 +4278,7 @@ return actionString;
     item elfCopiedTo; // only copy once, after 2 drops, the drop rate quickly drops off
     string Filter_Elvish(int round, monster mon, string page)
     {
-        if (elfCopiedTo == "none".to_item())
+        if (elfCopiedTo == noItem)
         {
             if (needsSpookyPutty)
             {
@@ -4350,7 +4372,7 @@ return actionString;
                 RunCombat("Filter_Elvish");
             }
         }
-        if (elfCopiedTo != "none".to_item() && elfCopiedTo != deck)
+        if (elfCopiedTo != noItem && elfCopiedTo != deck)
         {
             print("Activating copy of elf for a second robortender drop", printColor);
             PrepareFilterState();
@@ -4594,7 +4616,7 @@ return actionString;
             && limitedSkill.have_skill()
             && get_property(castProperty).to_int() < 10)
         {
-            CastSkill(limitedSkill, limitedEffect, turns, 25, true);
+            CastSkill(limitedSkill, turns, true);
         }
     }
 
@@ -4604,17 +4626,17 @@ return actionString;
     {
         if (polkad.have_effect() > 0 || EnsureOneSongSpace())
         {
-            CastSkill(polka, polkad, turns, 25, restoreMP);
+            CastSkill(polka, turns, restoreMP);
         }
-        CastSkill(leer, leering, turns, 10, restoreMP);
+        CastSkill(leer, turns, restoreMP);
         if (needWeightBuffs)
         {
-            CastSkill(leash, leashEffect, turns, 10, restoreMP);
-            CastSkill(empathy, empathyEffect, turns, 35, restoreMP);
+            CastSkill(leash, turns, restoreMP);
+            CastSkill(empathy, turns, restoreMP);
         }
         if (phatLooted.have_effect() > 0 ||  EnsureOneSongSpace())
         {
-            CastSkill(phatLoot, phatLooted, turns, 25, restoreMP);
+            CastSkill(phatLoot, turns, restoreMP);
         }
     }
 
@@ -4667,7 +4689,7 @@ return actionString;
             needWeightBuffs = false;
             GetPirateCostume();
         }
-        else if (runFamiliar.name == "none")
+        else if (runFamiliar == noFamiliar)
         {
             needWeightBuffs = false;
         }
@@ -4748,14 +4770,14 @@ return actionString;
         if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
             UseOneTotal(begpwnia, begpwniaEffect);
         UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
-        CastSkill(leer, leering, quietJudgement.have_skill() ? 1 : turns, 10, true);
-        CastSkill(polka, polkad, 10, 25, true);
+        CastSkill(leer, quietJudgement.have_skill() ? 1 : turns, true);
+        CastSkill(polka, 10, true);
         RentAHorse();
 
         if (needWeightBuffs)
         {
-            CastSkill(leash, leashEffect, 10, 10, true);
-            CastSkill(empathy, empathyEffect, 10, 35, true);
+            CastSkill(leash, 10, true);
+            CastSkill(empathy, 10, true);
             TrySpleen(joy, joyEffect, 1, 1);
 
             if (vipKey.item_amount() > 0 && get_clan_lounge() contains poolTable)
@@ -4904,7 +4926,7 @@ return actionString;
 
         if (EnsureOneSongSpace())
         {
-            CastSkill(phatLoot, phatLooted, 10, 25, true);
+            CastSkill(phatLoot, 10, true);
         }
 
         DriveObservantly(turns, true); // true == request to install the Asdon Martin
@@ -4931,7 +4953,7 @@ return actionString;
         if (needsSmokeBomb)
         {
             needsSmokeBomb = false;
-            return "item " + smokebomb.to_string() + ",none";
+            return "item " + smokebomb.to_string() + ", none";
         }
         return "run away";
     }
@@ -4957,7 +4979,7 @@ return actionString;
         else if (bandersnatch.have_familiar())
         {
             SwitchToFamiliar(stompingBoots);
-            CastSkill(odeToBooze, odeToBoozeEffect, 1, 25, true); // only need 1 turn of it
+            CastSkill(odeToBooze, 1, true); // only need 1 turn of it
         }
         if (GetFreeRunaways() > 0)
         {
@@ -5590,7 +5612,7 @@ return actionString;
         }
         BurnManaAndRestores(keep, true);
         if (pants.equipped_item() == sugarShorts)
-            pants.equip("none".to_item());
+            pants.equip(noItem);
     }
 
     void BeforeSwapOutMayo()
