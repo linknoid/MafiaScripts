@@ -5470,14 +5470,17 @@ print("Running filter = " + result, printColor);
         {
             if (weaponPasta.have_skill() && my_mp() > weaponPasta.mp_cost())
                 repeatAction = "skill " + weaponPasta.to_string();
-            if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
+            else
             {
-                mortared = true;
-                return "skill " + mortarShell.to_string();
+                if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
+                {
+                    mortared = true;
+                    return "skill " + mortarShell.to_string();
+                }
+         
+                if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
+                    return "skill " + sauceStorm.to_string();
             }
-     
-            if (sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost()) // saucestorm
-                return "skill " + sauceStorm.to_string();
         }
         else // equivaocator
         {
