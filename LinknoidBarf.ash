@@ -375,8 +375,7 @@ void ReadSettings()
 // melting familiar gear from pokegarden
     item pokeEqpBlock = ToItem("razor fang");
     item pokeEqpMeat = ToItem("amulet coin");
-//    item pokeEqpItem = ToItem("luck incense");
-    item pokeEqpItem = pokeEqpMeat; // todo: Mafia isn't recognizing this
+    item pokeEqpItem = ToItem("luck incense");
     item pokeEqpDamage = ToItem("muscle band");
     item pokeEqpHeal = ToItem("shell bell");
     item pokeEqpRun = ToItem("smoke ball");
@@ -1207,7 +1206,7 @@ DebugOutfit("Goal outfit", outfitDef);
             return false;
         if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
             return true;
-        if (!can_faxbot(embezzler))
+        if (!can_faxbot(meatyMonster))
             return false;
         return true;
     }
@@ -4069,6 +4068,9 @@ print("Running filter = " + result, printColor);
         if (eatUnique && HaveEaten(food))
             return false;
 
+        if (food.item_amount() <= 0)
+            return false;
+
         if (!RoomToEat(providedFullness))
             return false;
         UseItem(milk, gotmilk, 2, 20, 2000);
@@ -4891,9 +4893,15 @@ print("Running filter = " + result, printColor);
             TryEat(thanks8, thanksgetting, 2, 2, turns, true);
             TryDistentionForThanksgetting(turns);
             TryEat(thanks9, thanksgetting, 2, 0, turns, true);
-            while (thanksgetting.have_effect() < turns)
+            while (thanksgetting.have_effect() < turns && RoomToEat(2))
             {
-                if (!TryBonusThanksgetting())
+                // try re-eating something we already ate to increase duration
+                if (TryBonusSpinThanksgetting())
+                    continue;
+                item bestThanks = ChooseCheapestThanksgetting();
+                if (!AcquireFeast(bestThanks, 1))
+                    break;
+                if (!TryBonusEatThanksgetting(false))
                     break;
             }
             TryBonusThanksgetting();
