@@ -357,6 +357,7 @@ void ReadSettings()
     familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
     familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
     familiar garbageFire = ToFamiliar("Garbage Fire"); // drops burning newspaper
+    familiar optimisticCandle = ToFamiliar("Optimistic Candle"); // drops hot wax
     familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
     familiar grue = ToFamiliar("Grue"); // +15% myst
 
@@ -463,6 +464,9 @@ void ReadSettings()
 
 // Skills for more turns
     skill odeToBooze = ToSkill("The Ode to Booze");
+    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
+    //item songSpaceAcc = ToItem("La Hebilla del Cinturón de Lopez");
+    item songSpaceAcc = ToItem("La Hebilla del CinturÃ³n de Lopez");
     skill calcUniverse = ToSkill("Calculate the Universe");
 
 // skills for +meat bonus
@@ -530,7 +534,6 @@ void ReadSettings()
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
 // effects for +meat bonus
-    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
     effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
     effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
     effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
@@ -638,6 +641,7 @@ void ReadSettings()
     monster LOVequivocator =  ToMonster("LOV Equivocator");
     effect synthMyst = ToEffect("Synthesis: Smart"); // from Sweet Synthesis skill
     effect synthMP = ToEffect("Synthesis: Energy"); // from Sweet Synthesis skill
+    effect favorLyle = ToEffect("Favored by Lyle");
     item licenseChill = ToItem("License to Chill"); // mana restore
     item yexpressCard = ToItem("Platinum Yendorian Express Card"); // mana restore
     item oscusSoda = ToItem("Oscus's neverending soda");
@@ -845,7 +849,7 @@ void ReadSettings()
     item[slot] InitOutfit(string outfitName);
     item[slot] InitOutfit(string outfitName, item[slot] result);
     void DebugOutfit(string name, item[slot] o);
-
+    item ChooseCheapestThanksgetting();
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -2346,6 +2350,8 @@ print("Running filter = " + result, printColor);
             choice = ChooseBjornCrownFamiliar(choice, machineElf);
         if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, orphan);
+        if (forDrops && get_property("_optimisticCandleDropsCrown").to_int() < 3)
+            choice = ChooseBjornCrownFamiliar(choice, optimisticCandle);
         if (forDrops && get_property("_garbageFireDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, garbageFire);
 // todo: if robortender, maybe do weight buff instead
@@ -3898,6 +3904,14 @@ print("Running filter = " + result, printColor);
 
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
+            if (odeToBoozeEffect.have_effect() == 0
+                && !EnsureOneSongSpace())
+            {
+                if (HaveEquipment(songSpaceAcc) && songSpaceAcc.can_equip() && !songSpaceAcc.have_equipped())
+                {
+                    acc1.equip(songSpaceAcc);
+                }
+            }
             if (odeToBooze.have_skill())
                 CastSkill(odeToBooze, providedDrunk, true);
             else
@@ -4015,15 +4029,15 @@ print("Running filter = " + result, printColor);
         // and this should buff exactly once
         int infTurns = 10000;
         // specify a 2 fullness remaining because we don't want to convert to drunk
+        if (thanks1.item_amount() == 0 && thanks2.item_amount() == 0 && thanks3.item_amount() == 0)
+        {
+            item bestThanks = ChooseCheapestThanksgetting();
+            if (!AcquireFeast(bestThanks, 1))
+                return false;
+        }
         if (RoomToEat(2)) { return TryEat(thanks1, thanksgetting, 2, 0, infTurns, unique); }
         if (RoomToEat(2)) { return TryEat(thanks2, thanksgetting, 2, 0, infTurns, unique); }
         if (RoomToEat(2)) { return TryEat(thanks3, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks4, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks5, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks6, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks7, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks8, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks9, thanksgetting, 2, 0, infTurns, unique); }
         return false;
     }
     boolean TryBonusSpinThanksgetting()
@@ -4852,20 +4866,21 @@ print("Running filter = " + result, printColor);
         {
             cli_execute(executeBeforeEat);
         }
-        TryDrink(dirt, dirtEffect, 1, 1);
-        TryDrink(gingerWine, gingerWineEffect, 2, 1);
 
         BeforeSwapOutAsdon();
         if (nightBefore)
         {
             TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
             TryEat(foodCone, foodConeEffect, 2, 0, turns, false);
+            if (RoomToEat(2))
+            {
+                item bestThanks = ChooseCheapestThanksgetting();
+                TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
+            }
             if (expensiveBuffs || fistTurkey.have_familiar())
             {
                 TryDrink(turkey, turkeyEffect, 1, turns);
             }
-            item bestThanks = ChooseCheapestThanksgetting();
-            TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
         }
         else
         {
@@ -4905,12 +4920,6 @@ print("Running filter = " + result, printColor);
                     break;
             }
             TryBonusThanksgetting();
-            if (fistTurkey.have_familiar())
-            {
-                int turkeyturns = turns > 25 * turkeyLimit ? 25 * turkeyLimit : turns; // limit to 5 turkeys a day, since that's all that can drop per day
-                for (int i = 0; i < turkeyLimit; i++)
-                    TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-            }
             if (CanDistention() // only worth doing a pantsgiving fullness run if we can get a second fullness point from distention pill
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
                 && my_fullness() == fullness_limit()) // pants can't activate without being completely full
@@ -4930,8 +4939,16 @@ print("Running filter = " + result, printColor);
         {
             cli_execute(executeAfterEat);
         }
+        TryDrink(dirt, dirtEffect, 1, 1);
+        TryDrink(gingerWine, gingerWineEffect, 2, 1);
         if (!nightBefore)
         {
+            if (fistTurkey.have_familiar())
+            {
+                int turkeyturns = turns > 25 * turkeyLimit ? 25 * turkeyLimit : turns; // limit to 5 turkeys a day, since that's all that can drop per day
+                for (int i = 0; i < turkeyLimit; i++)
+                    TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+            }
             for (int i = 0; i < sacramentoLimit; i++) // drink sacramento wine for +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
 
@@ -4944,8 +4961,8 @@ print("Running filter = " + result, printColor);
         }
 
         // don't finish with accordion buffs until after we've drunk, because we might need to shrug Ode to fit the song in our head
-        TryLimitedAccordionBuff(thingfinder, thingfinderEffect, "_thingfinderCasts", turns);
-        TryLimitedAccordionBuff(companionship, companionshipEffect, "_companionshipCasts", turns);
+        TryLimitedAccordionBuff(thingfinder, thingfinderEffect, "_thingfinderCasts", turns < 0 ? 500 : turns);
+        TryLimitedAccordionBuff(companionship, companionshipEffect, "_companionshipCasts", turns < 0 ? 500 : turns);
 
         if (EnsureOneSongSpace())
         {
@@ -5588,6 +5605,9 @@ print("Running filter = " + result, printColor);
 
         if (get_property("telescopeUpgrades").to_int() > 0 && get_property("telescopeLookedHigh") == "false")
             cli_execute("telescope high"); // +stats
+
+        if (favorLyle.have_effect() == 0)
+            visit_url("place.php?whichplace=monorail&action=monorail_lyle");
 
         visit_url("place.php?whichplace=spacegate"); // have to visit it to see if we have access
         if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
