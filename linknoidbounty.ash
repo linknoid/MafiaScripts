@@ -1,11 +1,12 @@
 
 effect beatenUp = "Beaten Up".to_effect();
 familiar nosyNose = "Nosy Nose".to_familiar();
+item bait = "Monster Bait".to_item();
 
 int mallPriceLimitPerBanish = 5000;
 string printColor = "orange";
 
-boolean IsDebug = true;
+boolean IsDebug = false;
 void PrintDebug(string text)
 {
 	if (IsDebug)
@@ -37,11 +38,12 @@ record BountyDetails
 	monster source;
 	int foundCount;
 	int requiredCount;
-	Banisher[monster] banishes;
-	float[monster] nonBounty;
+	Banisher[int] banishes;
+	float[int] nonBounty;
 	item accessItem;
 	effect accessEffect;
 	int accessTurns;
+	boolean NoAccess;
 };
 Banisher emptyBounty;
 
@@ -108,9 +110,12 @@ void StringToBountyDetails(BountyDetails[string] coll, string difficulty, int re
 
 	foreach mon,freq in appearance_rates(result.details.location, false)
 	{
+		PrintDebug("In zone " + result.details + ", monster " + mon.id + " with freq " + freq);
 		if (result.source != mon)
-			result.nonBounty[mon] = freq;
+			result.nonBounty[mon.id] = freq;
 	}
+	if (IsDebug)
+		waitq(1);
 
 	coll[result.key] = result;
 }
@@ -268,14 +273,29 @@ boolean BanisherUsed(Banisher b)
 	return false;
 }
 
+monster MapDynamicMonster(monster mon)
+{
+	switch (mon)
+	{
+		case $monster[lowercase B]: return $monster[acid blob];
+		case $monster[lowercase K]: return $monster[large kobold];
+		case $monster[lowercase H]: return $monster[mind flayer];
+		case $monster[Uppercase Q]: return $monster[Quantum Mechanic];
+		case $monster[swarm of lowercase As]: return $monster[swarm of killer bees];
+		default: return mon;
+	}
+}
+
 string TryBanish(monster mon)
 {
-	if (current.NonBounty[mon] < 0.1) // wandering monsters or rare enounters don't matter
+	//mon = MapDynamicMonster(mon);
+	print("Fighting monster " + mon + " with id=" + mon.id);
+	if (current.nonBounty[mon.id] < 0.1) // wandering monsters or rare enounters don't matter
 	{
-		print("Non-standard monster, no banish", printColor);
+		print("Non-standard monster, no banish = " + mon, printColor);
 		return "";
 	}
-	current.banishes[mon] = emptyBanisher;
+	current.banishes[mon.id] = emptyBanisher;
 	Banisher bestBanish;
 	foreach key,ban in AllBanishers
 	{
@@ -328,7 +348,7 @@ string TryBanish(monster mon)
 		result = "item " + bestBanish.AsItem;
 	if (result != "")
 	{
-		current.banishes[mon] = bestBanish;
+		current.banishes[mon.id] = bestBanish;
 		print("Banishing for " + bestBanish.TurnsBanishedPerUse + " turns", printColor);
 		bestBanish.UntilTurn = my_turnCount() + bestBanish.TurnsBanishedPerUse;
 	}
@@ -384,33 +404,69 @@ void DoBounty(BountyDetails b)
 		if (nosyNose.have_familiar() && my_familiar() != nosyNose)
 			nosyNose.use_familiar();
 		PrepareBanishers();
+		if (bait.item_amount() > 0 && !bait.have_equipped())
+			"accessory3".to_slot().equip(bait);
 		ResetCombatState();
 		string page = visit_url(current.details.location.to_url());
 		if (page.contains_text("choice.php"))
-			abort("To do, choice.php not yet handled");
-		run_combat("Filter_Combat");
+		{
+			if (page.contains_text("Typographical Clutter"))
+			{
+				run_choice(3);
+			}
+			else if (page.contains_text("Lights Out in the Wine Cellar"))
+			{
+				run_choice(1);
+				run_choice(1);
+			}
+			else
+			{
+				abort("To do, choice.php not yet handled");
+			}
+		}
+		else if (page.contains_text("You're fighting <span id='"))
+		{
+			run_combat("Filter_Combat");
+		}
+		else if (page.contains_text("That isn't a place you can go."))
+		{
+			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
+			current.NoAccess = true;
+			return;
+		}
+		else if (page.contains_text("adventure.php?snarfblat=") && page.contains_text("Adventure Again"))
+		{
+			print("Non-combat, no choice", printColor);
+			continue;
+		}
+		else
+		{
+			print(page);
+			abort("Unexpected non-combat");
+		}
 	}
 }
 
 void main()
 {
 	// todo: maximize combats (i.e. minimize non-combats)
-	TakeAllBounties();
-	while (easy.key != "" || hard.key != "" || special.key != "")
+	while (true)
 	{
-
-		if (easy.key != "")
+		TakeAllBounties();
+		if (easy.key != "" && !easy.NoAccess)
 		{
 			DoBounty(easy);
 		}
-		if (hard.key != "")
+		else if (hard.key != "" && !hard.NoAccess)
 		{
 			DoBounty(hard);
 		}
-		if (special.key != "")
+		else if (special.key != "" && !special.NoAccess)
 		{
 			DoBounty(special);
 		}
-		TakeAllBounties();
+		else
+			break;
 	}
 }
+
