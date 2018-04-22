@@ -6,6 +6,33 @@ Both scripts share a common configuration file.  It will be created with the set
 
 where USERNAME is the name of your current character.
 
+Here's a brief explanation of values in file:
+
+* abortOnBeatenUp - stops the script if you become beaten up to give you chance to fix what went wrong, otherwise it will heal you and keep running
+* allowExpensiveBuffs - if this is false, certain buffs will be considered off limits because the use expensive resources
+* autoConfirmBarf - skip past most of the user prompts and just use default values in the Barf script
+* autoConfirmMine - skip past most of the user prompts and just use default values in the Mine script
+* autoVoraciThanksgetting - automatically drink cuppa voraci tea to fit more thanksgetting after pantsgiving expands your stomach (almost certainly not worth the cost)
+* combatUserScript - for the standard Barf Mountain combat filter, use your character's default combat script instead of the one built into the barf script (after copies are handled).
+* defaultOutfit - the default outfit to use for Barf Mountain
+* dropsOutput - the outfit to use when fighting 0 meat monsters (for bonus drops)
+* executeAfterEat - allow custom script command to do any further eating or drinking after the Barf script does it's own eating.  This happens between Barf eating and drinking.
+* executeBeforeEat - allow custom script to do any eating before the Barf script does any eating whatsoever, in case you want to completely override the diet
+* hobopolisWhitelist - which clans you're allowed into Hobopolis
+* manaOutfit - an outfit to maximize your mana and survive LOV tunnel
+* maxUseEnamorings - how many enamorangs to use each day, since only 1 can be created per day, but many used
+* maxUsePrintScreens - how many print screens to use each day, since only 1 can be created per day, but many used
+* meatyOutfit - default outfit to use for fighting embezzlers.  If this is blank, it will use the default outfit instead
+* preferCalcUniversePvP - since Calculate the Universe changes as you spend turns, it makes sense to execute it while you can.  If you set this to true and have broken your hippy stone, it will choose 3 PvP fights instead of 3 adventures
+* printColor - the color to send messages in, defaults to orange for contrast and visibility against a white background with black text
+* sacramentoLimit - max number of sacramento wines to drink per day.  They probably aren't worth drinking for their cost while farming barf mountain, but you can specify your own limit if you wish 
+* saveLiver - how many drunkenness to save for other purposes.  Useful when you want to consume other stuff after
+* saveSpleen - how many spleen to save for other purposes.  Useful when you want to consume other stuff after
+* saveStomach - how many fullness to save for other purposes.  Useful when you want to consume other stuff after
+* thanksgettingFoodCostLimit - maximum to pay for a single unique Thanksgetting food.  If a food is over the limit, it will substitute cheaper foods for duration, while losing out on buff size
+* turkeyLimit - max number of ambitious turkeys to drink per day.  If you're getting 4 or 5 of them from your turkey a day, you might want to set it higher, but it defaults to 1
+* weightOutfit - an outfit to maximize weight for free runaways and NPZR free combats
+
 
 
 LinknoidBarf.ash:
@@ -130,11 +157,23 @@ Increases monster level before initial embezzlers to try to stop them from dying
  Grabs a pirate costume if trick-or-treating tot is your familiar.
  Doesn't cast familiar buffs if using tot.
 
+ Fight an elf from a chateau or deck of every card as first robortender fight for peppermint sprig, and makes a single copy for good probability of a second one.
+
+ 
+
  Visits protonic accelorator pack quest adventures, uses combat with a "drops" familiar in this priority:
+ * Baby Sand Worm
  * Fist Turkey
  * Space Jellyfish (if elemental)
  * Intergnat
  * Rockin' Robin
+
+ And Crown of Throns or Buddy Bjorn for drops in this order:
+ * Garbage fire
+ * Optimistic candle
+ * Trick-or-treating Tot
+ * Machine Elf
+ * Warbear Drone
 
  Before casting buffs, automatically equips Oscus's outfit for -5 MP cost, KGB for -3 MP cost (or orcish rubber if that's not available), and brimstone bracelet for -3 MP cost.
 
@@ -152,6 +191,7 @@ Increases monster level before initial embezzlers to try to stop them from dying
  * Glittery Mascera +15% myst
  * Oil of slipperiness or Oil of stability as necessary
  * Circle Drum
+ * Jump in the ball pit
 And restores mana using:
  * Free rests (using Pilgrim hat if available, else Chateau if available, else normal rest), wearing Pantsgiving if available
  * nuns
@@ -173,6 +213,7 @@ And restores mana using:
  * pickpockets
  * casts source terminal extract
  * uses Pantsgiving pocket crumbs
+ * uses the appropriate critical hit source if wearing mafia ring
 
 
 

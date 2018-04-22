@@ -1,7 +1,7 @@
 
-effect beatenUp = "Beaten Up".to_effect();
-familiar nosyNose = "Nosy Nose".to_familiar();
-item bait = "Monster Bait".to_item();
+effect beatenUp = $effect[Beaten Up];
+familiar nosyNose = $familiar[Nosy Nose];
+item bait = $item[Monster Bait];
 
 int mallPriceLimitPerBanish = 5000;
 string printColor = "orange";
@@ -91,12 +91,23 @@ Banisher[string] GetAllBanishers()
 	StringToBanisher(result, "KGB tranquilizer dart",           "Kremlin's Greatest Briefcase",         3, 20, "_kgbTranquilizerDartUses");
 	StringToBanisher(result, "Spring Loaded Front Bumper",      "Asdon Martin",                        -1, 30, "");
 	
+	string[int] banishes = get_property("banishedMonsters").split_string(":");
+	for (int i = 0; i < banishes.count(); i += 3)
+	{
+		monster mon = banishes[i].to_monster();
+		string src = banishes[i + 1];
+		int turnBanished = banishes[i + 2].to_int();
+		Banisher ban = result[src];
+		ban.UntilTurn = turnBanished + ban.TurnsBanishedPerUse;
+		ban.CurrentlyBanished = mon;
+		print("Currently banished for " + (ban.UntilTurn - my_turnCount()) + " more turns = " + mon, printColor);
+	}
 	
 	return result;
 }
 
 
-void StringToBountyDetails(BountyDetails[string] coll, string difficulty, int requiredCount, string itemName)
+BountyDetails StringToBountyDetails(BountyDetails[string] coll, string difficulty, int requiredCount, string itemName)
 {
 	BountyDetails result, none;
 	result.key = itemName;
@@ -118,14 +129,16 @@ void StringToBountyDetails(BountyDetails[string] coll, string difficulty, int re
 		waitq(1);
 
 	coll[result.key] = result;
+	return result;
 }
-void StringToBountyDetails(BountyDetails[string] coll, string difficulty, int requiredCount, string itemName,
+BountyDetails StringToBountyDetails(BountyDetails[string] coll, string difficulty, int requiredCount, string itemName,
 	string accessItem, int accessTurns, string accessEffect)
 {
 	StringToBountyDetails(coll, difficulty, requiredCount, itemName);
 	coll[itemName].accessItem = accessItem.to_item();
 	coll[itemName].accessTurns = accessTurns;
 	coll[itemName].accessEffect = accessEffect.to_effect();
+	return coll[itemName];
 }
 
 BountyDetails[string] GetAllBounties()
@@ -183,7 +196,7 @@ BountyDetails[string] GetAllBounties()
 	StringToBountyDetails(result, "Special", 8 , "country guano"       , "astral mushroom",                               5, "Half-Astral");
 	StringToBountyDetails(result, "Special", 10, "wig powder"          , "\"DRINK ME\" potion",                           20, "Down the Rabbit Hole");
 	StringToBountyDetails(result, "Special", 6 , "pop art banana peel" , "llama lama gong",                               12, "Shape of...Mole!");
-	StringToBountyDetails(result, "Special", 9 , "purple butt"         , "agua de vida bottle",                           10, "");
+	StringToBountyDetails(result, "Special", 9 , "purple butt"         , "empty agua de vida bottle",                           10, "");
 	StringToBountyDetails(result, "Special", 13, "unlucky claw"        , "jar of psychoses (The Suspicious-Looking Guy)", -1, "");
 	StringToBountyDetails(result, "Special", 10, "vivisected hair"     , "one-day ticket to Conspiracy Island",           -1, "");
 	return result;
@@ -273,18 +286,41 @@ boolean BanisherUsed(Banisher b)
 	return false;
 }
 
-monster MapDynamicMonster(monster mon)
+void PopulateZoneBanishes()
 {
-	switch (mon)
+	foreach ignore1,bnty in AllBounties
 	{
-		case $monster[lowercase B]: return $monster[acid blob];
-		case $monster[lowercase K]: return $monster[large kobold];
-		case $monster[lowercase H]: return $monster[mind flayer];
-		case $monster[Uppercase Q]: return $monster[Quantum Mechanic];
-		case $monster[swarm of lowercase As]: return $monster[swarm of killer bees];
-		default: return mon;
+		foreach monId,rate in bnty.nonBounty
+		{
+			monster mon = monId.to_monster();
+			foreach ignore2,ban in AllBanishers
+			{
+				if (ban.CurrentlyBanished == $monster[none])
+					continue;
+				if (ban.CurrentlyBanished == mon)
+				{
+					bnty.Banishes[monId] = ban;
+					print("Marking zone banished " + mon + " for bounty " + bnty);
+				}
+			}
+		}
 	}
 }
+
+//monster MapDynamicMonster(monster mon)
+//{
+//	// this doesn't work, you need to have unlocked dungeons of doom with + sign before
+//	// you can do the bounty, since it requires a kobold, not an uppercase K
+//	switch (mon)
+//	{
+//		case $monster[lowercase B]: return $monster[acid blob];
+//		case $monster[lowercase K]: return $monster[large kobold];
+//		case $monster[lowercase H]: return $monster[mind flayer];
+//		case $monster[Uppercase Q]: return $monster[Quantum Mechanic];
+//		case $monster[swarm of lowercase As]: return $monster[swarm of killer bees];
+//		default: return mon;
+//	}
+//}
 
 string TryBanish(monster mon)
 {
@@ -405,7 +441,7 @@ void DoBounty(BountyDetails b)
 			nosyNose.use_familiar();
 		PrepareBanishers();
 		if (bait.item_amount() > 0 && !bait.have_equipped())
-			"accessory3".to_slot().equip(bait);
+			"acc3".to_slot().equip(bait);
 		ResetCombatState();
 		string page = visit_url(current.details.location.to_url());
 		if (page.contains_text("choice.php"))
@@ -419,8 +455,50 @@ void DoBounty(BountyDetails b)
 				run_choice(1);
 				run_choice(1);
 			}
+			else if (page.contains_text("A Sietch in Time"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("Cavern Entrance") || page.contains_text("Entrance to the Forgotten City"))
+			{
+				run_choice(2);
+			}
+			else if (page.contains_text("Having a Medicine Ball"))
+			{
+				run_choice(2);
+				run_choice(4);
+			}
+			else if (page.contains_text("Heart of Madness"))
+			{
+				if ($item[strawberry].item_amount() > 0
+					&& $item[wad of dough].item_amount() > 0
+					&& $item[glob of enchanted icing].item_amount() > 0
+					&& ($item[popular part].item_amount() > 0 || get_property("popularTartUnlocked") == "true"))
+				{
+					run_choice(3); // popular machine
+					run_choice(1);
+				}
+				else if (page.contains_text("option=1"))
+				{
+					run_choice(1);
+					run_combat("Filter_Combat");
+				}
+				else
+				{
+					run_choice(4);
+				}
+			}
+			else if (page.contains_text("Out in the Open Source"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("You Don't Mess Around with Gym"))
+			{
+				run_choice(4);
+			}
 			else
 			{
+				print(page);
 				abort("To do, choice.php not yet handled");
 			}
 		}
@@ -428,7 +506,9 @@ void DoBounty(BountyDetails b)
 		{
 			run_combat("Filter_Combat");
 		}
-		else if (page.contains_text("That isn't a place you can go."))
+		else if (page.contains_text("That isn't a place you can go.")
+			|| page.contains_text("You shouldn't be here.")
+			|| page.contains_text("Whuzzat now?"))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
 			current.NoAccess = true;
@@ -438,6 +518,11 @@ void DoBounty(BountyDetails b)
 		{
 			print("Non-combat, no choice", printColor);
 			continue;
+		}
+		else if (page.contains_text("You break the bottle on the ground, and stomp it to powder"))
+		{
+			print("Agua de vida bottle ran out");
+			return;
 		}
 		else
 		{
@@ -449,6 +534,7 @@ void DoBounty(BountyDetails b)
 
 void main()
 {
+	PopulateZoneBanishes();
 	// todo: maximize combats (i.e. minimize non-combats)
 	while (true)
 	{
