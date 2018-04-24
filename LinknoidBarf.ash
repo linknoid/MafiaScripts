@@ -245,6 +245,7 @@ void ReadSettings()
     item terminal = ToItem("Source terminal");
     item mayoClinic = ToItem("portable Mayo Clinic");
     item asdonMartin = ToItem("Asdon Martin keyfob");
+    item oven = ToItem("warbear induction oven");
     effect observantly = ToEffect("Driving Observantly");
     item pieFuel = ToItem("pie man was not meant to eat");
     item water = to_item("soda water"); // food for adsonMartin
@@ -756,6 +757,13 @@ void ReadSettings()
     item louderThanBomb = ToItem("Louder Than Bomb");
     item tennisBall = ToItem("tennis ball");
 
+// cheesy items to increase rollover adventures
+    item cheeseStaff = ToItem("Staff of Queso Escusado");
+    item cheeseSword = ToItem("stinky cheese sword");
+    item cheesePants = ToItem("stinky cheese diaper");
+    item cheeseShield = ToItem("stinky cheese wheel");
+    item cheeseAccessory = ToItem("stinky cheese eye");
+
 // script state variables
     familiar runFamiliar;
     float snowSuitWeight = 0;
@@ -834,6 +842,7 @@ void ReadSettings()
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
+    void UseWarbearOven();
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
     void TryReduceManaCost(skill sk);
@@ -1602,6 +1611,8 @@ DebugOutfit("Goal outfit", outfitDef);
     }
     int GetFamiliarRunaways()
     {
+        if (my_familiar() != stompingBoots && my_familiar() != bandersnatch)
+            return 0;
         int result = (my_familiar().familiar_weight() + weight_adjustment()) / 5;
         result -= get_property("_banderRunaways").to_int();
         return result;
@@ -3810,9 +3821,12 @@ print("Running filter = " + result, printColor);
         return bestThanks;
     }
 
-    boolean AcquireFeast(item food, int cashewCost)
+    boolean AcquireFeast(item food, int cashewCost, boolean forWarbearOven)
     {
-        if (food.item_amount() > 0)
+        if (forWarbearOven && get_property("_warbearInductionOvenUsed") == "true")
+            return false;
+
+        if (food.item_amount() > 0 && !forWarbearOven)
             return true;
 
         item cashewIngredient = noItem;
@@ -3826,14 +3840,17 @@ print("Running filter = " + result, printColor);
         }
         if (cashewIngredient.to_int() < 0 || foodIngredient.to_int() < 0)
         {
-            print("Invalid ingredients for " + food.to_string());
+            print("Invalid ingredients for " + food.to_string(), printColor);
         }
         int cashewPrice = cashew.mall_price() * cashewCost + foodIngredient.mall_price();
         int cornucopiaPrice = cornucopia.mall_price() * cashewCost / 3; // assume average of 3 cashews per cornucopia
-        if (cashewPrice > thanksgettingFoodCostLimit
-            && cornucopiaPrice > thanksgettingFoodCostLimit)
+        int priceLimit = thanksgettingFoodCostLimit;
+        if (forWarbearOven)
+            priceLimit *= 2; // should get two of them back, not just one
+        if (cashewPrice > priceLimit
+            && cornucopiaPrice > priceLimit)
         {
-            print("Thanksgetting feast cost exceeds " + thanksgettingFoodCostLimit + ", skipping", "red");
+            print("Thanksgetting feast cost exceeds " + priceLimit + ", skipping", "red");
             return false;
         }
         int ingredientPrice = cashewIngredient.mall_price() + foodIngredient.mall_price();
@@ -3851,12 +3868,19 @@ print("Running filter = " + result, printColor);
         }
         if (cashewIngredient.item_amount() == 0)
         {
-            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, thanksgettingFoodCostLimit / cashewCost))
+            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, priceLimit / cashewCost))
                 return false;
             if (!cashewIngredient.seller.buy(1, cashewIngredient))
                 return false;
         }
-        return craft("cook", 1, cashewIngredient, foodIngredient) > 0;
+        int craftCount = craft("cook", 1, cashewIngredient, foodIngredient);
+        if (craftCount > 1)
+            set_property("_warbearInductionOvenUsed", "true");
+        return craftCount >= 1;
+    }
+    boolean AcquireFeast(item food, int cashewCost)
+    {
+        return AcquireFeast(food, cashewCost, false);
     }
 
     boolean TrySpleenSpace(int providedSpleen)
@@ -3971,6 +3995,7 @@ print("Running filter = " + result, printColor);
                     && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
                     BeforeSwapOutAsdon();
+                    UseWarbearOven();
                     use(1, mayoClinic);
                 }
                 if (!(get_campground() contains mayoClinic)
@@ -4530,6 +4555,7 @@ print("Running filter = " + result, printColor);
     boolean AcquireFullFeast()
     {
         cli_execute("acquire 8 jumping horseradish");
+        UseWarbearOven();
         boolean success = true;
         success = AcquireFeast(thanks1, 1) && success;
         success = AcquireFeast(thanks2, 1) && success;
@@ -4868,6 +4894,7 @@ print("Running filter = " + result, printColor);
         }
 
         BeforeSwapOutAsdon();
+        UseWarbearOven();
         if (nightBefore)
         {
             TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
@@ -4983,7 +5010,7 @@ print("Running filter = " + result, printColor);
     }
 
 
-    string runawayFilter(int round, monster mon, string page)
+    string Filter_Runaway(int round, monster mon, string page)
     {
         if (needsCleesh)
         {
@@ -5024,7 +5051,7 @@ print("Running filter = " + result, printColor);
         if (GetFreeRunaways() > 0)
         {
             PrepareSmokeBomb();
-            return "runawayFilter";
+            return "Filter_Runaway";
         }
         else
             return "Filter_Standard";
@@ -5061,6 +5088,39 @@ print("Running filter = " + result, printColor);
         //acc3.equip(gingerAcc3);
     }
 
+    boolean CheesyRunaway(item i, slot s, int needRunaways)
+    {
+        if (i.have_equipped())
+            return true;
+        if (i.item_amount() == 0)
+            return false;
+        int haveRunaways = GetFreeRunaways();
+        item old = s.equipped_item();
+        if (i.item_amount() > 0 && i.can_equip())
+            s.equip(i);
+        
+        if (GetFreeRunaways() < haveRunaways && GetFreeRunaways() < needRunaways)
+        {
+            print("Not enough runaways with " + i + " equipped, swapping back", printColor);
+            s.equip(old);
+        }
+        return i.have_equipped();
+    }
+
+    void CheesyRunaway(int needRunaways)
+    {
+        // having these cheesy items equipped during runaways counts towards combats for the day
+        int haveRunaways = GetFreeRunaways();
+        if (!CheesyRunaway(cheeseStaff, weapon, needRunaways))
+            CheesyRunaway(cheeseSword, weapon, needRunaways);
+        CheesyRunaway(cheesePants, pants, needRunaways);
+        CheesyRunaway(cheeseShield, offhand, needRunaways);
+        if (!CheesyRunaway(cheeseAccessory, acc1, needRunaways)
+            && CheesyRunaway(cheeseAccessory, acc2, needRunaways)
+            && CheesyRunaway(cheeseAccessory, acc3, needRunaways))
+        {
+        }
+    }
 
     void RunawayGingerbread()
     {
@@ -5072,16 +5132,19 @@ print("Running filter = " + result, printColor);
         {
             return;
         }
-        if (!stompingBoots.have_familiar() && !bandersnatch.have_familiar())
-            return;
+        if (stompingBoots.have_familiar())
+            stompingBoots.use_familiar();
+        else if (!bandersnatch.have_familiar())
+            bandersnatch.use_familiar();
         if (GetFreeRunaways() < 3)
             return;
         if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?", true))
         {
             return;
         }
+        CheesyRunaway(3);
         string filter = ReadyRunaway();
-        if (filter != "runawayFilter")
+        if (filter != "Filter_Runaway")
             return;
         string page = LoadChoiceAdventure(gingerCivic, false); // civic center
         run_choice(1); // clock choice
@@ -5672,6 +5735,29 @@ print("Running filter = " + result, printColor);
             pants.equip(noItem);
     }
 
+    item MoreValuableCrafting(item i1, item i2)
+    {
+        // for crafting purposes, the item we have the least of is most valuable for duplicating,
+        // and if they're tied, choose by the most expensive mall price
+        if (i1.item_amount() < i2.item_amount())
+            return i1;
+        if (i1.item_amount() > i2.item_amount())
+            return i2;
+        if (i1.mall_price() > i2.mall_price())
+            return i1;
+        return i2;
+    }
+
+    void UseWarbearOven()
+    {
+        if (get_property("_warbearInductionOvenUsed") == "true")
+            return;
+        item best = MoreValuableCrafting(thanks7, thanks8);
+        best = MoreValuableCrafting(best, thanks9);
+        print("Attempting to duplicate craft " + best + " using warbear induction oven", printColor);
+        AcquireFeast(best, 3, true);
+    }
+
     void BeforeSwapOutMayo()
     {
         if (get_campground() contains mayoClinic)
@@ -5694,7 +5780,7 @@ print("Running filter = " + result, printColor);
             && get_property("_workshedItemUsed") == "false"
             && get_property("_missileLauncherUsed") == "false")
         {
-            print("Using Missile Launcher while Asdon Martin is active");
+            print("Using Missile Launcher while Asdon Martin is active", printColor);
             shouldMissileLauncher = true;
             FuelAsdon(100);
             PrepareFilterState();

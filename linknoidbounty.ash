@@ -92,11 +92,11 @@ Banisher[string] GetAllBanishers()
 	StringToBanisher(result, "Spring Loaded Front Bumper",      "Asdon Martin",                        -1, 30, "");
 	
 	string[int] banishes = get_property("banishedMonsters").split_string(":");
-	for (int i = 0; i < banishes.count(); i += 3)
+	for (int i = 2; i < banishes.count(); i += 3)
 	{
-		monster mon = banishes[i].to_monster();
-		string src = banishes[i + 1];
-		int turnBanished = banishes[i + 2].to_int();
+		monster mon = banishes[i - 2].to_monster();
+		string src = banishes[i - 1];
+		int turnBanished = banishes[i - 0].to_int();
 		Banisher ban = result[src];
 		ban.UntilTurn = turnBanished + ban.TurnsBanishedPerUse;
 		ban.CurrentlyBanished = mon;
@@ -441,7 +441,18 @@ void DoBounty(BountyDetails b)
 			nosyNose.use_familiar();
 		PrepareBanishers();
 		if (bait.item_amount() > 0 && !bait.have_equipped())
-			"acc3".to_slot().equip(bait);
+			$slot[acc3].equip(bait);
+		if (current.details.location == $location[Poop deck])
+		{
+			item fledges = $item[pirate fledges];
+			if (fledges.item_amount() > 0)
+				$slot[acc2].equip($item[pirate fledges]);
+			if (!fledges.have_equipped())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
 		ResetCombatState();
 		string page = visit_url(current.details.location.to_url());
 		if (page.contains_text("choice.php"))
@@ -496,6 +507,21 @@ void DoBounty(BountyDetails b)
 			{
 				run_choice(4);
 			}
+			else if (page.contains_text("Temporarily Out of Skeletons"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("Lots of Options"))
+			{
+				run_choice(1);
+				run_choice(5);
+				run_choice(2);
+			}
+			else if (page.contains_text("O Cap'm, My Cap'm"))
+			{
+				run_choice(1);
+				visit_url("ocean.php?lon=59+lat=10");
+			}
 			else
 			{
 				print(page);
@@ -508,7 +534,8 @@ void DoBounty(BountyDetails b)
 		}
 		else if (page.contains_text("That isn't a place you can go.")
 			|| page.contains_text("You shouldn't be here.")
-			|| page.contains_text("Whuzzat now?"))
+			|| page.contains_text("Whuzzat now?")
+			|| page.contains_text("You can't get there anymore, because you don't know the transporter frequency."))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
 			current.NoAccess = true;
