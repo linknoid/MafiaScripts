@@ -667,6 +667,8 @@ void ReadSettings()
 // makin' copies, at the copy machine
     item camera = ToItem("4-d camera");
     item usedcamera = ToItem("Shaking 4-d camera");
+    item beerLens = ToItem("beer lens");
+    item nothingInTheBox = ToItem("nothing-in-the-box");
     item enamorang = ToItem("LOV Enamorang");
     item BACON = ToItem("BACON");
     item usedFax = ToItem("photocopied monster");
@@ -708,6 +710,11 @@ void ReadSettings()
     item gingerAcc2 = ToItem("candy necktie");
     item gingerAcc3 = ToItem("chocolate pocketwatch");
     item gingerSprinkles = ToItem("sprinkles");
+
+// Madness bakery
+    item strawberry = ToItem("strawberry");
+    item icing = ToItem("glob of enchanted icing");
+    item popPart = ToItem("popular part");
 
 // effect which will confuse KoLmafia
     item greendrops = ToItem("soft green echo eyedrop antidote"); // remove undesirable effects
@@ -1341,7 +1348,7 @@ DebugOutfit("Goal outfit", outfitDef);
                 if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
                     abort("Aborting so you can choose whether to duplicate an item");
             }
-            if (page.contains_text("A path away. ALl ways. Always."))
+            if (page.contains_text("A path away. All ways. Always."))
             {
                 run_choice(6); // skip the adventure
             }
@@ -1795,6 +1802,11 @@ DebugOutfit("Goal outfit", outfitDef);
         ChooseEducate(false, needsDigitize);
 
         needsEnamorang = enamorang.item_amount() > 0 && get_property("enamorangMonster") == "";
+        if (usedCamera.item_amount() == 0 && camera.item_amount() == 0 && beerLens.item_amount() > 0)
+        {
+            cli_execute("acquire nothing-in-the-box");
+            craft("paste", 1, nothingInTheBox, beerLens);
+        }
         needsCamera = usedCamera.item_amount() == 0 && camera.item_amount() > 0;
         needsPrintScreen = printScreen.item_amount() > 0 && get_property("screencappedMonster") == "";
         needsRainDoh = rainDoh.item_amount() > 0 && usedRainDoh.item_amount() == 0;
@@ -3874,9 +3886,9 @@ print("Running filter = " + result, printColor);
                 return false;
         }
         int craftCount = craft("cook", 1, cashewIngredient, foodIngredient);
-        if (craftCount > 1)
+        if (craftCount > 0 && get_campground() contains oven)
             set_property("_warbearInductionOvenUsed", "true");
-        return craftCount >= 1;
+        return craftCount > 0;
     }
     boolean AcquireFeast(item food, int cashewCost)
     {
@@ -3933,7 +3945,8 @@ print("Running filter = " + result, printColor);
             {
                 if (HaveEquipment(songSpaceAcc) && songSpaceAcc.can_equip() && !songSpaceAcc.have_equipped())
                 {
-                    acc1.equip(songSpaceAcc);
+                    // slots 1 and 2 are for MP cost reduction
+                    acc3.equip(songSpaceAcc);
                 }
             }
             if (odeToBooze.have_skill())
@@ -5134,7 +5147,7 @@ print("Running filter = " + result, printColor);
         }
         if (stompingBoots.have_familiar())
             stompingBoots.use_familiar();
-        else if (!bandersnatch.have_familiar())
+        else if (bandersnatch.have_familiar())
             bandersnatch.use_familiar();
         if (GetFreeRunaways() < 3)
             return;
@@ -5184,6 +5197,54 @@ print("Running filter = " + result, printColor);
         {
             print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
             run_choice(1); // take a free drink
+        }
+    }
+
+    void RunawayMadnessBakery()
+    {
+        if (stompingBoots.have_familiar())
+            stompingBoots.use_familiar();
+        else if (bandersnatch.have_familiar())
+            bandersnatch.use_familiar();
+        else
+            return;
+        WearOutfit(weightOutfitPieces);
+        CheesyRunaway(1);
+
+        boolean first = true;
+
+        while (GetFamiliarRunaways() > 0
+            && strawberry.item_amount() > 0
+            && dough.item_amount() > 0
+            && icing.item_amount() > 0
+            && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true"))
+        {
+            if (first)
+            {
+                first = false;
+                if (!UserConfirmDefault("Use free runaways to make popular tarts?", true))
+                    return;
+            }
+            string filter = ReadyRunaway();
+            if (filter != "Filter_Runaway")
+                return;
+            print("Visiting Madness Bakery with free runaways", printColor);
+            string page = visit_url("adventure.php?snarfblat=440");
+            if (page.contains_text("choice.php"))
+            {
+                run_choice(3); // popular machine
+                run_choice(1); // make popular tart
+            }
+            else
+                run_combat(filter);
+            if (GetFamiliarRunaways() <= 0)
+            {
+                WearOutfit(weightOutfitPieces);
+                if (GetFamiliarRunaways() <= 0)
+                {
+                    TryUseMovableFeast();
+                }
+            }
         }
     }
 
@@ -5446,11 +5507,12 @@ print("Running filter = " + result, printColor);
 
     void ActivateChibiBuddy()
     {
-        if (chibiOff.item_amount() > 0)
+        print("chibi: Off = " + chibiOff.item_amount() + ", on =" + chibiOn.item_amount(), printColor);
+        if (chibiOff.item_amount() > 0 && chibiOn.item_amount() == 0)
         {
             //use(1, chibiOff);
             visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5925");
-            visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=633&name=ChibiBuffMaker");
+            print(visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=633&option=1&chibiname=ChibiBuffMaker"));
         }
         if (chibiOn.item_amount() > 0 && chibiEffect.have_effect() == 0)
         {
@@ -5752,6 +5814,8 @@ print("Running filter = " + result, printColor);
     {
         if (get_property("_warbearInductionOvenUsed") == "true")
             return;
+        if (!(get_campground() contains oven))
+            return;
         item best = MoreValuableCrafting(thanks7, thanks8);
         best = MoreValuableCrafting(best, thanks9);
         print("Attempting to duplicate craft " + best + " using warbear induction oven", printColor);
@@ -5817,7 +5881,7 @@ print("batoom = " + canBatoomerang);
 print("missile = " + canMissileLauncher);
 print("punch = " + canShatteringPunch);
 print("mob = " + canMobHit);
-        if ( !UserConfirmDefault("Run all free kills in LT&T?", true) )
+        if ( !UserConfirmDefault("Run all free kills in LT&T?", false) )
             return;
         print("Checking for need telegram, count = " + telegram.item_amount(), printColor);
         string page;
@@ -5913,6 +5977,7 @@ print("mob = " + canMobHit);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
+            RunawayMadnessBakery();
         }
         for (int i = 0; i < turnCount; i++)
         {

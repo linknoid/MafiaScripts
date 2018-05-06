@@ -133,16 +133,20 @@ void main()
 		else
 			print("No warbear oven crafting", printColor);
 	}
-	if (get_property("hasDetectiveSchool") == "true"
-		&& get_property("_detectiveCasesCompleted").to_int() < 3)
-	{
-		cli_execute("Detective Solver.ash");
-	}
 	if (get_property("_sourceTerminalExtrudes").to_int() < 3)
 	{
 		cli_execute("terminal extrude food.ext");
 		cli_execute("terminal extrude booze.ext");
 		cli_execute("terminal extrude booze.ext");
+	}
+	if ($item[raffle ticket].item_amount() == 0)
+	{
+		cli_execute("raffle 1");
+	}
+	if (get_property("hasDetectiveSchool") == "true"
+		&& get_property("_detectiveCasesCompleted").to_int() < 3)
+	{
+		cli_execute("Detective Solver.ash");
 	}
 }
 

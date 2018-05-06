@@ -431,6 +431,7 @@ void DoBounty(BountyDetails b)
 	print("Attempting bounty at " + b.details.location, printColor);
 	current = b;
         string propertyName = ("current" + b.difficulty + "BountyItem");
+	boolean slot3Avail = true;
 	while (GetBounty(get_property(propertyName)).foundCount < b.requiredCount)
 	{
 		if (my_adventures() == 0)
@@ -440,7 +441,7 @@ void DoBounty(BountyDetails b)
 		if (nosyNose.have_familiar() && my_familiar() != nosyNose)
 			nosyNose.use_familiar();
 		PrepareBanishers();
-		if (bait.item_amount() > 0 && !bait.have_equipped())
+		if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail)
 			$slot[acc3].equip(bait);
 		if (current.details.location == $location[Poop deck])
 		{
@@ -461,10 +462,27 @@ void DoBounty(BountyDetails b)
 			{
 				run_choice(3);
 			}
+			else if (page.contains_text("Lights Out in the Nursery"))
+			{
+				run_choice(1);
+				run_choice(2);
+				run_choice(2);
+				run_choice(1);
+				run_choice(1);
+			}
 			else if (page.contains_text("Lights Out in the Wine Cellar"))
 			{
 				run_choice(1);
 				run_choice(1);
+			}
+			else if (page.contains_text("Lights Out in the Kitchen"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("All Over the Map"))
+			{
+				run_choice(3); // Be Mine
+				run_choice(1); // black gold
 			}
 			else if (page.contains_text("A Sietch in Time"))
 			{
@@ -522,6 +540,76 @@ void DoBounty(BountyDetails b)
 				run_choice(1);
 				visit_url("ocean.php?lon=59+lat=10");
 			}
+			else if (page.contains_text("Yeah, You're for Me, Punk Rock Giant"))
+			{
+				run_choice(3);
+				run_choice(2);
+			}
+			else if (page.contains_text("Melon Collie and the Infinite Lameness"))
+			{
+				run_choice(4);
+				run_choice(2);
+			}
+			else if (page.contains_text("Flavor of a Raver"))
+			{
+				run_choice(4);
+				run_choice(3);
+				run_choice(2);
+			}
+			else if (page.contains_text("Copper Feel"))
+			{
+				run_choice(2);
+			}
+			else if (page.contains_text("Welcome to the Copperhead Club"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("Shen Copperhead, Nightclub Owner"))
+			{
+				run_choice(1);
+			}
+                	else if (page.contains_text("The Singing Tree"))
+			{
+				run_choice(4);
+			}
+                	else if (page.contains_text("Oh No, Hobo"))
+			{
+				run_choice(3);
+			}
+                	else if (page.contains_text("The Baker's Dilemma"))
+			{
+				run_choice(2);
+			}
+                	else if (page.contains_text("you discover a Knob Goblin Assistant Chef rummaging through the shelves"))
+			{
+				run_choice(3);
+			}
+                	else if (page.contains_text("Duffel on the Double"))
+			{
+				run_choice(3);
+			}
+                	else if (page.contains_text("Saint Beernard"))
+			{
+				run_choice(1);
+			}
+                	else if (page.contains_text("Yeti Nother Hippy"))
+			{
+				run_choice(1);
+			}
+                	else if (page.contains_text("Generic Teen Comedy Snowboarding Adventure"))
+			{
+				run_choice(1);
+			}
+                	else if (page.contains_text("Welcome Back!"))
+			{
+				run_choice(1);
+				return;
+			}
+                	else if (page.contains_text("The Gong Has Been Bung"))
+			{
+				run_choice(2);
+				return;
+			}
 			else
 			{
 				print(page);
@@ -532,9 +620,22 @@ void DoBounty(BountyDetails b)
 		{
 			run_combat("Filter_Combat");
 		}
+		else if (page.contains_text("You're going to need some sort of stench protection if you want to adventure here."))
+		{
+			if ($item[ghost of a necklace].item_amount() > 0)
+			{
+				$slot[acc3].equip($item[ghost of a necklace]);
+			}
+			if ($item[Pine-Fresh air freshener].item_amount() > 0)
+			{
+				$slot[acc3].equip($item[Pine-Fresh air freshener]);
+			}
+			slot3Avail = false;
+		}
 		else if (page.contains_text("That isn't a place you can go.")
 			|| page.contains_text("You shouldn't be here.")
 			|| page.contains_text("Whuzzat now?")
+			|| page.contains_text("You don't know where that place is.")
 			|| page.contains_text("You can't get there anymore, because you don't know the transporter frequency."))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
