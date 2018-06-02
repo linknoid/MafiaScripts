@@ -32,16 +32,13 @@
 
 // TODO:
 
-// Reducing server hits:
-// buy consumables in larger quantities than 1
-// investigate ways to script combat as a macro instead of requiring a full consult for each round of combat
-// 
+// First digitize needs to visit adventure.php to actually trigger the digitize counter to start.
+// Can this be done by visiting an overgrown shrine?
 
 // duplicate witchess knight (code is partly there, but it's not actually firing)
 
 // track candle/scroll drops from intergnat
 
-// maybe do faxing/wishing of black crayon elf if deck isn't available
 
 // For dice gear:
 // Change filter to kill ticking modifier monsters immediately instead of dragging out combat
@@ -245,6 +242,7 @@ void ReadSettings()
     item terminal = ToItem("Source terminal");
     item mayoClinic = ToItem("portable Mayo Clinic");
     item asdonMartin = ToItem("Asdon Martin keyfob");
+    item oven = ToItem("warbear induction oven");
     effect observantly = ToEffect("Driving Observantly");
     item pieFuel = ToItem("pie man was not meant to eat");
     item water = to_item("soda water"); // food for adsonMartin
@@ -357,6 +355,7 @@ void ReadSettings()
     familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
     familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
     familiar garbageFire = ToFamiliar("Garbage Fire"); // drops burning newspaper
+    familiar optimisticCandle = ToFamiliar("Optimistic Candle"); // drops hot wax
     familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
     familiar grue = ToFamiliar("Grue"); // +15% myst
 
@@ -434,6 +433,7 @@ void ReadSettings()
     skill funkslinging = ToSkill("Ambidextrous Funkslinging");
     skill meteorShower = ToSkill("Meteor Shower");
     skill accordionBash = ToSkill("Accordion Bash");
+    skill singAlong = ToSkill("Sing Along");
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
     item carpe = ToItem("carpe");
@@ -463,6 +463,9 @@ void ReadSettings()
 
 // Skills for more turns
     skill odeToBooze = ToSkill("The Ode to Booze");
+    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
+    //item songSpaceAcc = ToItem("La Hebilla del Cinturón de Lopez");
+    item songSpaceAcc = ToItem("La Hebilla del CinturÃ³n de Lopez");
     skill calcUniverse = ToSkill("Calculate the Universe");
 
 // skills for +meat bonus
@@ -530,7 +533,6 @@ void ReadSettings()
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
 // effects for +meat bonus
-    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
     effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
     effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
     effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
@@ -638,6 +640,7 @@ void ReadSettings()
     monster LOVequivocator =  ToMonster("LOV Equivocator");
     effect synthMyst = ToEffect("Synthesis: Smart"); // from Sweet Synthesis skill
     effect synthMP = ToEffect("Synthesis: Energy"); // from Sweet Synthesis skill
+    effect favorLyle = ToEffect("Favored by Lyle");
     item licenseChill = ToItem("License to Chill"); // mana restore
     item yexpressCard = ToItem("Platinum Yendorian Express Card"); // mana restore
     item oscusSoda = ToItem("Oscus's neverending soda");
@@ -662,6 +665,8 @@ void ReadSettings()
 // makin' copies, at the copy machine
     item camera = ToItem("4-d camera");
     item usedcamera = ToItem("Shaking 4-d camera");
+    item beerLens = ToItem("beer lens");
+    item nothingInTheBox = ToItem("nothing-in-the-box");
     item enamorang = ToItem("LOV Enamorang");
     item BACON = ToItem("BACON");
     item usedFax = ToItem("photocopied monster");
@@ -703,6 +708,11 @@ void ReadSettings()
     item gingerAcc2 = ToItem("candy necktie");
     item gingerAcc3 = ToItem("chocolate pocketwatch");
     item gingerSprinkles = ToItem("sprinkles");
+
+// Madness bakery
+    item strawberry = ToItem("strawberry");
+    item icing = ToItem("glob of enchanted icing");
+    item popPart = ToItem("popular part");
 
 // effect which will confuse KoLmafia
     item greendrops = ToItem("soft green echo eyedrop antidote"); // remove undesirable effects
@@ -752,6 +762,13 @@ void ReadSettings()
     item louderThanBomb = ToItem("Louder Than Bomb");
     item tennisBall = ToItem("tennis ball");
 
+// cheesy items to increase rollover adventures
+    item cheeseStaff = ToItem("Staff of Queso Escusado");
+    item cheeseSword = ToItem("stinky cheese sword");
+    item cheesePants = ToItem("stinky cheese diaper");
+    item cheeseShield = ToItem("stinky cheese wheel");
+    item cheeseAccessory = ToItem("stinky cheese eye");
+
 // script state variables
     familiar runFamiliar;
     float snowSuitWeight = 0;
@@ -761,6 +778,7 @@ void ReadSettings()
     boolean canRaveConcentration = false; // item drops
     boolean canRaveSteal = false; // steal an item
     boolean canAccordionBash = false;
+    boolean canSingAlong = false;
     string bagOTricksSkill = "";
     boolean needsSpookyPutty = false;
     boolean needsRainDoh = false;
@@ -779,6 +797,7 @@ void ReadSettings()
     boolean canDuplicate = false;
     boolean canTurbo = false;
     int enamorangsUsed = 0;
+    boolean digitizeActivationNeeded = false;
     boolean canJokesterGun = false;
     boolean canBatoomerang = false;
     boolean canMissileLauncher = false;
@@ -830,6 +849,7 @@ void ReadSettings()
     void PrepareFamiliar(boolean forMeaty);
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
+    void UseWarbearOven();
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
     void TryReduceManaCost(skill sk);
@@ -845,7 +865,7 @@ void ReadSettings()
     item[slot] InitOutfit(string outfitName);
     item[slot] InitOutfit(string outfitName, item[slot] result);
     void DebugOutfit(string name, item[slot] o);
-
+    item ChooseCheapestThanksgetting();
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -1197,6 +1217,10 @@ DebugOutfit("Goal outfit", outfitDef);
         return mon == embezzler;
             //|| mon == mimeExecutive;
     }
+    boolean IsMeatyMonster(string mon)
+    {
+        return IsMeatyMonster(mon.to_monster());
+    }
 
     boolean MeatyFaxable()
     {
@@ -1204,7 +1228,7 @@ DebugOutfit("Goal outfit", outfitDef);
             return false;
         if (get_property("_photocopyUsed") != "false")
             return false;
-        if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+        if (IsMeatyMonster(get_property("photocopyMonster")))
             return true;
         if (!can_faxbot(meatyMonster))
             return false;
@@ -1213,39 +1237,39 @@ DebugOutfit("Goal outfit", outfitDef);
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
     boolean MeatyCameraed()
     {
         string capped = get_property("cameraMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && !get_property("_cameraUsed").to_boolean();
     }
     boolean MeatyRainDohed()
     {
         string capped = get_property("rainDohMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyPuttied()
     {
         string capped = get_property("spookyPuttyMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyEnamoranged()
     {
         string capped = get_property("enamorangMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyDigitized()
     {
         string capped = get_property("digitized");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyChateaud()
     {
         string capped = get_property("chateauMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && get_property("_chateauMonsterFought") == "false";
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
@@ -1280,6 +1304,11 @@ DebugOutfit("Goal outfit", outfitDef);
         canPocketCrumb = pantsGiving.have_equipped();
         staggerOption = 0;
         abstractioned = false;
+        canAccordionBash = accordionBash.have_skill()
+            && IsAccordion(weapon.equipped_item())
+            && bakeBackpack.have_equipped();
+
+        canSingAlong = singAlong.have_skill();
     }
     void DisableFreeKills()
     {
@@ -1328,7 +1357,7 @@ DebugOutfit("Goal outfit", outfitDef);
                 if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
                     abort("Aborting so you can choose whether to duplicate an item");
             }
-            if (page.contains_text("A path away. ALl ways. Always."))
+            if (page.contains_text("A path away. All ways. Always."))
             {
                 run_choice(6); // skip the adventure
             }
@@ -1598,7 +1627,14 @@ DebugOutfit("Goal outfit", outfitDef);
     }
     int GetFamiliarRunaways()
     {
-        int result = (my_familiar().familiar_weight() + weight_adjustment()) / 5;
+        if (my_familiar() != stompingBoots && my_familiar() != bandersnatch)
+            return 0;
+        //int familiarWeight = (my_familiar().familiar_weight() + weight_adjustment());
+        // weight_adjustment doesn't account for movable feast, but modifier_eval("W") does
+        // http://kolmafia.us/showthread.php?20249-Getting-Familiar-Weight
+        int familiarWeight = modifier_eval("W");
+
+        int result = familiarWeight / 5;
         result -= get_property("_banderRunaways").to_int();
         return result;
     }
@@ -1720,9 +1756,6 @@ DebugOutfit("Goal outfit", outfitDef);
         }
         canPocketCrumb = pantsGiving.have_equipped();
 
-        canAccordionBash = accordionBash.have_skill()
-            && IsAccordion(weapon.equipped_item())
-            && bakeBackpack.have_equipped();
 
         needsMeteorShower = meteorShower.have_skill()
             && runFamiliar != orphan
@@ -1765,12 +1798,31 @@ DebugOutfit("Goal outfit", outfitDef);
         }
         int digitizeCount = get_property("_sourceTerminalDigitizeUses").to_int();
         needsDigitize = digitizeCount == 0;
-        if (digitizeCount < 3)
+        if (digitizeCount < 3 && !needsDigitize)
         {
+            int turnsUntilDigitized = digitizeCounter - my_turnCount(); // how many turns until the next digitized monster shows up?
+            int turnsAfterNextDigitized = my_adventures();              // how many adventures will I have left after it shows up?
+            if (turnsUntilDigitized > 0)                                // in case the counter is brain damaged
+                turnsAfterNextDigitized -= turnsUntilDigitized;
+            int monstersPerDigitize = 4; // 7, 27, 57, 97
+
+            // todo: my brain is tired, these numbers might need revisiting.
+            // But worst case scenario, it digitizes at 97 when it should have been at 147, or vice versa,
+            // so nothing too horrible
+
+            // If you need to digitize every 147 adventures, you need at
+            // 97 turns left for the last digitize, and 147 more for the next
+            // to middle digitize.  But also need to account for number of
+            // turns before the next digitize encounter
+            if ((digitizeCount == 1 && turnsAfterNextDigitized >= 245)
+                || (digitizeCount == 2 && turnsAfterNextDigitized >= 105))
+            {
+                monstersPerDigitize = 5; // 7, 27, 57, 97, 147
+            }
             int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
-            if (digitizeRange >= 4)
+            if (digitizeRange >= monstersPerDigitize)
                 needsDigitize = true;
-            else if (my_turnCount() >= digitizeCounter && digitizeRange == 3)
+            else if (turnsUntilDigitized < 0 && digitizeRange == (monstersPerDigitize - 1))
             {
                 needsDigitize = true;
                 needBagOTricks = true;
@@ -1780,6 +1832,11 @@ DebugOutfit("Goal outfit", outfitDef);
         ChooseEducate(false, needsDigitize);
 
         needsEnamorang = enamorang.item_amount() > 0 && get_property("enamorangMonster") == "";
+        if (usedCamera.item_amount() == 0 && camera.item_amount() == 0 && beerLens.item_amount() > 0)
+        {
+            cli_execute("acquire nothing-in-the-box");
+            craft("paste", 1, nothingInTheBox, beerLens);
+        }
         needsCamera = usedCamera.item_amount() == 0 && camera.item_amount() > 0;
         needsPrintScreen = printScreen.item_amount() > 0 && get_property("screencappedMonster") == "";
         needsRainDoh = rainDoh.item_amount() > 0 && usedRainDoh.item_amount() == 0;
@@ -1915,16 +1972,19 @@ DebugOutfit("Goal outfit", outfitDef);
             }
             if (needsRomanticArrow)
             {
+                digitizeActivationNeeded = true;
                 needsRomanticArrow = false;
                 return "skill " + romanticArrow.to_string();
             }
             if (needsWinkAt)
             {
+                digitizeActivationNeeded = true;
                 needsWinkAt = false;
                 return "skill " + winkAt.to_string();
             }
             if (needsDigitize)
             {
+                digitizeActivationNeeded = true;
                 needsDigitize = false;
                 return "skill " + digitize.to_string();
             }
@@ -2039,6 +2099,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canAccordionBash = false;
             result += "; skill Accordion Bash";
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            result += "; skill Sing Along";
+        }
         if (needsMayfly)
         {
             needsMayfly = false;
@@ -2133,6 +2198,11 @@ print("Running filter = " + result, printColor);
 
     string Filter_Seal(int round, monster mon, string page)
     {
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
         {
             cursed = true;
@@ -2346,6 +2416,8 @@ print("Running filter = " + result, printColor);
             choice = ChooseBjornCrownFamiliar(choice, machineElf);
         if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, orphan);
+        if (forDrops && get_property("_optimisticCandleDropsCrown").to_int() < 3)
+            choice = ChooseBjornCrownFamiliar(choice, optimisticCandle);
         if (forDrops && get_property("_garbageFireDropsCrown").to_int() < 3)
             choice = ChooseBjornCrownFamiliar(choice, garbageFire);
 // todo: if robortender, maybe do weight buff instead
@@ -2912,6 +2984,11 @@ print("Running filter = " + result, printColor);
             staggerOption = 2;
             result += WrapInSafetyCheck(curseOfWeaksauce);
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            result += "; skill Sing Along";
+        }
         if (staggerOption < 3)
         {
             staggerOption = 3;
@@ -2995,6 +3072,11 @@ print("Running filter = " + result, printColor);
                 cursed = true;
                 return "skill " + curseOfWeaksauce.to_string();
             }
+            if (canSingAlong)
+            {
+                canSingAlong = false;
+                return "skill Sing Along";
+            }
             return ChooseDictionaryCombatAction();
         }
         string dup = Filter_Duplicate(round, mon, page);
@@ -3053,6 +3135,11 @@ print("Running filter = " + result, printColor);
         {
             cursed = true;
             return "skill " + curseOfWeaksauce.to_string();
+        }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
         }
         if (!abstractioned)
         {
@@ -3369,6 +3456,11 @@ print("Running filter = " + result, printColor);
 
     string Filter_TrapGhost(int round, monster mon, string page)
     {
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (CanCast(curseOfIslands) && !cursed) // reduce chances of stun breaking early
         {
             cursed = true;
@@ -3804,9 +3896,12 @@ print("Running filter = " + result, printColor);
         return bestThanks;
     }
 
-    boolean AcquireFeast(item food, int cashewCost)
+    boolean AcquireFeast(item food, int cashewCost, boolean forWarbearOven)
     {
-        if (food.item_amount() > 0)
+        if (forWarbearOven && get_property("_warbearInductionOvenUsed") == "true")
+            return false;
+
+        if (food.item_amount() > 0 && !forWarbearOven)
             return true;
 
         item cashewIngredient = noItem;
@@ -3820,14 +3915,17 @@ print("Running filter = " + result, printColor);
         }
         if (cashewIngredient.to_int() < 0 || foodIngredient.to_int() < 0)
         {
-            print("Invalid ingredients for " + food.to_string());
+            print("Invalid ingredients for " + food.to_string(), printColor);
         }
         int cashewPrice = cashew.mall_price() * cashewCost + foodIngredient.mall_price();
         int cornucopiaPrice = cornucopia.mall_price() * cashewCost / 3; // assume average of 3 cashews per cornucopia
-        if (cashewPrice > thanksgettingFoodCostLimit
-            && cornucopiaPrice > thanksgettingFoodCostLimit)
+        int priceLimit = thanksgettingFoodCostLimit;
+        if (forWarbearOven)
+            priceLimit *= 2; // should get two of them back, not just one
+        if (cashewPrice > priceLimit
+            && cornucopiaPrice > priceLimit)
         {
-            print("Thanksgetting feast cost exceeds " + thanksgettingFoodCostLimit + ", skipping", "red");
+            print("Thanksgetting feast cost exceeds " + priceLimit + ", skipping", "red");
             return false;
         }
         int ingredientPrice = cashewIngredient.mall_price() + foodIngredient.mall_price();
@@ -3845,12 +3943,19 @@ print("Running filter = " + result, printColor);
         }
         if (cashewIngredient.item_amount() == 0)
         {
-            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, thanksgettingFoodCostLimit / cashewCost))
+            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, priceLimit / cashewCost))
                 return false;
             if (!cashewIngredient.seller.buy(1, cashewIngredient))
                 return false;
         }
-        return craft("cook", 1, cashewIngredient, foodIngredient) > 0;
+        int craftCount = craft("cook", 1, cashewIngredient, foodIngredient);
+        if (craftCount > 0 && get_campground() contains oven)
+            set_property("_warbearInductionOvenUsed", "true");
+        return craftCount > 0;
+    }
+    boolean AcquireFeast(item food, int cashewCost)
+    {
+        return AcquireFeast(food, cashewCost, false);
     }
 
     boolean TrySpleenSpace(int providedSpleen)
@@ -3898,6 +4003,15 @@ print("Running filter = " + result, printColor);
 
         if (odeToBoozeEffect.have_effect() < providedDrunk)
         {
+            if (odeToBoozeEffect.have_effect() == 0
+                && !EnsureOneSongSpace())
+            {
+                if (HaveEquipment(songSpaceAcc) && songSpaceAcc.can_equip() && !songSpaceAcc.have_equipped())
+                {
+                    // slots 1 and 2 are for MP cost reduction
+                    acc3.equip(songSpaceAcc);
+                }
+            }
             if (odeToBooze.have_skill())
                 CastSkill(odeToBooze, providedDrunk, true);
             else
@@ -3957,6 +4071,7 @@ print("Running filter = " + result, printColor);
                     && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
                     BeforeSwapOutAsdon();
+                    UseWarbearOven();
                     use(1, mayoClinic);
                 }
                 if (!(get_campground() contains mayoClinic)
@@ -4015,15 +4130,15 @@ print("Running filter = " + result, printColor);
         // and this should buff exactly once
         int infTurns = 10000;
         // specify a 2 fullness remaining because we don't want to convert to drunk
+        if (thanks1.item_amount() == 0 && thanks2.item_amount() == 0 && thanks3.item_amount() == 0)
+        {
+            item bestThanks = ChooseCheapestThanksgetting();
+            if (!AcquireFeast(bestThanks, 1))
+                return false;
+        }
         if (RoomToEat(2)) { return TryEat(thanks1, thanksgetting, 2, 0, infTurns, unique); }
         if (RoomToEat(2)) { return TryEat(thanks2, thanksgetting, 2, 0, infTurns, unique); }
         if (RoomToEat(2)) { return TryEat(thanks3, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks4, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks5, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks6, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks7, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks8, thanksgetting, 2, 0, infTurns, unique); }
-        if (RoomToEat(2)) { return TryEat(thanks9, thanksgetting, 2, 0, infTurns, unique); }
         return false;
     }
     boolean TryBonusSpinThanksgetting()
@@ -4314,6 +4429,11 @@ print("Running filter = " + result, printColor);
             }
             elfCopiedTo = deck; // dumb placeholder, so it's not none
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (mon == crayonElf) // don't waste free kills on Crayon Elf, it's already a free fight
         {
             if (cigar.item_amount() > 0)
@@ -4516,6 +4636,7 @@ print("Running filter = " + result, printColor);
     boolean AcquireFullFeast()
     {
         cli_execute("acquire 8 jumping horseradish");
+        UseWarbearOven();
         boolean success = true;
         success = AcquireFeast(thanks1, 1) && success;
         success = AcquireFeast(thanks2, 1) && success;
@@ -4852,20 +4973,22 @@ print("Running filter = " + result, printColor);
         {
             cli_execute(executeBeforeEat);
         }
-        TryDrink(dirt, dirtEffect, 1, 1);
-        TryDrink(gingerWine, gingerWineEffect, 2, 1);
 
         BeforeSwapOutAsdon();
+        UseWarbearOven();
         if (nightBefore)
         {
             TryEat(horseradish, kickedInSinuses, 1, 0, turns, false);
             TryEat(foodCone, foodConeEffect, 2, 0, turns, false);
+            if (RoomToEat(2))
+            {
+                item bestThanks = ChooseCheapestThanksgetting();
+                TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
+            }
             if (expensiveBuffs || fistTurkey.have_familiar())
             {
                 TryDrink(turkey, turkeyEffect, 1, turns);
             }
-            item bestThanks = ChooseCheapestThanksgetting();
-            TryEat(bestThanks, thanksgetting, 2, 0, turns, false);
         }
         else
         {
@@ -4905,12 +5028,6 @@ print("Running filter = " + result, printColor);
                     break;
             }
             TryBonusThanksgetting();
-            if (fistTurkey.have_familiar())
-            {
-                int turkeyturns = turns > 25 * turkeyLimit ? 25 * turkeyLimit : turns; // limit to 5 turkeys a day, since that's all that can drop per day
-                for (int i = 0; i < turkeyLimit; i++)
-                    TryDrink(turkey, turkeyEffect, 1, turkeyturns);
-            }
             if (CanDistention() // only worth doing a pantsgiving fullness run if we can get a second fullness point from distention pill
                 && thanksgetting.have_effect() < turns // only if more turns of the effect were requested
                 && my_fullness() == fullness_limit()) // pants can't activate without being completely full
@@ -4930,8 +5047,16 @@ print("Running filter = " + result, printColor);
         {
             cli_execute(executeAfterEat);
         }
+        TryDrink(dirt, dirtEffect, 1, 1);
+        TryDrink(gingerWine, gingerWineEffect, 2, 1);
         if (!nightBefore)
         {
+            if (fistTurkey.have_familiar())
+            {
+                int turkeyturns = turns > 25 * turkeyLimit ? 25 * turkeyLimit : turns; // limit to 5 turkeys a day, since that's all that can drop per day
+                for (int i = 0; i < turkeyLimit; i++)
+                    TryDrink(turkey, turkeyEffect, 1, turkeyturns);
+            }
             for (int i = 0; i < sacramentoLimit; i++) // drink sacramento wine for +item buff
                 TryDrink(sacramento, sacramentoEffect, 1, turns);
 
@@ -4944,8 +5069,8 @@ print("Running filter = " + result, printColor);
         }
 
         // don't finish with accordion buffs until after we've drunk, because we might need to shrug Ode to fit the song in our head
-        TryLimitedAccordionBuff(thingfinder, thingfinderEffect, "_thingfinderCasts", turns);
-        TryLimitedAccordionBuff(companionship, companionshipEffect, "_companionshipCasts", turns);
+        TryLimitedAccordionBuff(thingfinder, thingfinderEffect, "_thingfinderCasts", turns < 0 ? 500 : turns);
+        TryLimitedAccordionBuff(companionship, companionshipEffect, "_companionshipCasts", turns < 0 ? 500 : turns);
 
         if (EnsureOneSongSpace())
         {
@@ -4966,7 +5091,7 @@ print("Running filter = " + result, printColor);
     }
 
 
-    string runawayFilter(int round, monster mon, string page)
+    string Filter_Runaway(int round, monster mon, string page)
     {
         if (needsCleesh)
         {
@@ -5007,7 +5132,7 @@ print("Running filter = " + result, printColor);
         if (GetFreeRunaways() > 0)
         {
             PrepareSmokeBomb();
-            return "runawayFilter";
+            return "Filter_Runaway";
         }
         else
             return "Filter_Standard";
@@ -5044,6 +5169,39 @@ print("Running filter = " + result, printColor);
         //acc3.equip(gingerAcc3);
     }
 
+    boolean CheesyRunaway(item i, slot s, int needRunaways)
+    {
+        if (i.have_equipped())
+            return true;
+        if (i.item_amount() == 0)
+            return false;
+        int haveRunaways = GetFreeRunaways();
+        item old = s.equipped_item();
+        if (i.item_amount() > 0 && i.can_equip())
+            s.equip(i);
+        
+        if (GetFreeRunaways() < haveRunaways && GetFreeRunaways() < needRunaways)
+        {
+            print("Not enough runaways with " + i + " equipped, swapping back", printColor);
+            s.equip(old);
+        }
+        return i.have_equipped();
+    }
+
+    void CheesyRunaway(int needRunaways)
+    {
+        // having these cheesy items equipped during runaways counts towards combats for the day
+        int haveRunaways = GetFreeRunaways();
+        if (!CheesyRunaway(cheeseStaff, weapon, needRunaways))
+            CheesyRunaway(cheeseSword, weapon, needRunaways);
+        CheesyRunaway(cheesePants, pants, needRunaways);
+        CheesyRunaway(cheeseShield, offhand, needRunaways);
+        if (!CheesyRunaway(cheeseAccessory, acc1, needRunaways)
+            && CheesyRunaway(cheeseAccessory, acc2, needRunaways)
+            && CheesyRunaway(cheeseAccessory, acc3, needRunaways))
+        {
+        }
+    }
 
     void RunawayGingerbread()
     {
@@ -5055,16 +5213,19 @@ print("Running filter = " + result, printColor);
         {
             return;
         }
-        if (!stompingBoots.have_familiar() && !bandersnatch.have_familiar())
-            return;
+        if (stompingBoots.have_familiar())
+            stompingBoots.use_familiar();
+        else if (bandersnatch.have_familiar())
+            bandersnatch.use_familiar();
         if (GetFreeRunaways() < 3)
             return;
         if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?", true))
         {
             return;
         }
+        CheesyRunaway(3);
         string filter = ReadyRunaway();
-        if (filter != "runawayFilter")
+        if (filter != "Filter_Runaway")
             return;
         string page = LoadChoiceAdventure(gingerCivic, false); // civic center
         run_choice(1); // clock choice
@@ -5104,6 +5265,58 @@ print("Running filter = " + result, printColor);
         {
             print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
             run_choice(1); // take a free drink
+        }
+    }
+
+    void RunawayMadnessBakery()
+    {
+        if (stompingBoots.have_familiar())
+            stompingBoots.use_familiar();
+        else if (bandersnatch.have_familiar())
+            bandersnatch.use_familiar();
+        else
+            return;
+
+        item[slot] weightOF = CopyOutfit(weightOutfitPieces);
+        if (HaveEquipment(snowSuit))
+            weightOF[famEqp] = snowSuit;
+        WearOutfit(weightOF);
+
+        boolean first = true;
+
+        while (GetFamiliarRunaways() > 0
+            && strawberry.item_amount() > 0
+            && dough.item_amount() > 0
+            && icing.item_amount() > 0
+            && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true"))
+        {
+            if (first)
+            {
+                first = false;
+                if (!UserConfirmDefault("Use free runaways to make popular tarts?", true))
+                    return;
+                CheesyRunaway(1);
+            }
+            string filter = ReadyRunaway();
+            if (filter != "Filter_Runaway")
+                return;
+            print("Visiting Madness Bakery with free runaways", printColor);
+            string page = visit_url("adventure.php?snarfblat=440");
+            if (page.contains_text("choice.php"))
+            {
+                run_choice(3); // popular machine
+                run_choice(1); // make popular tart
+            }
+            else
+                run_combat(filter);
+            if (GetFamiliarRunaways() <= 0)
+            {
+                WearOutfit(weightOF);
+                if (GetFamiliarRunaways() <= 0)
+                {
+                    TryUseMovableFeast();
+                }
+            }
         }
     }
 
@@ -5221,11 +5434,11 @@ print("Running filter = " + result, printColor);
     {
         if (my_turnCount() == digitizeCounter)
         {
-            return get_property("_sourceTerminalDigitizeMonster") == embezzler.to_string();
+            return IsMeatyMonster(get_property("_sourceTerminalDigitizeMonster"));
         }
         if (my_turnCount() == enamorangCounter)
         {
-            return get_property("enamorangMonster") == embezzler.to_string();
+            return IsMeatyMonster(get_property("enamorangMonster"));
         }
         return false;
     }
@@ -5260,8 +5473,24 @@ print("Running filter = " + result, printColor);
         }
     }
 
+    void TryActivateDigitize()
+    {
+        if (digitizeActivationNeeded)
+        {
+            digitizeActivationNeeded = false;
+            // visit "An Overgrown shrine", shouldn't take an adventure, but will activate
+            // the digitize counter immediately (which combat through items won't do):
+            string page = visit_url("adventure.php?snarfblat=349");
+            if (page.contains_text("choice.php"))
+                run_choice(6); // Back off
+            else
+                RunCombat("Filter_Standard");
+        }
+    }
+
     boolean RunCopiedMeaty()
     {
+        TryActivateDigitize();
         PrepareMeaty();
 
         // any copying item that we're using up should be set to "need to use" to
@@ -5366,11 +5595,12 @@ print("Running filter = " + result, printColor);
 
     void ActivateChibiBuddy()
     {
-        if (chibiOff.item_amount() > 0)
+        print("chibi: Off = " + chibiOff.item_amount() + ", on =" + chibiOn.item_amount(), printColor);
+        if (chibiOff.item_amount() > 0 && chibiOn.item_amount() == 0)
         {
             //use(1, chibiOff);
             visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5925");
-            visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=633&name=ChibiBuffMaker");
+            print(visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=633&option=1&chibiname=ChibiBuffMaker"));
         }
         if (chibiOn.item_amount() > 0 && chibiEffect.have_effect() == 0)
         {
@@ -5494,16 +5724,21 @@ print("Running filter = " + result, printColor);
         {
             if (can_still_steal())
                 return "\"pickpocket\"";
+            if (canSingAlong)
+            {
+                canSingAlong = false;
+                return "skill Sing Along";
+            }
             if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
             {
                 mortared = true;
                 return "skill " + mortarShell.to_string();
             }
         }
-        if (repeatAction == "" && sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost())
-            repeatAction = "skill " + sauceStorm.to_string();
         if (repeatAction == "" && thrustSmack.have_skill() && my_mp() > thrustSmack.mp_cost())
             repeatAction =  "skill " + thrustSmack.to_string();
+        if (repeatAction == "" && sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost())
+            repeatAction = "skill " + sauceStorm.to_string();
         if (repeatAction != "")
         {
             string result = "";
@@ -5589,6 +5824,9 @@ print("Running filter = " + result, printColor);
         if (get_property("telescopeUpgrades").to_int() > 0 && get_property("telescopeLookedHigh") == "false")
             cli_execute("telescope high"); // +stats
 
+        if (favorLyle.have_effect() == 0)
+            visit_url("place.php?whichplace=monorail&action=monorail_lyle");
+
         visit_url("place.php?whichplace=spacegate"); // have to visit it to see if we have access
         if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
@@ -5652,6 +5890,31 @@ print("Running filter = " + result, printColor);
             pants.equip(noItem);
     }
 
+    item MoreValuableCrafting(item i1, item i2)
+    {
+        // for crafting purposes, the item we have the least of is most valuable for duplicating,
+        // and if they're tied, choose by the most expensive mall price
+        if (i1.item_amount() < i2.item_amount())
+            return i1;
+        if (i1.item_amount() > i2.item_amount())
+            return i2;
+        if (i1.mall_price() > i2.mall_price())
+            return i1;
+        return i2;
+    }
+
+    void UseWarbearOven()
+    {
+        if (get_property("_warbearInductionOvenUsed") == "true")
+            return;
+        if (!(get_campground() contains oven))
+            return;
+        item best = MoreValuableCrafting(thanks7, thanks8);
+        best = MoreValuableCrafting(best, thanks9);
+        print("Attempting to duplicate craft " + best + " using warbear induction oven", printColor);
+        AcquireFeast(best, 3, true);
+    }
+
     void BeforeSwapOutMayo()
     {
         if (get_campground() contains mayoClinic)
@@ -5674,7 +5937,7 @@ print("Running filter = " + result, printColor);
             && get_property("_workshedItemUsed") == "false"
             && get_property("_missileLauncherUsed") == "false")
         {
-            print("Using Missile Launcher while Asdon Martin is active");
+            print("Using Missile Launcher while Asdon Martin is active", printColor);
             shouldMissileLauncher = true;
             FuelAsdon(100);
             PrepareFilterState();
@@ -5711,7 +5974,7 @@ print("batoom = " + canBatoomerang);
 print("missile = " + canMissileLauncher);
 print("punch = " + canShatteringPunch);
 print("mob = " + canMobHit);
-        if ( !UserConfirmDefault("Run all free kills in LT&T?", true) )
+        if ( !UserConfirmDefault("Run all free kills in LT&T?", false) )
             return;
         print("Checking for need telegram, count = " + telegram.item_amount(), printColor);
         string page;
@@ -5807,6 +6070,7 @@ print("mob = " + canMobHit);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
+            RunawayMadnessBakery();
         }
         for (int i = 0; i < turnCount; i++)
         {
