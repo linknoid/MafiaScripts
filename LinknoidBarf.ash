@@ -32,16 +32,13 @@
 
 // TODO:
 
-// Reducing server hits:
-// buy consumables in larger quantities than 1
-// investigate ways to script combat as a macro instead of requiring a full consult for each round of combat
-// 
+// First digitize needs to visit adventure.php to actually trigger the digitize counter to start.
+// Can this be done by visiting an overgrown shrine?
 
 // duplicate witchess knight (code is partly there, but it's not actually firing)
 
 // track candle/scroll drops from intergnat
 
-// maybe do faxing/wishing of black crayon elf if deck isn't available
 
 // For dice gear:
 // Change filter to kill ticking modifier monsters immediately instead of dragging out combat
@@ -436,6 +433,7 @@ void ReadSettings()
     skill funkslinging = ToSkill("Ambidextrous Funkslinging");
     skill meteorShower = ToSkill("Meteor Shower");
     skill accordionBash = ToSkill("Accordion Bash");
+    skill singAlong = ToSkill("Sing Along");
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
     item carpe = ToItem("carpe");
@@ -780,6 +778,7 @@ void ReadSettings()
     boolean canRaveConcentration = false; // item drops
     boolean canRaveSteal = false; // steal an item
     boolean canAccordionBash = false;
+    boolean canSingAlong = false;
     string bagOTricksSkill = "";
     boolean needsSpookyPutty = false;
     boolean needsRainDoh = false;
@@ -798,6 +797,7 @@ void ReadSettings()
     boolean canDuplicate = false;
     boolean canTurbo = false;
     int enamorangsUsed = 0;
+    boolean digitizeActivationNeeded = false;
     boolean canJokesterGun = false;
     boolean canBatoomerang = false;
     boolean canMissileLauncher = false;
@@ -1217,6 +1217,10 @@ DebugOutfit("Goal outfit", outfitDef);
         return mon == embezzler;
             //|| mon == mimeExecutive;
     }
+    boolean IsMeatyMonster(string mon)
+    {
+        return IsMeatyMonster(mon.to_monster());
+    }
 
     boolean MeatyFaxable()
     {
@@ -1224,7 +1228,7 @@ DebugOutfit("Goal outfit", outfitDef);
             return false;
         if (get_property("_photocopyUsed") != "false")
             return false;
-        if (IsMeatyMonster(get_property("photocopyMonster").to_monster()))
+        if (IsMeatyMonster(get_property("photocopyMonster")))
             return true;
         if (!can_faxbot(meatyMonster))
             return false;
@@ -1233,39 +1237,39 @@ DebugOutfit("Goal outfit", outfitDef);
     boolean MeatyPrintScreened()
     {
         string capped = get_property("screencappedMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens; // need guard to prevent infinite print screening
     }
     boolean MeatyCameraed()
     {
         string capped = get_property("cameraMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && !get_property("_cameraUsed").to_boolean();
     }
     boolean MeatyRainDohed()
     {
         string capped = get_property("rainDohMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyPuttied()
     {
         string capped = get_property("spookyPuttyMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyEnamoranged()
     {
         string capped = get_property("enamorangMonster");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyDigitized()
     {
         string capped = get_property("digitized");
-        return IsMeatyMonster(capped.to_monster());
+        return IsMeatyMonster(capped);
     }
     boolean MeatyChateaud()
     {
         string capped = get_property("chateauMonster");
-        return IsMeatyMonster(capped.to_monster())
+        return IsMeatyMonster(capped)
             && get_property("_chateauMonsterFought") == "false";
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
@@ -1300,6 +1304,11 @@ DebugOutfit("Goal outfit", outfitDef);
         canPocketCrumb = pantsGiving.have_equipped();
         staggerOption = 0;
         abstractioned = false;
+        canAccordionBash = accordionBash.have_skill()
+            && IsAccordion(weapon.equipped_item())
+            && bakeBackpack.have_equipped();
+
+        canSingAlong = singAlong.have_skill();
     }
     void DisableFreeKills()
     {
@@ -1620,7 +1629,12 @@ DebugOutfit("Goal outfit", outfitDef);
     {
         if (my_familiar() != stompingBoots && my_familiar() != bandersnatch)
             return 0;
-        int result = (my_familiar().familiar_weight() + weight_adjustment()) / 5;
+        //int familiarWeight = (my_familiar().familiar_weight() + weight_adjustment());
+        // weight_adjustment doesn't account for movable feast, but modifier_eval("W") does
+        // http://kolmafia.us/showthread.php?20249-Getting-Familiar-Weight
+        int familiarWeight = modifier_eval("W");
+
+        int result = familiarWeight / 5;
         result -= get_property("_banderRunaways").to_int();
         return result;
     }
@@ -1742,9 +1756,6 @@ DebugOutfit("Goal outfit", outfitDef);
         }
         canPocketCrumb = pantsGiving.have_equipped();
 
-        canAccordionBash = accordionBash.have_skill()
-            && IsAccordion(weapon.equipped_item())
-            && bakeBackpack.have_equipped();
 
         needsMeteorShower = meteorShower.have_skill()
             && runFamiliar != orphan
@@ -1787,12 +1798,31 @@ DebugOutfit("Goal outfit", outfitDef);
         }
         int digitizeCount = get_property("_sourceTerminalDigitizeUses").to_int();
         needsDigitize = digitizeCount == 0;
-        if (digitizeCount < 3)
+        if (digitizeCount < 3 && !needsDigitize)
         {
+            int turnsUntilDigitized = digitizeCounter - my_turnCount(); // how many turns until the next digitized monster shows up?
+            int turnsAfterNextDigitized = my_adventures();              // how many adventures will I have left after it shows up?
+            if (turnsUntilDigitized > 0)                                // in case the counter is brain damaged
+                turnsAfterNextDigitized -= turnsUntilDigitized;
+            int monstersPerDigitize = 4; // 7, 27, 57, 97
+
+            // todo: my brain is tired, these numbers might need revisiting.
+            // But worst case scenario, it digitizes at 97 when it should have been at 147, or vice versa,
+            // so nothing too horrible
+
+            // If you need to digitize every 147 adventures, you need at
+            // 97 turns left for the last digitize, and 147 more for the next
+            // to middle digitize.  But also need to account for number of
+            // turns before the next digitize encounter
+            if ((digitizeCount == 1 && turnsAfterNextDigitized >= 245)
+                || (digitizeCount == 2 && turnsAfterNextDigitized >= 105))
+            {
+                monstersPerDigitize = 5; // 7, 27, 57, 97, 147
+            }
             int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
-            if (digitizeRange >= 4)
+            if (digitizeRange >= monstersPerDigitize)
                 needsDigitize = true;
-            else if (my_turnCount() >= digitizeCounter && digitizeRange == 3)
+            else if (turnsUntilDigitized < 0 && digitizeRange == (monstersPerDigitize - 1))
             {
                 needsDigitize = true;
                 needBagOTricks = true;
@@ -1942,16 +1972,19 @@ DebugOutfit("Goal outfit", outfitDef);
             }
             if (needsRomanticArrow)
             {
+                digitizeActivationNeeded = true;
                 needsRomanticArrow = false;
                 return "skill " + romanticArrow.to_string();
             }
             if (needsWinkAt)
             {
+                digitizeActivationNeeded = true;
                 needsWinkAt = false;
                 return "skill " + winkAt.to_string();
             }
             if (needsDigitize)
             {
+                digitizeActivationNeeded = true;
                 needsDigitize = false;
                 return "skill " + digitize.to_string();
             }
@@ -2066,6 +2099,11 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canAccordionBash = false;
             result += "; skill Accordion Bash";
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            result += "; skill Sing Along";
+        }
         if (needsMayfly)
         {
             needsMayfly = false;
@@ -2160,6 +2198,11 @@ print("Running filter = " + result, printColor);
 
     string Filter_Seal(int round, monster mon, string page)
     {
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
         {
             cursed = true;
@@ -2941,6 +2984,11 @@ print("Running filter = " + result, printColor);
             staggerOption = 2;
             result += WrapInSafetyCheck(curseOfWeaksauce);
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            result += "; skill Sing Along";
+        }
         if (staggerOption < 3)
         {
             staggerOption = 3;
@@ -3024,6 +3072,11 @@ print("Running filter = " + result, printColor);
                 cursed = true;
                 return "skill " + curseOfWeaksauce.to_string();
             }
+            if (canSingAlong)
+            {
+                canSingAlong = false;
+                return "skill Sing Along";
+            }
             return ChooseDictionaryCombatAction();
         }
         string dup = Filter_Duplicate(round, mon, page);
@@ -3082,6 +3135,11 @@ print("Running filter = " + result, printColor);
         {
             cursed = true;
             return "skill " + curseOfWeaksauce.to_string();
+        }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
         }
         if (!abstractioned)
         {
@@ -3398,6 +3456,11 @@ print("Running filter = " + result, printColor);
 
     string Filter_TrapGhost(int round, monster mon, string page)
     {
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (CanCast(curseOfIslands) && !cursed) // reduce chances of stun breaking early
         {
             cursed = true;
@@ -4366,6 +4429,11 @@ print("Running filter = " + result, printColor);
             }
             elfCopiedTo = deck; // dumb placeholder, so it's not none
         }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
         if (mon == crayonElf) // don't waste free kills on Crayon Elf, it's already a free fight
         {
             if (cigar.item_amount() > 0)
@@ -5208,8 +5276,11 @@ print("Running filter = " + result, printColor);
             bandersnatch.use_familiar();
         else
             return;
-        WearOutfit(weightOutfitPieces);
-        CheesyRunaway(1);
+
+        item[slot] weightOF = CopyOutfit(weightOutfitPieces);
+        if (HaveEquipment(snowSuit))
+            weightOF[famEqp] = snowSuit;
+        WearOutfit(weightOF);
 
         boolean first = true;
 
@@ -5224,6 +5295,7 @@ print("Running filter = " + result, printColor);
                 first = false;
                 if (!UserConfirmDefault("Use free runaways to make popular tarts?", true))
                     return;
+                CheesyRunaway(1);
             }
             string filter = ReadyRunaway();
             if (filter != "Filter_Runaway")
@@ -5239,7 +5311,7 @@ print("Running filter = " + result, printColor);
                 run_combat(filter);
             if (GetFamiliarRunaways() <= 0)
             {
-                WearOutfit(weightOutfitPieces);
+                WearOutfit(weightOF);
                 if (GetFamiliarRunaways() <= 0)
                 {
                     TryUseMovableFeast();
@@ -5362,11 +5434,11 @@ print("Running filter = " + result, printColor);
     {
         if (my_turnCount() == digitizeCounter)
         {
-            return get_property("_sourceTerminalDigitizeMonster") == embezzler.to_string();
+            return IsMeatyMonster(get_property("_sourceTerminalDigitizeMonster"));
         }
         if (my_turnCount() == enamorangCounter)
         {
-            return get_property("enamorangMonster") == embezzler.to_string();
+            return IsMeatyMonster(get_property("enamorangMonster"));
         }
         return false;
     }
@@ -5401,8 +5473,24 @@ print("Running filter = " + result, printColor);
         }
     }
 
+    void TryActivateDigitize()
+    {
+        if (digitizeActivationNeeded)
+        {
+            digitizeActivationNeeded = false;
+            // visit "An Overgrown shrine", shouldn't take an adventure, but will activate
+            // the digitize counter immediately (which combat through items won't do):
+            string page = visit_url("adventure.php?snarfblat=349");
+            if (page.contains_text("choice.php"))
+                run_choice(6); // Back off
+            else
+                RunCombat("Filter_Standard");
+        }
+    }
+
     boolean RunCopiedMeaty()
     {
+        TryActivateDigitize();
         PrepareMeaty();
 
         // any copying item that we're using up should be set to "need to use" to
@@ -5636,16 +5724,21 @@ print("Running filter = " + result, printColor);
         {
             if (can_still_steal())
                 return "\"pickpocket\"";
+            if (canSingAlong)
+            {
+                canSingAlong = false;
+                return "skill Sing Along";
+            }
             if (canMortar && my_mp() < mortarShell.mp_cost() && !mortared)
             {
                 mortared = true;
                 return "skill " + mortarShell.to_string();
             }
         }
-        if (repeatAction == "" && sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost())
-            repeatAction = "skill " + sauceStorm.to_string();
         if (repeatAction == "" && thrustSmack.have_skill() && my_mp() > thrustSmack.mp_cost())
             repeatAction =  "skill " + thrustSmack.to_string();
+        if (repeatAction == "" && sauceStorm.have_skill() && my_mp() > sauceStorm.mp_cost())
+            repeatAction = "skill " + sauceStorm.to_string();
         if (repeatAction != "")
         {
             string result = "";
