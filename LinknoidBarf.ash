@@ -723,6 +723,7 @@ void ReadSettings()
     item papier3 = ToItem("papier-masque"); // inserts random words into sentences
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
     effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
+    effect haikuMind = ToEffect("Haiku State of Mind"); // turns everything into haiku
 
 // free combats
     item genie = ToItem("genie bottle");
@@ -1724,6 +1725,7 @@ DebugOutfit("Goal outfit", outfitDef);
         RemoveConfusionEffects(papier3, firstCheck);
         RemoveConfusionEffects(disAbled);
         RemoveConfusionEffects(anapests);
+        RemoveConfusionEffects(haikuMind );
     }
 
     boolean PrepareAsdonLauncher()
@@ -4602,7 +4604,7 @@ print("Running filter = " + result, printColor);
         {
             if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
                 return;
-            cli_execute("briefcase b " + keyword);
+            cli_execute("Briefcase b " + keyword);
             if (effectTurns == kgbBuff.have_effect())
             {
                 print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?", "red");
@@ -4619,7 +4621,7 @@ print("Running filter = " + result, printColor);
         if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
             return;
         // code to control briefcase is too complex, we depend on Ezandora's briefcase script
-        cli_execute("briefcase martinis"); // make sure to get martinis first
+        cli_execute("Briefcase martinis"); // make sure to get martinis first
         KGBBuff(turns, kgbMeat, "meat");
         KGBBuff(turns, kgbItems, "item"); // any leftover clicks after done buffing +meat go to +item
     }
