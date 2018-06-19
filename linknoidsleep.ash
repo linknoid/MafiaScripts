@@ -1,6 +1,7 @@
 familiar stooper = $familiar[Stooper];
 familiar orphan = $familiar[Trick-or-Treating Tot];
 item sleepCostume = $item[li'l unicorn costume];
+item sleepCostumeGeneral = $item[solid shifting time weirdness];
 skill odeToBooze = $skill[The Ode to Booze];
 effect odeToBoozeEffect = $effect[Ode to Booze];
 item elemCaip = $item[Elemental caipiroska];
@@ -12,6 +13,13 @@ item thanks8 = $item[thanksgiving turkey];
 item thanks9 = $item[warm gravy];
 item cashew = $item[cashew];
 item cornucopia = $item[cornucopia];
+item pokeGarden = $item[packet of tall grass seeds];
+item fertilizer = $item[Poké-Gro fertilizer];
+item thanksGarden = $item[packet of thanksgarden seeds];
+item Xtattoo = $item[temporary X tattoos];
+effect straightEdge = $effect[Straight-Edgy];
+item skeletonX = $item[X];
+
 
 string printColor = "orange";
 
@@ -25,6 +33,55 @@ void OdeUp(int size)
 		if (odeToBoozeEffect.have_effect() < size)
 		{
 			abort("Need to acquire OdeToBooze before drinking");
+		}
+	}
+}
+int GetOvernightAdventures()
+{
+	int GetAdventureGain(slot sl)
+	{
+		return sl.equipped_item().numeric_modifier("adventures").to_int();
+	}
+	slot head = $slot[hat];
+	slot back = $slot[back];
+	slot shirt = $slot[shirt];
+	slot weapon = $slot[weapon];
+	slot offhand = $slot[off-hand];
+	slot pants = $slot[pants];
+	slot acc1 = $slot[acc1];
+	slot acc2 = $slot[acc2];
+	slot acc3 = $slot[acc3];
+	slot famEqp = $slot[familiar];
+
+	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40; // 40 basic regen for all characters
+	if (get_property("_borrowedTimeUsed") == "true")
+		overnightAdventureGain -= 20;
+	overnightAdventureGain += GetAdventureGain(head);
+	overnightAdventureGain += GetAdventureGain(back);
+	overnightAdventureGain += GetAdventureGain(shirt);
+	overnightAdventureGain += GetAdventureGain(weapon);
+	overnightAdventureGain += GetAdventureGain(offhand);
+	overnightAdventureGain += GetAdventureGain(pants);
+	overnightAdventureGain += GetAdventureGain(acc1);
+	overnightAdventureGain += GetAdventureGain(acc2);
+	overnightAdventureGain += GetAdventureGain(acc3);
+	overnightAdventureGain += GetAdventureGain(famEqp);
+	return overnightAdventureGain;
+}
+void SwitchToThanksgarden()
+{
+	foreach it, count in get_campground()
+	{
+		if (it == pokeGarden && thanksGarden.item_amount() > 0)
+		{
+			if (count == 0 && fertilizer.item_amount() > 0)
+			{
+				use(1, fertilizer); // this will get converted to a single cornucopia, but it should grow to 3 tomorrow
+			}
+			if (count <= 1)
+			{
+				use(1, thanksGarden);
+			}
 		}
 	}
 }
@@ -42,22 +99,44 @@ void main()
 		stooper.use_familiar();
 	}
 	int remainingDrunk = inebriety_limit() - my_inebriety();
-	if (get_property("barrelShrineUnlocked") == "true"
-		&& my_class().to_string() == "Accordion Thief"
-		&& get_property("_barrelPrayer") != "true") 
+	int advGain = GetOvernightAdventures();
+	if (advGain + my_adventures() + remainingDrunk * 4.5 > 200)
 	{
-		cli_execute("barrelprayer buff");
+		if (straightEdge.have_effect() == 0)
+		{
+			if (Xtattoo.item_amount() == 0)
+			{
+				if (skeletonX.item_amount() < 2)
+					buy(2, skeletonX);
+				// make our own
+				string page = visit_url("shop.php?whichshop=xo");
+				visit_url("shop.php?whichshop=xo&action=buyitem&quantity=1&whichrow=957&pwd=" + my_hash());
+			}
+			if (Xtattoo.item_amount() > 0)
+			{
+				use(1, Xtattoo);
+			}
+		}
 	}
-	OdeUp(remainingDrunk + 10);
-	while (inebriety_limit() > my_inebriety())
+	else
 	{
-		drink(1, elemCaip);
+		if (get_property("barrelShrineUnlocked") == "true"
+			&& my_class().to_string() == "Accordion Thief"
+			&& get_property("_barrelPrayer") != "true") 
+		{
+			cli_execute("barrelprayer buff");
+		}
+		OdeUp(remainingDrunk + 10);
+		while (inebriety_limit() > my_inebriety())
+		{
+			drink(1, elemCaip);
+		}
+		if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
+		{
+			pinkyRing.to_slot().equip(pinkyRing);
+		}
+		drink(1, wineBucket);
 	}
-	if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
-	{
-		pinkyRing.to_slot().equip(pinkyRing);
-	}
-	drink(1, wineBucket);
 	outfit("sleep");
 	if (orphan.have_familiar())
 	{
@@ -68,7 +147,18 @@ void main()
 			sleepCostume.to_slot().equip(sleepCostume);
 		}
 	}
-	while (get_property("_chocolatesUsed").to_int() < 2)
+	else if (sleepCostumeGeneral.item_amount() > 0
+		&& !sleepCostumeGeneral.have_equipped())
+	{
+		sleepCostumeGeneral.to_slot().equip(sleepCostumeGeneral);
+	}
+	if ($skill[That's Not a Knife].have_skill())
+	{
+		if ($item[soap knife].item_amount() > 0)
+			put_closet($item[soap knife].item_amount(), $item[soap knife]);
+		use_skill(1, $skill[That's Not a Knife]);
+	}
+	while (get_property("_chocolatesUsed").to_int() < 2 && advGain + my_adventures() < 197)
 	{
 		item choc;
 		switch (my_class())
@@ -84,6 +174,9 @@ void main()
 			break;
 		use(1, choc);
 	}
+
+	SwitchToThanksgarden();
+
 	if ($effect[Driving Observantly].have_effect() > 1000
 		&& oven.item_amount() > 0
 		&& !(get_campground() contains oven)
@@ -110,10 +203,10 @@ void main()
 			item foodIngredient;
 			foreach ingr in cookItem.get_ingredients()
 			{
-			    if (ingr.fullness > 0)
-				foodIngredient = ingr;
-			    else
-				cashewIngredient = ingr;
+				if (ingr.fullness > 0)
+					foodIngredient = ingr;
+				else
+					cashewIngredient = ingr;
 			}
 			while (cashew.item_amount() < 3)
 			{
