@@ -152,6 +152,18 @@ void main()
 	{
 		sleepCostumeGeneral.to_slot().equip(sleepCostumeGeneral);
 	}
+	if ($item[time-spinner].item_amount() > 0
+		&& get_property("_timeSpinnerMinutesUsed").to_int() <= 8
+		&& get_property("_timeSpinnerReplicatorUsed") == "false")
+	{
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9104");
+		run_choice(4); // visit the future
+		run_choice(1); // random choice
+		run_choice(3); // use the replicator
+		run_choice(2); // Kardashian gin
+		run_choice(4); // go to sleep
+		run_choice(2); // sleep away the future
+	}
 	if ($skill[That's Not a Knife].have_skill())
 	{
 		if ($item[soap knife].item_amount() > 0)

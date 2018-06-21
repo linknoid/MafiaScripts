@@ -6073,7 +6073,7 @@ print("mob = " + canMobHit);
         }
     }
 
-    bool swappedGarden = false;
+    boolean swappedGarden = false;
     void PrepGarden()
     {
         // Credit to Erosionseeker for pointing out that you can swap gardens multiple times a day, and that
