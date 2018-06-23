@@ -250,6 +250,13 @@ void ReadSettings()
     item breadFuel = ToItem("loaf of soda bread");
     item sphygmayo = ToItem("sphygmayomanometer");
 
+// garden
+    item pokeGarden = ToItem("packet of tall grass seeds");
+    //item fertilizer = ToItem("Poké-Gro fertilizer");
+    item fertilizer = ToItem("PokÃ©-Gro fertilizer");
+    item thanksGarden = ToItem("packet of thanksgarden seeds");
+
+// LT&T
     item telegram = ToItem("plaintive telegram");
     location telegramLoc = ToLocation("Investigating a Plaintive Telegram");
 
@@ -723,6 +730,7 @@ void ReadSettings()
     item papier3 = ToItem("papier-masque"); // inserts random words into sentences
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
     effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
+    effect haikuMind = ToEffect("Haiku State of Mind"); // turns everything into haiku
 
 // free combats
     item genie = ToItem("genie bottle");
@@ -1724,6 +1732,7 @@ DebugOutfit("Goal outfit", outfitDef);
         RemoveConfusionEffects(papier3, firstCheck);
         RemoveConfusionEffects(disAbled);
         RemoveConfusionEffects(anapests);
+        RemoveConfusionEffects(haikuMind );
     }
 
     boolean PrepareAsdonLauncher()
@@ -2255,6 +2264,8 @@ print("Running filter = " + result, printColor);
         if (MeatyPuttied())
             return true;
         if (MeatyChateaud())
+            return true;
+        if (MeatyFaxable())
             return true;
         return false;
     }
@@ -4600,7 +4611,7 @@ print("Running filter = " + result, printColor);
         {
             if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
                 return;
-            cli_execute("briefcase b " + keyword);
+            cli_execute("Briefcase b " + keyword);
             if (effectTurns == kgbBuff.have_effect())
             {
                 print("KGB buff failed, is Ezandora's briefcase script installed?  Are you out of clicks for the day?", "red");
@@ -4617,7 +4628,7 @@ print("Running filter = " + result, printColor);
         if (get_property("_kgbClicksUsed").to_int() > kgbClickLimit) // not enough clicks left, skipping
             return;
         // code to control briefcase is too complex, we depend on Ezandora's briefcase script
-        cli_execute("briefcase martinis"); // make sure to get martinis first
+        cli_execute("Briefcase martinis"); // make sure to get martinis first
         KGBBuff(turns, kgbMeat, "meat");
         KGBBuff(turns, kgbItems, "item"); // any leftover clicks after done buffing +meat go to +item
     }
@@ -6062,62 +6073,117 @@ print("mob = " + canMobHit);
         }
     }
 
+    boolean swappedGarden = false;
+    void PrepGarden()
+    {
+        // Credit to Erosionseeker for pointing out that you can swap gardens multiple times a day, and that
+        // you keep 1 day's growth each time, which means you can force 1 day's growth using fertilizer
+        // and then swap back to thanksgarden at the end of the day to harvest 3 a day, plus get two
+        // more fertilizer from turns spent, for a total of up to 5 cornucopias a day
+        foreach it, count in get_campground()
+        {
+            if ((it == thanksGarden || it == cornucopia) && pokeGarden.item_amount() > 0 && fertilizer.item_amount() > 0)
+            {
+                if (count > 1 && UserConfirmDefault("Harvest " + count + " from Thanksgiving garden to switch to " + pokeGarden, true))
+                {
+                    cli_execute("garden pick");
+                    count = 0;
+                }
+                if (count <= 1)
+                {
+                    use(1, pokeGarden);
+                    swappedGarden = true;
+                }
+            }
+        }
+    }
+    void RestoreGarden()
+    {
+        if (!swappedGarden)
+            return;
+        foreach it, count in get_campground()
+        {
+            if (it == pokeGarden && thanksGarden.item_amount() > 0)
+            {
+                if (count == 0 && fertilizer.item_amount() > 0)
+                {
+                    use(1, fertilizer); // this will get converted to a single cornucopia, but it should grow to 3 tomorrow
+                }
+                if (count <= 1)
+                {
+                    use(1, thanksGarden);
+                }
+            }
+        }
+    }
+
     void RunTurns(int turnCount)
     {
-        if (turnCount != 0) // things to do while familiar weight is maxxed
+        if (turnCount == 0)
+            return;
+
+        PrepGarden();
+        try
         {
+
+            // things to do while familiar weight is maxxed
             TryRunLTTFreeKills(turnCount);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
             RunawayMadnessBakery();
-        }
-        for (int i = 0; i < turnCount; i++)
-        {
-            print("LinknoidBarf Turns remaining = " + (turnCount - i));
-            TryCalculateUniverse();
-            TryAutoExtendThanksGetting(turnCount - i);
-            BuffInRun(turnCount - i, false);
-            BurnManaAndRestores(20, false);
-          
-            PrepareFilterState();
-            if (turnCount < 0 && !hasFreeKillRemaining)
-                return;
-            if (needBagOTricks)
-                TryActivateBagOTricks();
 
-            TryAutoExtendThanksgetting(turnCount - i);
-            SoulSauceToMana();
-            if (spookyravenCounter == my_turnCount())
+            for (int i = 0; i < turnCount; i++)
             {
-                print("Skipping Spookyraven in this script, if you don't want it to skip, add a 'counter script' in KoLMafia");
-                BypassCounterError();
-            }
+                print("LinknoidBarf Turns remaining = " + (turnCount - i));
+                TryCalculateUniverse();
+                TryAutoExtendThanksGetting(turnCount - i);
+                BuffInRun(turnCount - i, false);
+                BurnManaAndRestores(20, false);
+              
+                PrepareFilterState();
+                if (turnCount < 0 && !hasFreeKillRemaining)
+                    return;
+                if (needBagOTricks)
+                    TryActivateBagOTricks();
 
-            if (fortuneCookieCounter == my_turnCount()
-                && semiRareAttempted != my_turnCount())
-            {
-                print("Running semi-rare");
-                RunSemiRare();
-                continue;
-            }
-            if ((turnCount - i) % 5 == 1)  // only check every 5 turns
-            {
-                if (TryFightGhost())
+                TryAutoExtendThanksgetting(turnCount - i);
+                SoulSauceToMana();
+                if (spookyravenCounter == my_turnCount())
                 {
+                    print("Skipping Spookyraven in this script, if you don't want it to skip, add a 'counter script' in KoLMafia");
+                    BypassCounterError();
+                }
+
+                if (fortuneCookieCounter == my_turnCount()
+                    && semiRareAttempted != my_turnCount())
+                {
+                    print("Running semi-rare");
+                    RunSemiRare();
                     continue;
                 }
+                if ((turnCount - i) % 5 == 1)  // only check every 5 turns
+                {
+                    if (TryFightGhost())
+                    {
+                        continue;
+                    }
+                }
+                if (CopiedMeatyAvailable())
+                {
+                    print("Running copied embezzler");
+                    PrepareFamiliar(true);
+                    if (RunCopiedMeaty())
+                        continue;
+                }
+                PrepareFamiliar(false);
+                print("Running barf mountain");
+                RunBarfMountain(true);
             }
-            if (CopiedMeatyAvailable())
-            {
-                print("Running copied embezzler");
-                PrepareFamiliar(true);
-                if (RunCopiedMeaty())
-                    continue;
-            }
-            PrepareFamiliar(false);
-            print("Running barf mountain");
-            RunBarfMountain(true);
+        }
+        finally
+        {
+            RestoreGarden();
         }
     }
 
