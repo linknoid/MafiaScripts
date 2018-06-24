@@ -1837,10 +1837,10 @@ DebugOutfit("Goal outfit", outfitDef);
             {
                 monstersPerDigitize = 5; // 7, 27, 57, 97, 147
             }
-            int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
-            if (digitizeRange >= monstersPerDigitize)
+            int copiesFought = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
+            if (copiesFought >= monstersPerDigitize) // in case we somehow missed the intended fight, guarantee the next embezzler is digitized
                 needsDigitize = true;
-            else if (turnsUntilDigitized < 0 && digitizeRange == (monstersPerDigitize - 1))
+            else if (turnsUntilDigitized <= 0 && copiesFought == (monstersPerDigitize - 1)) // otherwise we're searching for the last in the sequence
             {
                 needsDigitize = true;
                 needBagOTricks = true;
@@ -5023,7 +5023,6 @@ print("Running filter = " + result, printColor);
             cli_execute(executeBeforeEat);
         }
 
-        BeforeSwapOutAsdon();
         UseWarbearOven();
         if (nightBefore)
         {
@@ -5863,11 +5862,11 @@ print("Running filter = " + result, printColor);
         }
         if (sweetSynth.have_skill())
         {
-            if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && RoomToSpleen(1))
+            if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && TrySpleenSpace(1))
             {
                 sweet_synthesis(milkStud, seniorMint);
             }
-            if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && RoomToSpleen(1))
+            if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && TrySpleenSpace(1))
                 sweet_synthesis(milkStud, daffyTaffy);
         }
 

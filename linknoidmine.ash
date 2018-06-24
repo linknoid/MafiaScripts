@@ -738,7 +738,7 @@ void HandleEatDrinkSpleen()
 	}
 	if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
 		put_closet(swizzler.item_amount(), swizzler);
-	item bestRoboDrink;
+        item bestRoboDrink;
 	if (get_property("_mimeArmyShotglassUsed") == "false" && shotglass.item_amount() > 0)
 	{
 		bestRoboDrink = ChooseCheapest(3000, robodrink1, robodrink2, robodrink3, robodrink4, robodrink5, robodrink6);
@@ -811,7 +811,7 @@ void PrepTomorrow()
 		{
 			eat(1, burrito2);
 		}
-		else if (burrito2.item_amount() > 0)
+		else if (burrito3.item_amount() > 0)
 		{
 			eat(1, burrito3);
 		}
@@ -823,6 +823,7 @@ void PrepTomorrow()
 				print("burrito prices are too high, find your own food", "red");
 				break;
 			}
+			BuyItem(cheapestBurrito, 5);
 		}
 	}
 	int remainingSpleen = spleen_limit() - saveSpleen - my_spleen_use();
