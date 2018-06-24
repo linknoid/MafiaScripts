@@ -56,6 +56,7 @@
 
 
     boolean autoConfirmBarf = false;
+    boolean autoConfirm = false;
     string defaultOutfit = "barf";
     string meatyOutfit = "";
     string dropsOutfit = "drops";
@@ -73,6 +74,7 @@
     int turkeyLimit = 1; // how many ambitious turkeys to drink per day
     int sacramentoLimit = 0; // how many sacramento wines to drink per day
     int thanksgettingFoodCostLimit = 15000; // Don't thanksgetting foods that cost more than this
+    int mojoCostLimit = 6000; // Don't thanksgetting foods that cost more than this
     boolean combatUserScript = false; // in barf mountain fights, use the user's default combat script instead of the built in logic
     boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
@@ -101,6 +103,7 @@ void WriteSettings()
     map["turkeyLimit"] = turkeyLimit.to_string();
     map["sacramentoLimit"] = sacramentoLimit.to_string();
     map["thanksgettingFoodCostLimit"] = thanksgettingFoodCostLimit.to_string();
+    map["mojoCostLimit"] = mojoCostLimit.to_string();
     map["combatUserScript"] = combatUserScript.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
@@ -134,6 +137,7 @@ void ReadSettings()
             case "turkeyLimit": turkeyLimit = value.to_int(); break;
             case "sacramentoLimit": sacramentoLimit = value.to_int(); break;
             case "thanksgettingFoodCostLimit": thanksgettingFoodCostLimit = value.to_int(); break;
+            case "mojoCostLimit": mojoCostLimit = value.to_int(); break;
             case "combatUserScript": combatUserScript = value == "true"; break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
@@ -363,6 +367,9 @@ void ReadSettings()
     familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
     familiar garbageFire = ToFamiliar("Garbage Fire"); // drops burning newspaper
     familiar optimisticCandle = ToFamiliar("Optimistic Candle"); // drops hot wax
+    familiar grimBrother = ToFamiliar("Grim Brother"); // drops grim fairy tales
+    familiar grimstoneGolem = ToFamiliar("Grimstone Golem"); // drops grimstone mask
+    familiar warbearDrone = ToFamiliar("Warbear Drone"); // drops whosits
     familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
     familiar grue = ToFamiliar("Grue"); // +15% myst
 
@@ -865,7 +872,7 @@ void ReadSettings()
     void ChooseEducate(boolean duplicate, boolean digitize);
     void ChooseThrall(boolean forMeat);  //, boolean forItems)
     void EquipBjornCrownFamiliars(familiar first, familiar second);
-    void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops);
+    void ChooseBjornCrownFamiliars(boolean forMeaty);
     void ActivateChibiBuddy();
     void ActivateFortuneTeller();
     void BuffInRun(int turns, boolean restoreMP);
@@ -890,7 +897,7 @@ void ReadSettings()
     }
     boolean UserConfirmDefault(string message, boolean defaultValue)
     {
-        if (autoConfirmBarf)
+        if (autoConfirm)
         {
             print("Skipping confirmation for request '" + message + "' with default value = " + defaultValue, printColor);
             return defaultValue;
@@ -1282,6 +1289,8 @@ DebugOutfit("Goal outfit", outfitDef);
     }
     void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
     {
+        if (maxPrice < 0)
+            return;
         int buyCount = numberRequested - itm.item_amount();
         if (buyCount <= 0)
             return;
@@ -1828,10 +1837,10 @@ DebugOutfit("Goal outfit", outfitDef);
             {
                 monstersPerDigitize = 5; // 7, 27, 57, 97, 147
             }
-            int digitizeRange = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
-            if (digitizeRange >= monstersPerDigitize)
+            int copiesFought = get_property("_sourceTerminalDigitizeMonsterCount").to_int();
+            if (copiesFought >= monstersPerDigitize) // in case we somehow missed the intended fight, guarantee the next embezzler is digitized
                 needsDigitize = true;
-            else if (turnsUntilDigitized < 0 && digitizeRange == (monstersPerDigitize - 1))
+            else if (turnsUntilDigitized <= 0 && copiesFought == (monstersPerDigitize - 1)) // otherwise we're searching for the last in the sequence
             {
                 needsDigitize = true;
                 needBagOTricks = true;
@@ -2410,11 +2419,12 @@ print("Running filter = " + result, printColor);
         }
         return best;
     }
-    void ChooseBjornCrownFamiliars(boolean forMeaty, boolean forDrops)
+    void ChooseBjornCrownFamiliars(boolean forMeaty)
     {
         if (!bjorn.have_equipped() && !crown.have_equipped())
             return;
 
+        // work our way from the least valuable to most valuable choice:
         familiarPair choice;
         choice = ChooseBjornCrownFamiliar(choice, leprechaun);
         choice = ChooseBjornCrownFamiliar(choice, obtuseAngel);
@@ -2423,14 +2433,33 @@ print("Running filter = " + result, printColor);
         choice = ChooseBjornCrownFamiliar(choice, goldenMonkey);
         choice = ChooseBjornCrownFamiliar(choice, happyMedium);
         choice = ChooseBjornCrownFamiliar(choice, organGrinder);
-        if (forDrops && get_property("_abstractionDropsCrown").to_int() < 20)
-            choice = ChooseBjornCrownFamiliar(choice, machineElf);
-        if (forDrops && get_property("_hoardedCandyDropsCrown").to_int() < 3)
-            choice = ChooseBjornCrownFamiliar(choice, orphan);
-        if (forDrops && get_property("_optimisticCandleDropsCrown").to_int() < 3)
-            choice = ChooseBjornCrownFamiliar(choice, optimisticCandle);
-        if (forDrops && get_property("_garbageFireDropsCrown").to_int() < 3)
-            choice = ChooseBjornCrownFamiliar(choice, garbageFire);
+
+        // ~65 mpa for +25% meat in barf mountain, with 20% drop chance of
+        // whosit, as long as whosits are over 325 meat each, this is a
+        // better use of a bjorn/crown
+        if (!forMeaty)
+            choice = ChooseBjornCrownFamiliar(choice, warbearDrone);
+
+        // Mafia can't detect bjorn/crown drops while in machine elf tunnels
+        // which means counts don't get updated, which means these thresholds
+        // won't get triggered, which means it will bjornify the wrong familiar
+        // waiting for the remaining drops forever.  So don't use these familiars
+        // inside the machine elf tunnels.
+        if (my_familiar() != machineElf && !forMeaty)
+        {
+            if (get_property("_abstractionDropsCrown").to_int() < 15)
+                choice = ChooseBjornCrownFamiliar(choice, machineElf);
+            if (get_property("_hoardedCandyDropsCrown").to_int() < 3)
+                choice = ChooseBjornCrownFamiliar(choice, orphan);
+            if (get_property("_optimisticCandleDropsCrown").to_int() < 3)
+                choice = ChooseBjornCrownFamiliar(choice, optimisticCandle);
+            if (get_property("_garbageFireDropsCrown").to_int() < 3)
+                choice = ChooseBjornCrownFamiliar(choice, garbageFire);
+            if (get_property("_grimFairyTaleDropsCrown").to_int() < 2)
+                choice = ChooseBjornCrownFamiliar(choice, grimBrother);
+            if (get_property("_grimstoneMaskDropsCrown").to_int() < 1)
+                choice = ChooseBjornCrownFamiliar(choice, grimstoneGolem);
+        }
 // todo: if robortender, maybe do weight buff instead
 
         EquipBjornCrownFamiliars(choice.first, choice.second);
@@ -2458,6 +2487,8 @@ print("Running filter = " + result, printColor);
 
     void TryUseMovableFeast()
     {
+        if (my_familiar() == machineElf)
+            return;
         if (moveableFeast.item_amount() > 0
             && get_property("_feastUsed").to_int() < 5
             && !get_property("_feastFamiliars").contains_text(my_familiar().to_string()))
@@ -2470,7 +2501,7 @@ print("Running filter = " + result, printColor);
     {
         if (my_familiar() != runFamiliar)
             SwitchToFamiliar(runFamiliar);
-        ChooseBjornCrownFamiliars(forMeaty, false);
+        ChooseBjornCrownFamiliars(forMeaty);
         if (my_familiar() == orphan)
         {
             // counts as an 80+ pound leprechaun, but just chose some arbitrary number larger
@@ -2918,7 +2949,7 @@ print("Running filter = " + result, printColor);
         if (jingleBells.have_skill())
             CastSkill(jingleBells, 1, true); // only need 1 turn of it
         WearOutfit(SwapOutSunglasses(selectedOutfit));
-        ChooseBjornCrownFamiliars(false, true);
+        ChooseBjornCrownFamiliars(false); // don't want drops familiar bjornified with machine elf
         ChooseThrall(true);
         RemoveConfusionEffects(false);
         HealUp();
@@ -3360,7 +3391,7 @@ print("Running filter = " + result, printColor);
 //            acc1.equip(screege);
 //        if (cheeng.item_amount() > 0 && !cheeng.have_equipped())
 //            acc2.equip(cheeng);
-//        ChooseBjornCrownFamiliars(false, true); // drops familiar
+//        ChooseBjornCrownFamiliars(false); // drops familiar
 //    }
 
     string AvailableSpellForBagOfTricks()
@@ -3723,8 +3754,8 @@ print("Running filter = " + result, printColor);
                 int buyCount = useCount - itm.item_amount();
                 if (buyCount > 0)
                 {
-                    if (buyCount < 5) // buy in groups of 5 to reduce server hits
-                        buyCount = 5;
+                    if (buyCount < 10) // buy in groups of 10 to reduce server hits
+                        buyCount = 10;
                     BuyItemIfNeeded(itm, buyCount, maxPrice);
                 }
             }
@@ -3748,7 +3779,7 @@ print("Running filter = " + result, printColor);
         UseItem(itm, resultingEffect, requestedTurns, turnsPerItem, 0); // price limit 0, don't ever buy on mall
     }
 
-    int kgbManaBonus = 1; // -1 means hasn't been checked yet, should be 0 or -3
+    int kgbManaBonus = 1; // 1 means hasn't been checked yet, should be 0 or -3
 
     void TryReduceManaCost(skill forSkill)
     {
@@ -3869,6 +3900,8 @@ print("Running filter = " + result, printColor);
         }
         if (count <= 0)
             return true;
+        if (thanksgettingFoodCostLimit < 0)
+            return false;
         if (preferCashews)
         {
             if (buy(count, cashew, costLimitPerCashew) == count)
@@ -3928,33 +3961,38 @@ print("Running filter = " + result, printColor);
         {
             print("Invalid ingredients for " + food.to_string(), printColor);
         }
-        int cashewPrice = cashew.mall_price() * cashewCost + foodIngredient.mall_price();
-        int cornucopiaPrice = cornucopia.mall_price() * cashewCost / 3; // assume average of 3 cashews per cornucopia
         int priceLimit = thanksgettingFoodCostLimit;
-        if (forWarbearOven)
-            priceLimit *= 2; // should get two of them back, not just one
-        if (cashewPrice > priceLimit
-            && cornucopiaPrice > priceLimit)
+        boolean preferCashews = false;
+        if (priceLimit >= 0)
         {
-            print("Thanksgetting feast cost exceeds " + priceLimit + ", skipping", "red");
-            return false;
-        }
-        int ingredientPrice = cashewIngredient.mall_price() + foodIngredient.mall_price();
-        int finishedPrice = food.mall_price();
-        if (finishedPrice <= ingredientPrice && finishedPrice <= cashewPrice)
-        {
-            // cheapest to buy finished product
-            if (buy(1, food))
-                return true;
-        }
-        if (foodIngredient.item_amount() < 1)
-        {
-            if (!buy(1, foodIngredient))
+            int cashewPrice = cashew.mall_price() * cashewCost + foodIngredient.mall_price();
+            int cornucopiaPrice = cornucopia.mall_price() * cashewCost / 3; // assume average of 3 cashews per cornucopia
+            if (forWarbearOven)
+                priceLimit *= 2; // should get two of them back, not just one
+            if (cashewPrice > priceLimit
+                && cornucopiaPrice > priceLimit)
+            {
+                print("Thanksgetting feast cost exceeds " + priceLimit + ", skipping", "red");
                 return false;
+            }
+            int ingredientPrice = cashewIngredient.mall_price() + foodIngredient.mall_price();
+            int finishedPrice = food.mall_price();
+            if (finishedPrice <= ingredientPrice && finishedPrice <= cashewPrice)
+            {
+                // cheapest to buy finished product
+                if (buy(1, food))
+                    return true;
+            }
+            if (foodIngredient.item_amount() < 1)
+            {
+                if (!buy(1, foodIngredient))
+                    return false;
+            }
+            preferCashews = cashewPrice < cornucopiaPrice;
         }
         if (cashewIngredient.item_amount() == 0)
         {
-            if (!BuyCashews(cashewCost - cashew.item_amount(), cashewPrice < cornucopiaPrice, priceLimit / cashewCost))
+            if (!BuyCashews(cashewCost - cashew.item_amount(), preferCashews, priceLimit / cashewCost))
                 return false;
             if (!cashewIngredient.seller.buy(1, cashewIngredient))
                 return false;
@@ -3976,7 +4014,7 @@ print("Running filter = " + result, printColor);
             if (get_property("currentMojoFilters").to_int() >= 3 || my_spleen_use() == 0)
                 return false;
 
-           BuyItemIfNeeded(mojoFilter, 1, 6000);
+           BuyItemIfNeeded(mojoFilter, 1, mojoCostLimit);
            if (mojoFilter.item_amount() == 0)
                return false;
            use(1, mojoFilter);
@@ -4985,7 +5023,6 @@ print("Running filter = " + result, printColor);
             cli_execute(executeBeforeEat);
         }
 
-        BeforeSwapOutAsdon();
         UseWarbearOven();
         if (nightBefore)
         {
@@ -5205,7 +5242,8 @@ print("Running filter = " + result, printColor);
         int haveRunaways = GetFreeRunaways();
         if (!CheesyRunaway(cheeseStaff, weapon, needRunaways))
             CheesyRunaway(cheeseSword, weapon, needRunaways);
-        CheesyRunaway(cheesePants, pants, needRunaways);
+        if (!CheesyRunaway(pantsgiving, pants, needRunaways))
+            CheesyRunaway(cheesePants, pants, needRunaways);
         CheesyRunaway(cheeseShield, offhand, needRunaways);
         if (!CheesyRunaway(cheeseAccessory, acc1, needRunaways)
             && CheesyRunaway(cheeseAccessory, acc2, needRunaways)
@@ -5824,11 +5862,11 @@ print("Running filter = " + result, printColor);
         }
         if (sweetSynth.have_skill())
         {
-            if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && RoomToSpleen(1))
+            if (synthMP.have_effect() == 0 && milkStud.item_amount() > 0 && seniorMint.item_amount() > 0 && TrySpleenSpace(1))
             {
                 sweet_synthesis(milkStud, seniorMint);
             }
-            if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && RoomToSpleen(1))
+            if (synthMyst.have_effect() == 0 && milkStud.item_amount() > 0 && daffyTaffy.item_amount() > 0 && TrySpleenSpace(1))
                 sweet_synthesis(milkStud, daffyTaffy);
         }
 
@@ -6236,6 +6274,7 @@ print("mob = " + canMobHit);
     {
         ReadSettings();
         WriteSettings(); // in case there are new properties
+        autoConfirm = autoConfirmBarf || user_confirm("Auto-confirm all prompts this run?");
         InitOutfits();
         ChooseSummonType();
         SetRunFamiliar(familiarName, buffTurns);
