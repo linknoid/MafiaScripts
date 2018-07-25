@@ -20,6 +20,49 @@ item Xtattoo = $item[temporary X tattoos];
 effect straightEdge = $effect[Straight-Edgy];
 item skeletonX = $item[X];
 
+    int LastIndexOf(string page, string match, int beforeIndex) // this doesn't appear to be part of the ASH standard API, not sure why
+    {
+        int ix = page.index_of(match);
+        int result = -1;
+        while (ix < beforeIndex && ix >= 0)
+        {
+            result = ix;
+            ix = page.index_of(match, ix + 1);
+        }
+        return result;
+    }
+    int FindVariableChoice(string page, string match, boolean matchTextIsButtonText)
+    {
+        int ix = page.index_of(match);
+        if (ix <= 0)
+            return -1;
+
+        string optionSearch = "<input type=hidden name=option value=";
+        if (matchTextIsButtonText) // the name=option value=1 comes before the button text
+            ix = LastIndexOf(page, optionSearch, ix);
+        else // otherwise we found a prefix with that text
+            ix = page.index_of(optionSearch, ix);
+        if (ix <= 0)
+            return -1;
+        ix += optionSearch.length();
+
+        string choice = page.substring(ix, ix + 2); // allow up to 99 options
+        choice = choice.replace_string(">", "").replace_string("/", "").replace_string(" ", ""); // strip off extra invalid character
+        return choice.to_int();
+    }
+    string PushChoiceAdventureButton(string buttonText, string page)
+    {
+        int ix = FindVariableChoice(page, buttonText, true);
+        if (ix < 0)
+	{
+print("Could not find " + buttonText + " in " + page);
+abort();
+            return "";
+	}
+        return run_choice(ix);
+    }
+
+
 
 string printColor = "orange";
 
@@ -83,6 +126,22 @@ void SwitchToThanksgarden()
 				use(1, thanksGarden);
 			}
 		}
+	}
+}
+void UseReplicator()
+{
+	if ($item[time-spinner].item_amount() > 0
+		&& get_property("_timeSpinnerMinutesUsed").to_int() <= 8
+		&& get_property("_timeSpinnerReplicatorUsed") == "false")
+	{
+		string page = visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9104");
+		//use(1, $item[time-spinner]);
+		page = run_choice(4); // visit the future
+		page = run_choice(1); // random choice
+		page = PushChoiceAdventureButton("Use the Replicator", page);
+		page = PushChoiceAdventureButton("Gin, Kardashian, Shot", page);
+		page = PushChoiceAdventureButton("Go to sleep", page);
+		page = PushChoiceAdventureButton("I'm sure, I want to sleep away the future", page);
 	}
 }
 
@@ -152,18 +211,8 @@ void main()
 	{
 		sleepCostumeGeneral.to_slot().equip(sleepCostumeGeneral);
 	}
-	if ($item[time-spinner].item_amount() > 0
-		&& get_property("_timeSpinnerMinutesUsed").to_int() <= 8
-		&& get_property("_timeSpinnerReplicatorUsed") == "false")
-	{
-		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9104");
-		run_choice(4); // visit the future
-		run_choice(1); // random choice
-		run_choice(3); // use the replicator
-		run_choice(2); // Kardashian gin
-		run_choice(4); // go to sleep
-		run_choice(2); // sleep away the future
-	}
+	UseReplicator();
+
 	if ($skill[That's Not a Knife].have_skill())
 	{
 		if ($item[soap knife].item_amount() > 0)

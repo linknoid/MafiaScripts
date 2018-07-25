@@ -745,6 +745,7 @@ void ReadSettings()
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
     effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
     effect haikuMind = ToEffect("Haiku State of Mind"); // turns everything into haiku
+    effect tempBlind = ToEffect("Temporary Blindness"); // makes messages just say you're blind
 
 // free combats
     item genie = ToItem("genie bottle");
@@ -4299,7 +4300,7 @@ print("Running filter = " + result, printColor);
             "breath mint", // glass gnoll eye once a day
             "Now and Earlier",
             "abandoned candy",
-            "Wax Flask",
+            //"Wax Flask",
             "piece of after eight",
             "licorice root",
             "garbage-juice flavored Hob-O",
