@@ -484,6 +484,11 @@ void DoBounty(BountyDetails b)
 				run_choice(3); // Be Mine
 				run_choice(1); // black gold
 			}
+			else if (page.contains_text("Arboreal Respite"))
+			{
+				run_choice(2); // explore the stream
+				run_choice(2); // skip adventure
+			}
 			else if (page.contains_text("A Sietch in Time"))
 			{
 				run_choice(1);
@@ -600,6 +605,16 @@ void DoBounty(BountyDetails b)
 			{
 				run_choice(1);
 			}
+                	else if (page.contains_text("Malice in Chains"))
+			{
+				run_choice(2);
+				run_combat("Filter_Combat");
+			}
+                	else if (page.contains_text("Knob Goblin BBQ"))
+			{
+				run_choice(2);
+				run_combat("Filter_Combat");
+			}
                 	else if (page.contains_text("Welcome Back!"))
 			{
 				run_choice(1);
@@ -608,6 +623,32 @@ void DoBounty(BountyDetails b)
                 	else if (page.contains_text("The Gong Has Been Bung"))
 			{
 				run_choice(2);
+				return;
+			}
+                	else if (page.contains_text("Working Holiday"))
+			{
+				run_choice(3);
+				return;
+			}
+                	else if (page.contains_text("Lights Out in the Laboratory"))
+			{
+				run_choice(2);
+				return;
+			}
+                	else if (page.contains_text("Set an Open Course for the Virgin Booty"))
+			{
+				visit_url("ocean.php?lon=59+lat=10");
+				return;
+			}
+                	else if (page.contains_text("Random Lack of an Encounter"))
+			{
+				run_choice(1);
+				return;
+			}
+                	else if (page.contains_text("Stupid Pipes."))
+			{
+				run_choice(2);
+// todo: add healing
 				return;
 			}
 			else
@@ -650,6 +691,11 @@ void DoBounty(BountyDetails b)
 		else if (page.contains_text("You break the bottle on the ground, and stomp it to powder"))
 		{
 			print("Agua de vida bottle ran out");
+			return;
+		}
+		else if (page.contains_text("Set an Open Course for the Virgin Booty"))
+		{
+			visit_url("ocean.php?lon=59+lat=10");
 			return;
 		}
 		else
