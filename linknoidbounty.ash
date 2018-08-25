@@ -443,12 +443,23 @@ void DoBounty(BountyDetails b)
 		PrepareBanishers();
 		if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail)
 			$slot[acc3].equip(bait);
-		if (current.details.location == $location[Poop deck])
+		if (current.details.location == $location[The Poop Deck])
 		{
 			item fledges = $item[pirate fledges];
 			if (fledges.item_amount() > 0)
 				$slot[acc2].equip($item[pirate fledges]);
 			if (!fledges.have_equipped())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
+		else if (current.details.location == $location[Inside the Palindome])
+		{
+			item talisman = $item[talisman o' namsilat];
+			if (talisman.item_amount() > 0)
+				$slot[acc2].equip(talisman);
+			if (!talisman.have_equipped())
 			{
 				b.NoAccess = true;
 				return;
@@ -640,6 +651,22 @@ void DoBounty(BountyDetails b)
 				visit_url("ocean.php?lon=59+lat=10");
 				return;
 			}
+                	else if (page.contains_text("Sun at Noon, Tan Us"))
+			{
+				run_choice(1);
+				return;
+			}
+                	else if (page.contains_text("No sir, away!  A papaya war is on!"))
+			{
+				visit_url("choice.php?whichchoice=127&option=1");
+				//run_choice(1);
+				return;
+			}
+			else if (page.contains_text("Foreshadowing Demon!"))
+			{
+				run_choice(2); // Get out on the double
+				return;
+			}
                 	else if (page.contains_text("Random Lack of an Encounter"))
 			{
 				run_choice(1);
@@ -692,6 +719,13 @@ void DoBounty(BountyDetails b)
 		{
 			print("Agua de vida bottle ran out");
 			return;
+		}
+		else if (page.contains_text("Remember that devilish folio you read?"))
+		{
+			print("Devilish folia ran out");
+			if ($item[devilish folio].item_amount() == 0)
+				cli_execute("acquire devilish folio");
+			use(1, $item[devilish folio]);
 		}
 		else if (page.contains_text("Set an Open Course for the Virgin Booty"))
 		{
