@@ -6,6 +6,7 @@ item bait = $item[Monster Bait];
 int mallPriceLimitPerBanish = 5000;
 string printColor = "orange";
 
+boolean PromptDebug = false;
 boolean IsDebug = false;
 void PrintDebug(string text)
 {
@@ -13,6 +14,25 @@ void PrintDebug(string text)
 		print(text, printColor);
 }
 
+void WriteSettings()
+{
+	string[string] map;
+	file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+	map["promptDebug"] = PromptDebug.to_string();
+	map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
+}
+void ReadSettings()
+{
+	string[string] map;
+	file_to_map("linknoidfarm_" + my_name() + ".txt", map);
+	foreach key,value in map
+	{
+		switch (key)
+		{
+			case "promptDebug": PromptDebug = value == "true"; break;
+		}
+	}
+}
 
 record Banisher
 {
@@ -263,10 +283,12 @@ void PrepareBanishers()
 		int usesRemain = -1;
 		if (b.UsedTodayCountProperty != "")
 		{
+			string usedStr = get_property(b.UsedTodayCountProperty);
+			PrintDebug("Banisher " + b.Key + " used = " + usedStr);
 			if (b.UsesPerDayCount == 1)
-				usesRemain = get_property(b.UsedTodayCountProperty).to_boolean() ? 0 : 1;
+				usesRemain = usedStr.to_boolean() ? 0 : 1;
 			else
-				usesRemain = b.UsesPerDayCount - get_property(b.UsedTodayCountProperty).to_int();
+				usesRemain = b.UsesPerDayCount - usedStr.to_int();
 		}
 		if (usesRemain > 0 && b.SkillProvider.item_amount() > 0 && b.SkillProvider.can_equip())
 		{
@@ -341,15 +363,26 @@ string TryBanish(monster mon)
 			PrintDebug("0 or fewer uses remain");
 			continue;
 		}
-		if (ban.AsItem != "none".to_item())
+		if (BanisherUsed(ban))
+		{
+			PrintDebug("Banisher already in use in this zone");
+			continue;
+		}
+		if (ban.AsItem != $item[none])
 		{
 			if (ban.AsItem.item_amount() == 0)
 			{
 				PrintDebug("not enough items");
 				continue;
 			}
+			if (ban.AsItem.to_slot() != $slot[none]
+				&& !ban.AsItem.have_equipped())
+			{
+				PrintDebug("banisher item not equipped");
+				continue;
+			}
 		}
-		else if (ban.AsSkill != "none".to_skill())
+		else if (ban.AsSkill != $skill[none])
 		{
 			if (ban.SkillProvider != "none".to_item())
 			{
@@ -369,11 +402,6 @@ string TryBanish(monster mon)
 				PrintDebug("Don't have enough MP");
 				continue;
 			}
-		}
-		if (BanisherUsed(ban))
-		{
-			PrintDebug("Banisher already in use in this zone");
-			continue;
 		}
 		bestBanish = ban;
 	}
@@ -406,6 +434,11 @@ void ResetCombatState()
 
 string Filter_Combat(int round, monster mon, string page)
 {
+	if ($monsters[ticking time bomb, frustrating knight, rage flame] contains mon)
+	{
+		// can't do anything but attack here
+		return "attack";
+	}
 	if (mon != current.source)
 	{
 		string result = TryBanish(mon);
@@ -487,6 +520,14 @@ void DoBounty(BountyDetails b)
 				run_choice(1);
 			}
 			else if (page.contains_text("Lights Out in the Kitchen"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("Lights Out in the Bathroom"))
+			{
+				run_choice(2);
+			}
+			else if (page.contains_text("Off the Rack"))
 			{
 				run_choice(1);
 			}
@@ -674,8 +715,7 @@ void DoBounty(BountyDetails b)
 			}
                 	else if (page.contains_text("Stupid Pipes."))
 			{
-				run_choice(2);
-// todo: add healing
+				run_choice(3);
 				return;
 			}
 			else
@@ -700,11 +740,27 @@ void DoBounty(BountyDetails b)
 			}
 			slot3Avail = false;
 		}
+		else if (page.contains_text("You don't know where that place is."))
+		{
+			if ($item[&quot;DRINK ME&quot; potion].item_amount() == 0)
+			{
+				buy(1, $item[&quot;DRINK ME&quot; potion]);
+			}
+			use(1,  $item[&quot;DRINK ME&quot; potion]);
+		}
+		else if (page.contains_text("You can't get there anymore, because you don't know the transporter frequency."))
+		{
+			if ($item[transporter transponder].item_amount() == 0)
+			{
+				buy(1, $item[transporter transponder]);
+			}
+			use(1, $item[transporter transponder]);
+		}
 		else if (page.contains_text("That isn't a place you can go.")
+			|| page.contains_text("That isn't a place.") // clown head
 			|| page.contains_text("You shouldn't be here.")
 			|| page.contains_text("Whuzzat now?")
-			|| page.contains_text("You don't know where that place is.")
-			|| page.contains_text("You can't get there anymore, because you don't know the transporter frequency."))
+			|| page.contains_text("You don't know where that place is."))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
 			current.NoAccess = true;
@@ -742,6 +798,12 @@ void DoBounty(BountyDetails b)
 
 void main()
 {
+        ReadSettings();
+        WriteSettings(); // in case there are new properties
+
+	if (PromptDebug && user_confirm("Do you want to run in debug mode?"))
+		IsDebug = true;
+
 	PopulateZoneBanishes();
 	// todo: maximize combats (i.e. minimize non-combats)
 	while (true)
