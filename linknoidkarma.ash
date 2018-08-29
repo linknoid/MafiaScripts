@@ -11,6 +11,32 @@ boolean HaveItem(item i)
 	return i.item_amount() > 0 || i.have_equipped();
 }
 
+void BuyCoinItemForEffect(coinmaster c, item i, effect e)
+{
+	if (e.have_effect() <= 0)
+	{
+		if (i.item_amount() == 0)
+			buy(c, 1, i);
+		use(1, i);
+	}
+}
+void BuyItemForEffect(item i, effect e)
+{
+	if (e.have_effect() <= 0)
+	{
+		if (i.item_amount() == 0)
+			buy(1, i);
+		use(1, i);
+	}
+}
+void UseSkillForEffect(skill s, effect e)
+{
+	if (e.have_effect() <= 0)
+	{
+		use_skill(1, s);
+	}
+}
+
 void ChateauRest(int needMP)
 {
 	if (my_mp() < needMP)
@@ -21,8 +47,41 @@ void ChateauRest(int needMP)
 	}
 }
 
+void DailySummons()
+{
+	ChateauRest(20);
+
+	use_skill(1, $skill[Perfect Freeze]);
+	use_skill(1, $skill[Pastamastery]);
+	use_skill(1, $skill[Summon Crimbo Candy]);
+	use_skill(1, $skill[Advanced Saucecrafting]);
+	use_skill(1, $skill[Advanced Cocktailcrafting]);
+	use_skill(1, $skill[Acquire Rhinestones]);
+	use_skill(1, $skill[Summon Alice's Army Cards]);
+	if (get_property("_kgbLeftDrawerUsed") != "true" || get_property("_kgbRightDrawerUsed") != "true")
+		cli_execute("Briefcase.ash drawers");
+	if (get_property("_kgbDispenserUses").to_int() < 3)
+		cli_execute("Briefcase.ash splendid");
+	if (get_property("_lookingGlass") != "true")
+		visit_url("clan_viplounge.php?action=lookingglass&whichfloor=2"); // grab DRINK ME
+	if (get_property("_detectiveCasesCompleted").to_int() < 3)
+		cli_execute("Detective Solver.ash");
+}
+void MakeGreenMana()
+{
+	if (get_property("_deckCardsDrawn").to_int() > 10)
+		return;
+	string seen = get_property("_deckCardsSeen");
+	if (!seen.contains_text("Giant Growth"))
+		cli_execute("cheat Giant Growth");
+	else if (!seen.contains_text("Forest"))
+		cli_execute("cheat Forest");
+}
+
+
 void InitCharacter()
 {
+	// burn initial MP
 	use_skill(1, $skill[Perfect Freeze]);
 	use_skill(1, $skill[Pastamastery]);
 
@@ -55,7 +114,6 @@ void InitCharacter()
 		cli_execute("numberology 14");
 		autosell(3 * 14, $item[moxie weed]);
 		buy(1, $item[li'l unicorn costume]);
-		buy(1, $item[frilly skirt]);
 	}
 
 	if (!HaveItem($item[turtle totem]))
@@ -75,10 +133,9 @@ void InitCharacter()
 		use_skill(2, $skill[Summon Smithsness]);
 		visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=04&clip2=04&clip3=04&pwd");
 		create(1, $item[Shakespeare's Sister's Accordion]);
-	}
-	if (!HaveItem($item[Vicar's Tutu]))
-	{
-		create(1, $item[Vicar's Tutu]);
+		if ($item[maiden wig].item_amount() == 0)
+			buy(1, $item[maiden wig]);
+		create(1, $item[Hairpiece on Fire]);
 	}
 
 	if (!HaveItem($item[makeshift garbage shirt]))
@@ -90,8 +147,6 @@ void InitCharacter()
 	
 	if (!HaveItem($item[pantogram pants]))
 	{
-		//use(1, $item[portable pantogram]);
-		// this is broken
 		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9573");
 		visit_url("choice.php?whichchoice=1270&pwd&option=1&m=1&e=1&s1=-1,0&s2=-1,0&s3=-1,0");
 	}
@@ -102,18 +157,16 @@ void InitCharacter()
 		visit_url("choice.php?pwd&whichchoice=1280&option=2"); // mage's hat
 	}
 
+	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
 	$slot[shirt].equip($item[makeshift garbage shirt]);
+	$slot[back].equip($item[protonic accelerator pack]);
 	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
 	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	$slot[pants].equip($item[pantogram pants]);
 	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
 	$slot[acc2].equip($item[gold detective badge]);
 	$slot[acc3].equip($item[your cowboy boots]);
-	$slot[back].equip($item[protonic accelerator pack]);
-	$slot[pants].equip($item[pantogram pants]);
-	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
 
-	if (get_property("_lookingGlass") != "true")
-		visit_url("clan_viplounge.php?action=lookingglass&whichfloor=2"); // grab DRINK ME
 
 	if (visit_url("shop.php?whichshop=doc").contains_text("Problem?"))
 	{
@@ -131,13 +184,8 @@ void InitCharacter()
 		run_choice(1); // open skeleton shop
 	}
 
-	ChateauRest(20);
+	DailySummons();
 
-	use_skill(1, $skill[Summon Crimbo Candy]);
-	use_skill(1, $skill[Advanced Saucecrafting]);
-	use_skill(1, $skill[Advanced Cocktailcrafting]);
-	use_skill(1, $skill[Acquire Rhinestones]);
-	use_skill(1, $skill[Summon Alice's Army Cards]);
 	if ($effect[Empathy].have_effect() == 0)
 		use_skill(1, $skill[Empathy of the Newt]);
 	if ($effect[Big].have_effect() == 0)
@@ -155,21 +203,15 @@ void InitCharacter()
 		cli_execute("terminal enquiry stats.enq");
 	if ($effect[substats.enh].have_effect() <= 0)
 		cli_execute("terminal enhance substats.enh");
-	if (get_property("_detectiveCasesCompleted").to_int() < 3)
-		cli_execute("Detective Solver.ash");
-	if (get_property("_kgbLeftDrawerUsed") != "true" || get_property("_kgbRightDrawerUsed") != "true")
-		cli_execute("Briefcase.ash drawers");
-	if (get_property("_kgbDispenserUses").to_int() < 3)
-		cli_execute("Briefcase.ash splendid");
 	if (get_property("_horsery") == "")
-		cli_execute("try; horsery dark");
+		cli_execute("horsery dark");
 	if (get_property("boomBoxSong") != "Total Eclipse of Your Meat")
 		cli_execute("boombox meat");
 	if ($item[green mana].item_amount() == 0)
-		cli_execute("cheat forest");
-
-	// dark horse? or pale horse?
-
+	{
+		MakeGreenMana();
+		MakeGreenMana();
+	}
 }
 
 boolean canCurse;
@@ -311,6 +353,8 @@ string Filter_DairyGoat(int round, monster mon, string page)
 
 string Filter_Standard(int round, monster mon, string page)
 {
+	if (round > 20)
+		abort("combat failed, please take over");
 	if (my_hp() < my_maxhp() / 4)
 		abort("combat failed, please take over");
 	if (canCurse)
@@ -382,6 +426,16 @@ string Filter_Gingerbread(int round, monster mon, string page)
 }
 
 
+string Filter_GiantGrowth(int round, monster mon, string page)
+{
+	if ($effect[Giant Growth].have_effect() == 0 && $item[green mana].item_amount() > 0)
+		return "skill " + $skill[Giant Growth];
+	if (mon == $monster[The Icewoman])
+		return Filter_Ghost(round, mon, page);
+	if (mon.to_string().contains_text("itchess"))
+		return Filter_Standard(round, mon, page);
+	return "skill " + $skill[KGB tranquilizer dart];
+}
 void RunLOVTunnel()
 {
 	if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
@@ -466,12 +520,14 @@ void RunSnojo(boolean stopAfterSourceEssence)
 			visit_url("place.php?whichplace=snojo&action=snojo_controller");
 			run_choice(2); // myst, for +booze and resist hat
 		}
-		if (freeFights == 0)
+		if (freeFights == 0 && stopAfterSourceEssence)
 		{
 			$familiar[Space Jellyfish].use_familiar();
 		}
 		else
+		{
 			ChooseFamiliar();
+		}
 
 		RecoverHPorMP(false);
 
@@ -490,10 +546,35 @@ void FightGhost(location loc)
 	run_combat("Filter_Ghost");
 }
 
+void FaxNinja()
+{
+	if (get_property("_photocopyUsed") != "false")
+		return;
+	RecoverHPorMP(false);
+	if ($item[photocopied monster].item_amount() == 0)
+	{
+		cli_execute("chat"); // apparently chat has to be open to receive a fax
+		waitq(5); // 5 seconds for chat to open
+		if (faxbot($monster[Ninja Snowman Janitor]))
+		{
+		}
+		if ($item[photocopied monster].item_amount() == 0)
+		{
+			abort("Fax failed");
+			return;
+		}
+	}
+
+	ResetCombatState();
+	visit_url("inv_use.php?whichitem=" + $item[photocopied monster].to_int());
+	run_combat("Filter_Standard");
+}
+
 void FaxDairyGoat()
 {
 	if (get_property("_photocopyUsed") != "false")
 		return;
+	$slot[acc3].equip($item[your cowboy boots]);
 	while (my_mp() < 160)
 	{
 		if (my_maxmp() < 160)
@@ -507,11 +588,11 @@ void FaxDairyGoat()
 		waitq(5); // 5 seconds for chat to open
 		if (faxbot($monster[Dairy Goat]))
 		{
-			if ($item[photocopied monster].item_amount() == 0)
-			{
-				abort("Fax failed");
-				return;
-			}
+		}
+		if ($item[photocopied monster].item_amount() == 0)
+		{
+			abort("Fax failed");
+			return;
 		}
 	}
 
@@ -524,6 +605,8 @@ void FightWitchessRook()
 {
 	if (get_property("_witchessFights").to_int() == 0)
 	{
+		RecoverHPorMP(false);
+		ResetCombatState();
 		visit_url("campground.php?action=witchess", false);
 		run_choice(1); // Examine the shrink ray
 		visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1938", false);
@@ -531,30 +614,54 @@ void FightWitchessRook()
 	}
 }
 
+int GingerbreadTurns()
+{
+	int turns = get_property("_gingerbreadCityTurns").to_int();
+	if (get_property("_gingerbreadClockAdvanced") == "true")
+		turns += 5;
+	print("Gingerbread turns = " + turns);
+	return turns;
+}
+
 void RunGingerbread()
 {
-	if (get_property("_gingerbreadCityTurns").to_int() > 10)
+	if (GingerbreadTurns() > 10)
 		return;
 
-	if (get_property("_gingerbreadCityTurns").to_int() == 0) // already ran turns
+	if (GingerbreadTurns() == 0) // already ran turns
 	{
         	string page = visit_url($location[Gingerbread Civic Center].to_url(), false);
 	        run_choice(1); // clock choice, advance 5 rounds
 	}
-int turns = get_property("_gingerbreadCityTurns").to_int();
-abort("Debug: turns = " + turns);
-	while (get_property("_gingerbreadCityTurns").to_int() < 9) // already ran turns
+	while (GingerbreadTurns() < 9) // already ran turns
 	{
 		ChateauRest(40); // need 30 to shattering punch, an extra 10 to be safe
 		ResetCombatState();
         	string page = visit_url($location[Gingerbread Upscale Retail District].to_url(), false);
 		run_combat("Filter_Gingerbread");
 	}
-	if (get_property("_gingerbreadCityTurns").to_int() == 9)
+	if (GingerbreadTurns() == 9)
 	{
         	string page = visit_url($location[Gingerbread Train Station].to_url(), false);
 	        run_choice(1); // dig for candy
 	}
+}
+
+void CastGiantGrowth() // can only be cast in combat, with free kill or runaway
+{
+	if ($item[green mana].item_amount() == 0)
+	{
+		MakeGreenMana();
+		if ($item[green mana].item_amount() == 0)
+			return;
+	}
+	if ($effect[Giant Growth].have_effect() > 0)
+		return;
+	
+	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
+
+	visit_url($location[The Haunted Kitchen].to_url());
+	run_combat("Filter_GiantGrowth");
 }
 
 
@@ -579,14 +686,13 @@ void EatBrowserCookie()
 			buy(1, $item[Mayodiol]);
 			use(1, $item[Mayodiol]);
 		}
-		if ($item[milk of magnesium].item_amount() > 0
-			&& $effect[Got Milk].have_effect() < 4)
+		if ($effect[Got Milk].have_effect() < 4)
 		{
 			if ($item[glass of goat's milk].item_amount() > 0)
-			{
 				cli_execute("create 1 milk of magnesium");
-			}
-			use(1, $item[milk of magnesium]);
+
+			if ($item[milk of magnesium].item_amount() > 0)
+				use(1, $item[milk of magnesium]);
 		}
 		// eat browser cookie, time spin 3, 1 with mayodiol
 		if ($item[Browser Cookie].item_amount() > 0)
@@ -600,29 +706,43 @@ void EatBrowserCookie()
 	}
 }
 
-boolean[11] completedQuests;
+boolean[31] completedQuests; // last quest is 30
+string UpdateQuestStatus(string councilPhpText)
+{
+	string page = councilPhpText;
+	if (page.contains_text("The door to the Council of Loathing building is locked"))
+	{
+		page = visit_url("council.php"); // first time in, it has intro text, need to skip past that
+	}
+	if (!page.contains_text("community services so far."))
+		abort("Unexpected council text");
+	for (int i = 1; i <= 11; i++)
+	{
+		string text = "name=option value=" + i; // not sure if it's followed by " " or " >", so check both
+		if (!page.contains_text(text + " ") && !page.contains_text(text + ">"))
+		{
+			completedQuests[i] = true;
+			print("Quest already complete: " + i);
+		}		
+	}
+	return page;
+}
 void DoQuest(int questNum)
 {
-	if (completedQuests[questNum - 1])
+	print("Requesting to do quest " + questNum);
+	if (completedQuests[questNum])
 		return;
-	string page = visit_url("council.php");
-	if (!page.contains_text("community services so far"))
-	{
-		abort("TODO: need special handling for initial page load: " + page);
-	}
-	for (int i = 0; i < 11; i++)
-	{
-		if (!page.contains_text("name=option value=" + i))
-			completedQuests[i] = true;
-	}
-	if (completedQuests[questNum - 1])
+	UpdateQuestStatus(visit_url("council.php"));
+	if (completedQuests[questNum])
 	{
 		print("Already completed quest " + questNum);
 	}
 	else
 	{
 		run_choice(questNum);
+		UpdateQuestStatus(visit_url("council.php"));
 	}
+	waitq(2);
 }
 
 void SetBastilleBattalionMode(int option, string target)
@@ -638,9 +758,9 @@ void SetBastilleBattalionMode(int option, string target)
 }
 void ExecuteBastilleBattalion(string target1, string target2, string target3)
 {
-	if ($item[Draftsman's driving gloves].item_amount() > 0
-		|| $item[Nouveau nosering].item_amount() > 0
-		|| $item[Brutal brogues].item_amount() > 0)
+	if ($item[Draftsman's driving gloves].HaveItem()
+		|| $item[Nouveau nosering].HaveItem()
+		|| $item[Brutal brogues].HaveItem())
 	{
 		return;
 	}
@@ -650,7 +770,7 @@ void ExecuteBastilleBattalion(string target1, string target2, string target3)
 	SetBastilleBattalionMode(3, target3);
 
 	visit_url("choice.php?whichchoice=1313&option=5&pwd=" +my_hash());
-	for (int i = 0; i < 15; i++)
+	for (int i = 0; i < 16; i++)
 		run_choice(3); // Always take the 3rd option, the last time #3 should be "I'm done for now"
 }
 
@@ -749,8 +869,6 @@ void Day1()
 // todo: Check for ghost here;
 	DoQuest(6); // weapon damage, not many options to improve
 
-	if (get_property("_clanFortuneBuffUsed") == "false")
-		cli_execute("fortune buff susie");
 	if ($effect[substats.enh].have_effect() <= 0)
 		cli_execute("terminal enhance substats.enh");
 
@@ -786,7 +904,13 @@ void Day1()
 	// fight remaining bishops with machine elf
 	// machine elf tunnels
 	// god lobster exp
-	// do quest 7 (+spell damage)
+
+	//if (!completedQuests[7])
+	//{
+	//	if ($item[LOV Elixir #6].item_amount() > 0 && $effect[The Magic of LOV].have_effect() == 0)
+	//		use(1, $item[LOV Elixir #6]);
+	//	DoQuest(7); // (+spell damage)
+	//}
 
 	// maybe get a perfume-soaked bandana from Garbage Barges while grabbing stench jelly (if lucky)
 	
@@ -800,6 +924,8 @@ void Day1()
 	// pale horse
 	// orphan candy corn
 	// do quest 9 (+hot resist)
+	//if (get_property("_clanFortuneBuffUsed") == "false")
+	//	cli_execute("fortune buff ???");
 
 	// fight garbage tourist for 3 dinsey bucks, spending turns in case of fertilizer drops
 
@@ -811,74 +937,251 @@ void Day2()
 {
 	if ($item[li'l candy corn costume].item_amount() == 0 && my_meat() >= 1000)
 		buy(1, $item[li'l candy corn costume]);
-	// Dark horse
-	// equip garbage shirt
-	// cheat Rope
-	// Bastille battalion: babar (muscle exp), cannon (muscle bonus), brutalist (+8 familiar weight)
-	// do familiar weight quest
-	// pantogram (same
+	if (get_property("_horsery") == "")
+		cli_execute("try; horsery dark");
+	if (!HaveItem($item[A Light that Never Goes Out]))
+	{
+		if ($item[third-hand lantern].item_amount() == 0)
+		{
+			buy(1, $item[third-hand lantern]);
+		}
+		use_skill(3, $skill[Summon Smithsness]);
+		create(1, $item[A Light that Never Goes Out]);
+		if ($item[frilly skirt].item_amount() == 0)
+			buy(1, $item[frilly skirt]);
+		create(1, $item[Vicar's Tutu]);
+	}
+	if (!HaveItem($item[makeshift garbage shirt]))
+	{
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=3&whichitem=9690");
+		run_choice(5); // garbage shirt
+	}
+	if (!HaveItem($item[rope]))
+	{
+		cli_execute("cheat rope");
+	}
+	ExecuteBastilleBattalion("BABAR", "BRUTALIST", "CANNON"); // muscle stats, +8 familiar weight, muscle buff
 
-	// perfect freeze
-	// fight witchess knight, and potion up
-	// clear snojo
-	// fax ninja snowman
 
-	// summon smithness A Light that Never Goes Out
-	// summon smithsness craft "Meat Tenderizer is Murder"
-	// summon smithness craft Saucepanic
+	if (!HaveItem($item[pantogram pants]))
+	{
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9573");
+		visit_url("choice.php?whichchoice=1270&pwd&option=1&m=1&e=1&s1=-1,0&s2=-1,0&s3=-1,0");
+	}
 
-	// FantasyRealm Warrior's Helm
-	// gingerbread city candy
-	// sweet synth +300% HP, +300% muscle
-	// ben-gal cream
-	// Get Big
+	if (!HaveItem($item[FantasyRealm Warrior's Helm]))
+	{
+		visit_url("place.php?whichplace=realm_fantasy&action=fr_initcenter");
+		visit_url("choice.php?pwd&whichchoice=1280&option=1"); // warrior's helm
+	}
+
+	if (!completedQuests[5])
+	{
+		$slot[weapon].equip($item[rope]);
+		$slot[acc3].equip($item[Brutal brogues]);
+
+		UseSkillForEffect($skill[Empathy of the Newt], $effect[Empathy]);
+
+		if ($effect[Puzzle Champ].have_effect() == 0
+			 && !get_property("_witchessBuff").to_boolean())
+		{
+			cli_execute("witchess");
+		}
+		$familiar[Baby Sandworm].use_familiar(); // should be the heaviest familiar at this point
+			
+		DoQuest(5); // familiar weight
+		ChooseFamiliar();
+	}
+
+	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
+	$slot[shirt].equip($item[makeshift garbage shirt]);
+	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
+	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
+	$slot[acc2].equip($item[gold detective badge]);
+	$slot[acc3].equip($item[your cowboy boots]);
+	$slot[back].equip($item[protonic accelerator pack]);
+	$slot[pants].equip($item[pantogram pants]);
+
+	DailySummons();
+	FightWitchessRook();
+	RunSnojo(false);
+	RunGingerbread();
+	FaxNinja();
+
+
+
+	if (!completedQuests[1])
+	{
+		BuyItemForEffect($item[Ben-Gal&trade; Balm], $effect[Go Get 'Em, Tiger!]);
+		UseSkillForEffect($skill[Get Big], $effect[Big]);
+
+		if ($item[LOV Elixir #3].item_amount() > 0)
+			use(1, $item[LOV Elixir #3]);
+
+		if ($effect[Strongly Motivated].have_effect() == 0)
+			cli_execute("cheat Strength");
+
+		$slot[hat].equip($item[FantasyRealm Warrior's Helm]);
+		$slot[shirt].equip($item[makeshift garbage shirt]);
+		$slot[back].equip($item[protonic accelerator pack]);
+		$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
+		$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+		$slot[pants].equip($item[pantogram pants]);
+		$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
+		$slot[acc2].equip($item[gold detective badge]);
+		$slot[acc3].equip($item[Brutal Brogues]);
+
+		if ($effect[Synthesis: Hardy].have_effect() == 0
+			|| $effect[Synthesis: Strong].have_effect() == 0)
+		{
+			abort("Please manually cast Synthesis: Hardy/Strong and then resume execution");
+		}
+		ChallengeGodLobster(1, 3);
+		ChallengeGodLobster(2, 3);
+		ChallengeGodLobster(3, 3);
+
+		$slot[off-hand].equip($item[A Light that Never Goes Out]);
+		DoQuest(1); // Bonus HP
+
+	}
+	if (!completedQuests[2])
+	{
+		$slot[off-hand].equip($item[A Light that Never Goes Out]);
+		$slot[pants].equip($item[Vicar's Tutu]);
+		CastGiantGrowth();
 	// flaskfull of hollow
-	// cheat muscle buff
-	// challenge god lobster x3 experience
-	// do quest 1 (bonus HP)
-	// do quest 2 (bonus muscle)
+		DoQuest(2); // Bonus Muscle
+	}
 
-	// hairspray
-	// rhinestones
-	// favored by lyle
-	// telescope buff
-	// spacegate broad-spectrum vaccine
-	// cross the streams
-	// sweet synth +300% moxie
-	// fight witchess bishop and cast giant growth
-	// do quest 4 (bonus moxie)
+	if (!completedQuests[4])
+	{
+		BuyItemForEffect($item[hair spray], $effect[Butt-Rock Hair]);
+		UseSkillForEffect($skill[Get Big], $effect[Big]);
 
-	// glittery mascara
-	// sweet synth +300% myst
-	// do quest 5 (bonus myst)
-	// do quest 5 (bonus myst)
+		if ($effect[Sensation].have_effect() == 0 && $item[abstraction: sensation].item_amount() > 0)
+			chew(1, $item[abstraction: sensation]);
 
-	// ode to booze
-	// beer barrel polka
-	// drink 6 astral pilsner (should be level 11)
-	// drink 1 sacramento wine
-	// buy/drink dinsey whinskey
-	// drink 1 splendid martini
-	// sweet synth +150% item drop
-	// fortune buff hagnk
-	// terminal.enh
-	// resolution: be happier (if available)
-	// steely eyed squint
-	// orphan wear ninja costume
-	// play pool (3)
-	// run LOV tunnel, grab earrings, eye surgery (choice 3), chocolate
-	// do quest 7 (item/booze drops)
+		use($item[rhinestone].item_amount(), $item[rhinestone]);
 
-	// buy/use shoe gum
-	// swim sprints
-	// sonata of sneakiness
-	// pantogram pants
-	// do quest 8 (-combat)
+		if (get_property("_lyleFavored") != "true")
+			visit_url("place.php?whichplace=monorail&action=monorail_lyle"); // favored by lyle
+		if (get_property("telescopeLookedHigh") != "true")
+			cli_execute("telescope high");
+		if (get_property("_spacegateVaccine") != "true")
+		{
+			visit_url("place.php?whichplace=spacegate&action=sg_vaccinator");
+			run_choice(2); // spacegate broad-spectrum vaccine
+		}
 
+		visit_url("showplayer.php?who=2807390");
+		visit_url("showplayer.php?action=crossthestreams&pwd=" + my_hash() + "&who=2807390"); // cross the streams
+
+		if ($effect[Synthesis: Cool].have_effect() == 0)
+		{
+			abort("Please manually cast Synthesis: Cool and then resume execution");
+		}
+		$slot[hat].equip($item[Hairpiece on Fire]);
+		$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
+		$slot[off-hand].equip($item[A Light that Never Goes Out]);
+		$slot[pants].equip($item[Vicar's Tutu]);
+		$slot[acc3].equip($item[your cowboy boots]);
+		CastGiantGrowth();
+		DoQuest(4); // Bonus Moxie
+	}
+
+	if (!completedQuests[3])
+	{
+		BuyItemForEffect($item[glittery mascara], $effect[Glittering Eyelashes]);
+		UseSkillForEffect($skill[Get Big], $effect[Big]);
+		if ($effect[Thought].have_effect() == 0 && $item[abstraction: thought].item_amount() > 0)
+			chew(1, $item[abstraction: thought]);
+
+		$slot[hat].equip($item[FantasyRealm Mage's Hat]);
+		$slot[pants].equip($item[Vicar's Tutu]);
+		if ($item[training legwarmers].item_amount() > 0)
+			$slot[acc3].equip($item[training legwarmers]);
+		if ($effect[Synthesis: Smart].have_effect() == 0)
+		{
+			abort("Please manually cast Synthesis: Smart and then resume execution");
+		}
+		CastGiantGrowth();
+		DoQuest(3); // Bonus Myst
+	}
+
+	if (!completedQuests[9])
+	{
+		if (my_inebriety() <= 5) // don't want to overdrink, expect to drink at least 9
+		{
+			if (get_property("_barrelPrayer") != "true")
+				cli_execute("barrelprayer buff");
+			if ($effect[Ode to Booze].have_effect() < 10)
+			{
+				ChateauRest(50);
+				use_skill(1, $skill[The Ode to Booze]);
+			}
+			drink(6, $item[astral pilsner]);
+			drink(1, $item[sacramento wine]);
+			if ($item[Dinsey whinskey].item_amount() == 0 && $item[Fun Funds].item_amount() >= 2)
+				buy(1, $item[Dinsey whinskey]);
+			if ($item[Dinsey whinskey].item_amount() > 0)
+				drink(1, $item[Dinsey whinskey]);
+			while (my_inebriety() < 10) // use up remaining barrel prayer buff
+				drink(1, $item[splendid martini]);
+		}
+		if (get_property("_clanFortuneBuffUsed") == "false")
+			cli_execute("fortune buff hagnk");
+		if ($effect[items.enh].have_effect() <= 0)
+			cli_execute("terminal enhance items.enh");
+		if ($effect[Joyful Resolve].have_effect() <= 0 && $item[resolution: be happier].item_amount() > 0)
+			use(1, $item[resolution: be happier]);
+		if ($effect[Hustlin'].have_effect() <= 0)
+			cli_execute("pool 3");
+
+		$familiar[trick-or-treating tot].use_familiar();
+		$slot[familiar].equip($item[li'l ninja costume]);
+		$slot[off-hand].equip($item[A Light that Never Goes Out]);
+		$slot[pants].equip($item[Vicar's Tutu]);
+		if ($effect[Synthesis: Collection].have_effect() == 0)
+		{
+			abort("Please manually cast Synthesis: Collection (+150% item) and then resume execution");
+		}
+		// todo: run LOV tunnel, grab earrings, eye surgery (choice 3), chocolate
+		if (get_property("_steelyEyedSquintUsed") != "true")
+		{
+			ChateauRest(100);
+			use_skill(1, $skill[Steely-Eyed Squint]);
+		}
+		DoQuest(9); // (item/booze drops)
+	}
+
+	if (!completedQuests[8])
+	{
+		BuyCoinItemForEffect($coinmaster[precinct], $item[shoe gum], $effect[Gummed Shoes]);
+		UseSkillForEffect($skill[The Sonata of Sneakiness], $effect[The Sonata of Sneakiness]);
+		UseSkillForEffect($skill[Smooth Movement], $effect[Smooth Movements]);
+		
+		if ($effect[Silent Running].have_effect() <= 0)
+			cli_execute("swim sprints");
+
+		$slot[pants].equip($item[pantogram pants]);
+
+		// try to intergnat "Rational Thought"
+		DoQuest(8); // (-combat)
+	}
+	DoQuest(30); // (Final Service)
 }
+
 
 void main(int DayNum1or2)
 {
+	if (my_daycount() != DayNum1or2)
+	{
+		if (!user_confirm("You entered day " + DayNum1or2 + " but actual day is " + my_daycount() + ".  Are you sure you wish to proceed?"))
+			return;
+	}
+	string page = visit_url("council.php");
+	UpdateQuestStatus(page);
 	if (DayNum1or2 == 1)
 	{
 		InitCharacter();

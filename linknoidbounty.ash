@@ -692,9 +692,19 @@ void DoBounty(BountyDetails b)
 				visit_url("ocean.php?lon=59+lat=10");
 				return;
 			}
+                	else if (page.contains_text("Denim Axes Examined"))
+			{
+				run_choice(2); // No thanks
+				return;
+			}
                 	else if (page.contains_text("Sun at Noon, Tan Us"))
 			{
 				run_choice(1);
+				return;
+			}
+                	else if (page.contains_text("A Pre-War Dresser Drawer, Pa!"))
+			{
+				run_choice(2); // ignawer the drawer
 				return;
 			}
                 	else if (page.contains_text("No sir, away!  A papaya war is on!"))
@@ -706,6 +716,21 @@ void DoBounty(BountyDetails b)
 			else if (page.contains_text("Foreshadowing Demon!"))
 			{
 				run_choice(2); // Get out on the double
+				return;
+			}
+			else if (page.contains_text("Adventurer, $1.99"))
+			{
+				run_choice(2); // Let sleeping doors lie
+				return;
+			}
+			else if (page.contains_text("When Rocks Attack"))
+			{
+				run_choice(2); // Sorry, gotta run
+				return;
+			}
+			else if (page.contains_text("All They Got Inside is Vacancy (and Ice)"))
+			{
+				run_choice(5); // Raid some guest rooms
 				return;
 			}
                 	else if (page.contains_text("Random Lack of an Encounter"))

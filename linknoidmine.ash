@@ -425,7 +425,7 @@ void DoVolcoino()
 {
 	DoVelvet();
 	DoBunker();
-	if (volcoino.item_amount() >= 3)
+	if (get_property("hotAirportAlways") != "true" && volcoino.item_amount() >= 3 && dayPass.item_amount() == 0)
 	{
 		cli_execute("coinmaster buy disco " + dayPass.to_string());
 	}
