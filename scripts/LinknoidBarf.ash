@@ -447,6 +447,7 @@ void ReadSettings()
     skill funkslinging = ToSkill("Ambidextrous Funkslinging");
     skill meteorShower = ToSkill("Meteor Shower");
     skill accordionBash = ToSkill("Accordion Bash");
+    item boomBox = ToItem("SongBoom&trade; BoomBox");
     skill singAlong = ToSkill("Sing Along");
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
@@ -640,6 +641,8 @@ void ReadSettings()
 
 // locations for adventuring
     location garbagePirates = ToLocation("Pirates of the Garbage Barges"); // for orphan costume
+    location uncleGator = ToLocation("Uncle Gator's Country Fun-Time Liquid Waste Sluice");
+    location toxicTeacups = ToLocation("The Toxic Teacups");
     location covePirates = ToLocation("The Obligatory Pirate's Cove"); // alternate for orphan costume... wait a second, we should always have main pirates location
     location castleTopFloor = ToLocation("The Castle in the Clouds in the Sky (Top Floor)"); // semi-rare
     location purpleLight = ToLocation("The Purple Light District"); // semi-rare
@@ -704,7 +707,12 @@ void ReadSettings()
 
 // semi-rare
     item nickel = ToItem("hobo nickel");
+// keys
     item billiardKey = ToItem("Spookyraven billiards room key");
+    item keyCardAlpha = ToItem("keycard α");
+    item keyCardBeta = ToItem("keycard β");
+    item keyCardGamma = ToItem("keycard γ");
+    item keyCardDelta = ToItem("keycard δ");
 
 // barf mountain quest
     item lubeShoes = ToItem("lube-shoes");
@@ -738,6 +746,7 @@ void ReadSettings()
     effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
     effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
     effect haikuMind = ToEffect("Haiku State of Mind"); // turns everything into haiku
+    effect tempBlind = ToEffect("Temporary Blindness"); // makes messages just say you're blind
 
 // free combats
     item genie = ToItem("genie bottle");
@@ -2229,7 +2238,7 @@ print("Running filter = " + result, printColor);
         return "skill " + thrustSmack.to_string();
     }
 
-    int PuttyCopiesRemaining()
+    void TryOpenRainDoh()
     {
         static boolean rainDohChecked = false;
         if (!rainDohChecked)
@@ -2245,6 +2254,11 @@ print("Running filter = " + result, printColor);
                 }
             }
         }
+    }
+
+    int PuttyCopiesRemaining()
+    {
+        TryOpenRainDoh();
         int puttyAvailable = 0;
         boolean hasPutty = spookyPutty.item_amount() > 0;
         boolean hasRaindoh = rainDoh.item_amount() > 0;
@@ -2491,7 +2505,7 @@ print("Running filter = " + result, printColor);
             return;
         if (moveableFeast.item_amount() > 0
             && get_property("_feastUsed").to_int() < 5
-            && !get_property("_feastFamiliars").contains_text(my_familiar().to_string()))
+            && !get_property("_feastedFamiliars").contains_text(my_familiar().to_string()))
         {
             use(1, moveableFeast);
         }
@@ -4292,7 +4306,7 @@ print("Running filter = " + result, printColor);
             "breath mint", // glass gnoll eye once a day
             "Now and Earlier",
             "abandoned candy",
-            "Wax Flask",
+            //"Wax Flask",
             "piece of after eight",
             "licorice root",
             "garbage-juice flavored Hob-O",
@@ -4514,6 +4528,7 @@ print("Running filter = " + result, printColor);
         {
             return;
         }
+        TryOpenRainDoh();
         print("Prepping to fight elf as Robortender", printColor);
         if (chateauMon != crayonElf && HaveEquipment(jokesterGun))
         {
@@ -5317,34 +5332,93 @@ print("Running filter = " + result, printColor);
         }
     }
 
-    void RunawayMadnessBakery()
+    boolean TryPrepareFamiliarRunaways(boolean first, item[slot] weightOF)
     {
         if (stompingBoots.have_familiar())
             stompingBoots.use_familiar();
         else if (bandersnatch.have_familiar())
             bandersnatch.use_familiar();
         else
-            return;
+            return false;
+        if (first)
+        {
+            weightOF = CopyOutfit(weightOutfitPieces);
+            if (HaveEquipment(snowSuit))
+                weightOF[famEqp] = snowSuit;
+            WearOutfit(weightOF);
+        }
+        if (GetFamiliarRunaways() > 1)
+        {
+            CheesyRunaway(1);
+            if (GetFamiliarRunaways() > 0)
+                return true;
+        }
 
-        item[slot] weightOF = CopyOutfit(weightOutfitPieces);
-        if (HaveEquipment(snowSuit))
-            weightOF[famEqp] = snowSuit;
         WearOutfit(weightOF);
+        if (GetFamiliarRunaways() > 0)
+            return true;
 
+        TryUseMovableFeast();
+        return GetFamiliarRunaways() > 0;
+    }
+
+    void RunawayDinseyBurnDelay()
+    {
         boolean first = true;
+        item[slot] weightOF;
+        if (!TryPrepareFamiliarRunaways(first, weightOF))
+            return;
+        while (TryPrepareFamiliarRunaways(first, weightOF))
+        {
+            location zone;
+            if (keyCardDelta.item_amount() == 0)
+            {
+                zone = uncleGator;
+            }
+            else if (keyCardBeta.item_amount() == 0)
+            {
+                zone = garbagePirates;
+            }
+            else if (keyCardGamma.item_amount() == 0)
+            {
+                zone = toxicTeacups;
+                return; // not supported yet, need to deal with getting blinded
+            }
+            else
+                return; // shouldn't get here, it checked earlier in the loop
+            if (first)
+            {
+                first = false;
+                if (!UserConfirmDefault("Use free runaways to burn delay in Dinsey zones to unlock keycards?", true))
+                    return;
+            }
+            string filter = ReadyRunaway();
+            if (filter != "Filter_Runaway")
+                return;
+            print("Burning delay in " + zone, printColor);
+            RemoveConfusionEffects(false);
+            HealUp(true);
+            string page = visit_url(zone.to_url().to_string());
+            run_combat(filter);
+        }
+    }
 
-        while (GetFamiliarRunaways() > 0
-            && strawberry.item_amount() > 0
+    void RunawayMadnessBakery()
+    {
+        boolean first = true;
+        item[slot] weightOF;
+
+        while (strawberry.item_amount() > 0
             && dough.item_amount() > 0
             && icing.item_amount() > 0
-            && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true"))
+            && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true")
+            && TryPrepareFamiliarRunaways(first, weightOF))
         {
             if (first)
             {
                 first = false;
                 if (!UserConfirmDefault("Use free runaways to make popular tarts?", true))
                     return;
-                CheesyRunaway(1);
             }
             string filter = ReadyRunaway();
             if (filter != "Filter_Runaway")
@@ -5358,14 +5432,6 @@ print("Running filter = " + result, printColor);
             }
             else
                 run_combat(filter);
-            if (GetFamiliarRunaways() <= 0)
-            {
-                WearOutfit(weightOF);
-                if (GetFamiliarRunaways() <= 0)
-                {
-                    TryUseMovableFeast();
-                }
-            }
         }
     }
 
@@ -5709,6 +5775,19 @@ print("Running filter = " + result, printColor);
         }
     }
 
+    boolean boomedBox = false;
+    void CheckBoomBoxSong()
+    {
+        if (boomedBox || boomBox.item_amount() == 0 || get_property("_boomBoxSongsLeft").to_int() < 2)
+            return;
+        if (get_property("boomBoxSong") == "Total Eclipse of Your Meat")
+            return;
+        boomedBox = true;
+        if (!UserConfirmDefault("Do you wish to switch your BoomBox song to \"Total Eclipse of Your Meat\"?", true))
+		return;
+	visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9919");
+	run_choice(5); // Total Eclipse of Your Meat
+    }
 
     void RunBarfMountain(boolean requireOutfit)
     {
@@ -6160,6 +6239,9 @@ print("mob = " + canMobHit);
         if (turnCount == 0)
             return;
 
+        CheckBoomBoxSong();
+        TryCalculateUniverse();
+        TryOpenRainDoh();
         PrepGarden();
         try
         {
@@ -6169,6 +6251,7 @@ print("mob = " + canMobHit);
             FreeCombatsForProfit();
 
             RunawayGingerbread();
+            RunawayDinseyBurnDelay();
             RunawayMadnessBakery();
 
             for (int i = 0; i < turnCount; i++)
@@ -6222,6 +6305,22 @@ print("mob = " + canMobHit);
         finally
         {
             RestoreGarden();
+
+            if (HaveEquipment(pantsGiving))
+            {
+                int pantsCount = get_property("_pantsgivingCount").to_int();
+                if (pantsCount < 500)
+                {
+                    int remaining;
+                    if (pantsCount < 5)
+                        remaining = 5 - pantsCount;
+                    else if (pantsCount < 50)
+                        remaining = 50 - pantsCount;
+                    else
+                        remaining = 500 - pantsCount;
+                    print("Pantsgiving " + remaining + " adventures until next fullness.", printColor);
+                }
+            }
         }
     }
 
