@@ -276,6 +276,23 @@ void TakeAllBounties()
 	special = TakeBounty("Special");
 }
 
+void AbandonBounty(BountyDetails b)
+{
+	print("Abandoning " + b.difficulty + " quest for " + b.details);
+	switch (b.difficulty)
+	{
+		case "Easy":
+			visit_url("bounty.php?pwd=" + my_hash() + "&action=giveup_low");
+			break;
+		case "Hard":
+			visit_url("bounty.php?pwd=" + my_hash() + "&action=giveup_hig");
+			break;
+		case "Special":
+			visit_url("bounty.php?pwd=" + my_hash() + "&action=giveup_spe");
+			break;
+	}
+}
+
 void PrepareBanishers()
 {
 	foreach key,b in AllBanishers
@@ -426,10 +443,12 @@ string TryBanish(monster mon)
 }
 
 boolean whiffed = false;
+monster matingCalled;
 
 void ResetCombatState()
 {
 	whiffed = false;
+	matingCalled = false;
 }
 
 string Filter_Combat(int round, monster mon, string page)
@@ -439,7 +458,26 @@ string Filter_Combat(int round, monster mon, string page)
 		// can't do anything but attack here
 		return "attack";
 	}
-	if (mon != current.source)
+	if (mon == current.source)
+	{
+		if (!whiffed && my_mp() > 40 && $skill[Transcendant Olfaction].have_skill()
+			&& $effect[On the Trail].have_effect() <= 0)
+		{
+			whiffed = true;
+			return "skill " + $skill[Transcendant Olfaction];
+		}
+		if (!whiffed && my_familiar() == nosyNose)
+		{
+			whiffed = true;
+			return "skill " + $skill[Get a Good Whiff of This Guy];
+		}
+		if (matingCalled != mon && my_mp() > 25 && $skill[Gallapagonsian Mating Call].have_skill())
+		{
+			matingCalled = mon;
+			return "skill " + $skill[Gallapagonsian Mating Call];
+		}
+	}
+	else
 	{
 		string result = TryBanish(mon);
 		if (result != "")
@@ -448,19 +486,122 @@ string Filter_Combat(int round, monster mon, string page)
 			return result;
 		}
 	}
-	else
-	{
-		if (!whiffed && my_familiar() == nosyNose)
-		{
-			whiffed = true;
-			return "skill Get a Good Whiff of This Guy";
-		}
-	}
 	return "";
 }
 
+boolean PromptToUnlock()
+{
+	int price = current.accessItem.mall_price();
+	if (!user_confirm("It will cost " + price + " meat to buy " + current.accessItem + " to unlock zone " + current.details.location + "."
+		+ "\r\n\r\nSpend " + price + " meat to unlock?"))
+	{
+		if (user_confirm("Do you want to abandon bounty in zone " + current.details.location + "?"))
+			AbandonBounty(current);
+		return false;
+	}
+	if (current.accessItem.item_amount() == 0)
+		buy(1, current.accessItem);
+	if (current.accessItem.item_amount() == 0)
+		return false;
+	use(1, current.accessItem);
+	return true;
+}
+
+void UnlockGuild()
+{
+	// todo
+}
+
+boolean UnlockFunHouse() // nemesis quest
+{
+	location guildZone;
+	string guildName;
+	int ghostChoice;
+	item requiredITem;
+	switch (my_class().to_string())
+	{
+		case "Seal Clubber":
+			guildName = "f";
+			guildZone = $location[The Outskirts of Cobb's Knob];
+			requiredItem = $item[seal-clubbing club];
+			break;
+		case "Turtle Tamer":
+			guildName = "f";
+			guildZone = $location[The Outskirts of Cobb's Knob];
+			requiredItem = $item[turtle totem];
+			break;
+		case "Sauceror":
+			guildName = "m";
+			guildZone = $location[The Haunted Pantry];
+			requiredItem = $item[saucepan];
+			break;
+		case "Pastamancer":
+			guildName = "m";
+			guildZone = $location[The Haunted Pantry];
+			requiredItem = $item[pasta spoon];
+			break;
+		case "Disco Bandit":
+			guildName = "t";
+			guildZone = $location[The Sleazy Back Alley];
+			requiredItem = $item[disco ball];
+			break;
+		case "Accordion Thief":
+			guildName = "t";
+			guildZone = $location[The Sleazy Back Alley];
+			requiredItem = $item[stolen accordion];
+			break;
+		default:
+			print("Unlocking guild for class " + my_class() + " not yet supported");
+			return false;
+			
+	}
+print("Unlocking fun house is not fully implemented yet", printColor);
+return false;
+	string page = visit_url("guild.php?guild=" + guildName);
+	if (page.contains_text("todo: blah blah"))
+	{
+		if (!UnlockGuild())
+			return false;
+	}
+	
+	page = visit_url("guild.php?place=scg");
+	visit_url("guild.php?place=scg"); // multiple visits to unlock
+
+	while (requiredItem.item_amount() == 0)
+	{
+		buy(1, $item[chewing gum on a string]);
+		use(1, $item[chewing gum on a string]);
+	}
+	while (true)
+	{
+		page = visit_url($location[The Unquiet Garves].to_url());
+		if (page.contains_text("You're fighting"))
+		{
+			run_combat();
+			continue;
+		}
+		if (page.contains_text("Todo: blah blah"))
+		{
+			run_choice(ghostChoice);
+			visit_url("choice.php"); // is this right?
+			run_combat();
+			// do swap items
+			break;
+		}
+	}
+}
+
+
 void DoBounty(BountyDetails b)
 {
+	if (b.details.location == $location[The Degrassi Knoll Restroom]
+		&& (my_sign() == "Mongoose" || my_sign() == "Wallaby" || my_sign() == "Vole"))
+	{
+		print("Can't do Degrassi bounty under Degrassi moonsign:", printColor);
+		AbandonBounty(b);
+		b.NoAccess = true;
+		return;
+	}
 	print("Attempting bounty at " + b.details.location, printColor);
 	current = b;
         string propertyName = ("current" + b.difficulty + "BountyItem");
@@ -504,7 +645,15 @@ void DoBounty(BountyDetails b)
 		{
 			if (page.contains_text("Typographical Clutter"))
 			{
+				if ($item[plus sign].item_amount() == 0)
+					run_choice(3); // The big apostrophe
+				else
+					run_choice(5); // teleportitis
+			}
+			else if (page.contains_text("The Oracle Will See You Now"))
+			{
 				run_choice(3);
+				use(1, $item[plus sign]);
 			}
 			else if (page.contains_text("Lights Out in the Nursery"))
 			{
@@ -738,6 +887,12 @@ void DoBounty(BountyDetails b)
 				run_choice(1);
 				return;
 			}
+                	else if (page.contains_text("Ouch!  You bump into a door!"))
+			{
+				run_choice(2); // fight a mimic
+				run_combat("Filter_Combat");
+				return;
+			}
                 	else if (page.contains_text("Stupid Pipes."))
 			{
 				run_choice(3);
@@ -781,10 +936,34 @@ void DoBounty(BountyDetails b)
 			}
 			use(1, $item[transporter transponder]);
 		}
+		else if (page.contains_text("You shouldn't be here.")
+			&& (current.details.location == $location[Anger Man's Level]))
+		{
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
+		else if (page.contains_text("That isn't a place.")
+			&& (current.details.location == $location[The "Fun" House]))
+		{
+			if (!UnlockFunHouse())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
 		else if (page.contains_text("That isn't a place you can go.")
-			|| page.contains_text("That isn't a place.") // clown head
-			|| page.contains_text("You shouldn't be here.")
-			|| page.contains_text("Whuzzat now?")
+			&& (current.details.location == $location[The Secret Government Laboratory]))
+		{
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
+		else if (page.contains_text("Whuzzat now?")
 			|| page.contains_text("You don't know where that place is."))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);

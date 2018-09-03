@@ -447,6 +447,7 @@ void ReadSettings()
     skill funkslinging = ToSkill("Ambidextrous Funkslinging");
     skill meteorShower = ToSkill("Meteor Shower");
     skill accordionBash = ToSkill("Accordion Bash");
+    item boomBox = ToItem("SongBoom&trade; BoomBox");
     skill singAlong = ToSkill("Sing Along");
     item bling = ToItem("Bling of the New Wave");
     item bakeBackpack = ToItem("bakelite backpack");
@@ -2237,7 +2238,7 @@ print("Running filter = " + result, printColor);
         return "skill " + thrustSmack.to_string();
     }
 
-    int PuttyCopiesRemaining()
+    void TryOpenRainDoh()
     {
         static boolean rainDohChecked = false;
         if (!rainDohChecked)
@@ -2253,6 +2254,11 @@ print("Running filter = " + result, printColor);
                 }
             }
         }
+    }
+
+    int PuttyCopiesRemaining()
+    {
+        TryOpenRainDoh();
         int puttyAvailable = 0;
         boolean hasPutty = spookyPutty.item_amount() > 0;
         boolean hasRaindoh = rainDoh.item_amount() > 0;
@@ -4522,6 +4528,7 @@ print("Running filter = " + result, printColor);
         {
             return;
         }
+        TryOpenRainDoh();
         print("Prepping to fight elf as Robortender", printColor);
         if (chateauMon != crayonElf && HaveEquipment(jokesterGun))
         {
@@ -5768,6 +5775,19 @@ print("Running filter = " + result, printColor);
         }
     }
 
+    boolean boomedBox = false;
+    void CheckBoomBoxSong()
+    {
+        if (boomedBox || boomBox.item_amount() == 0 || get_property("_boomBoxSongsLeft").to_int() < 2)
+            return;
+        if (get_property("boomBoxSong") == "Total Eclipse of Your Meat")
+            return;
+        boomedBox = true;
+        if (!UserConfirmDefault("Do you wish to switch your BoomBox song to \"Total Eclipse of Your Meat\"?", true))
+		return;
+	visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9919");
+	run_choice(5); // Total Eclipse of Your Meat
+    }
 
     void RunBarfMountain(boolean requireOutfit)
     {
@@ -6219,6 +6239,9 @@ print("mob = " + canMobHit);
         if (turnCount == 0)
             return;
 
+        CheckBoomBoxSong();
+        TryCalculateUniverse();
+        TryOpenRainDoh();
         PrepGarden();
         try
         {
