@@ -29,6 +29,13 @@ void BuyItemForEffect(item i, effect e)
 		use(1, i);
 	}
 }
+void UseItemForEffect(item i, effect e)
+{
+	if (e.have_effect() <= 0 && i.item_amount() > 0)
+	{
+		use(1, i);
+	}
+}
 void UseSkillForEffect(skill s, effect e)
 {
 	if (e.have_effect() <= 0)
@@ -64,7 +71,7 @@ item CraftPerfectDrink()
 	return $item[none];
 }
 
-boolean DrinkItem(item i, int liverReq)
+boolean DrinkForTurns(item i, int liverReq)
 {
 	if (i == $item[Dinsey whinskey] && $item[Dinsey whinskey].item_amount() == 0 && $item[FunFunds&trade;].item_amount() >= 2)
 		buy(1, $item[Dinsey whinskey]);
@@ -87,7 +94,7 @@ boolean DrinkForEffect(item i, effect e, int liverReq)
 {
 	if (e.have_effect() > 0)
 		return false;
-	return DrinkItem(i, liverReq);
+	return DrinkForTurns(i, liverReq);
 }
 
 
@@ -441,7 +448,7 @@ void InitCharacter()
 		use(1, $item[astral six-pack]);
 
 	while (get_property("_genieWishesUsed").to_int() < 3)
-		cli_execute("genie more wishes");
+		cli_execute("genie wish for more wishes");
 
 	visit_url("place.php?whichplace=chateau&action=chateau_desk2");
 
@@ -464,7 +471,6 @@ void InitCharacter()
 		buy(1, $item[Dramatic&trade; range]);
 		use(1, $item[Dramatic&trade; range]);
 	}
-
 
 	if (!HaveItem($item[Shakespeare's Sister's Accordion]))
 	{
@@ -1235,6 +1241,7 @@ void DoQuest(int questNum, int maxTurns)
 			cli_execute("cast * summon resolutions");
 			page = visit_url("council.php");
 		}
+		//abort("Quest " + questNum + " in " + turns + " turns, max = " + maxTurns);
 		run_choice(questNum);
 		UpdateQuestStatus(visit_url("council.php"));
 		if (!completedQuests[questNum])
@@ -1283,33 +1290,27 @@ void SpacegateMoxieStats()
 	int turnsLeft = get_property("_spacegateTurnsLeft").to_int();
 	if (turnsLeft > 0 && turnsLeft < 15) // initially 0 at the start of the day, jumps to 20 when you unlock, and should get this quest within 5 turns
 		return;
+	if (!HaveItem($item[geological sample kit]))
+	{
+		visit_url("place.php?whichplace=spacegate&action=sg_requisition");
+		run_choice(6);
+	}
+	if (!HaveItem($item[exo-servo leg braces]))
+	{
+		visit_url("place.php?whichplace=spacegate&action=sg_requisition");
+		run_choice(2);
+	}
 	string page = visit_url("place.php?whichplace=spacegate&action=sg_Terminal");
 	if (page.contains_text("(a valid set of coordinates is 7 letters)"))
 	{
 		page = visit_url("choice.php?whichchoice=1235&pwd=" + my_hash() + "&option=2&word=BAAAAAM");
-		if (page.contains_text("high gravity"))
-		{
-			page = visit_url("place.php?whichplace=spacegate&action=sg_requisition");
-			if (page.contains_text("exo-servo leg braces"))
-				run_choice(2);
-		}
 	}
 	try
 	{
-		if ($item[exo-servo leg braces].item_amount() > 0)
-			$slot[pants].equip($item[exo-servo leg braces]);
-		if ($item[geological sample kit].item_amount() == 0
-			&& !$item[geological sample kit].have_equipped())
-		{
-			page = visit_url("place.php?whichplace=spacegate&action=sg_requisition");
-			run_choice(6);
-		}
-		if ($item[geological sample kit].item_amount() > 0)
-			$slot[off-hand].equip($item[geological sample kit]);
-		if ($item[exo-servo leg braces].item_amount() > 0)
-			$slot[pants].equip($item[exo-servo leg braces]);
+		$slot[off-hand].equip($item[geological sample kit]);
+		$slot[pants].equip($item[exo-servo leg braces]);
 
-		for (int i = 0; i < 5; i++) // I think this should always be in the first 5 turns
+		for (int i = 0; i < 6; i++) // I think this should always be in the first 6 turns
 		{
 			page = visit_url("adventure.php?snarfblat=494");
 			if (page.contains_text("Paradise Under a Strange Sun"))
@@ -1318,6 +1319,8 @@ void SpacegateMoxieStats()
 				set_property("_WorkedOnYourTan", "true");
 				return;
 			}
+			else if (page.contains_text("A Whole New World")) // initial intro screen
+				continue;
 			else if (page.contains_text("Space Cave"))
 				run_choice(6); // Just leave
 			else if (page.contains_text("Cool Space Rocks"))
@@ -1325,7 +1328,10 @@ void SpacegateMoxieStats()
 			else if (page.contains_text("Wide Open Spaces"))
 				run_choice(2); // Take a core sample
 			else
-				abort("Todo: fix spacegate run for this page: " + page);
+			{
+				print(page);
+				abort("Todo: fix spacegate run for this page");
+			}
 		}
 	
 	}
@@ -1437,9 +1443,9 @@ void DoSleep()
 	while (my_inebriety() < 15)
 	{
 		if ($item[splendid martini].item_amount() > 0)
-			DrinkItem($item[splendid martini], 1);
+			DrinkForTurns($item[splendid martini], 1);
 		else if ($item[Sacramento wine].item_amount() > 0)
-			DrinkItem($item[Sacramento wine], 1);
+			DrinkForTurns($item[Sacramento wine], 1);
 	}
 	if (my_inebriety() == 15)
 	{
@@ -1506,10 +1512,11 @@ void Day1()
 	FightWitchessRook();
 
 	RunGingerbread();
-
 	if ($item[a ten-percent Bonus].item_amount() > 0)
 	{
 		SweetSynthesisEffect($effect[Synthesis: Style], 2, 4);
+		if ($effect[The Best Hair You've Ever Had].have_effect() <= 0)
+			abort("Please run The Neverending Party and buff in the basement to continue");
 		use(1, $item[a ten-percent Bonus]);
 		cli_execute("cheat lovers");
 	}
@@ -1591,7 +1598,7 @@ void Day1()
 		$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
 		// pale horse?  500 meat to switch
 		SweetSynthesisEffect($effect[Synthesis: Hot], 0, 0);
-		DoQuest(10, 29); // (+hot resist)
+		DoQuest(10, 21); // (+hot resist)
 	}
 	// fight garbage tourist for 3 dinsey bucks, spending turns in case of fertilizer drops
 	FightWanderers();
@@ -1603,12 +1610,12 @@ void Day1()
 	{
 		item perfect = CraftPerfectDrink();
 		if (perfect != $item[none])
-			DrinkItem(perfect, 3);
+			DrinkForTurns(perfect, 3);
 	}
 	while (my_inebriety() < 14)
 	{
 		if ($item[Sacramento wine].item_amount() > 0)
-			DrinkItem($item[Sacramento wine], 1);
+			DrinkForTurns($item[Sacramento wine], 1);
 	}
 
 	while (my_spleen_use() < 15 && $item[agua de vida].item_amount() > 0)
@@ -1622,6 +1629,7 @@ void Day1()
 		if ($effect[Silent Running].have_effect() <= 0)
 			cli_execute("swim sprints");
 
+		$slot[back].equip($item[protonic accelerator pack]);
 		$slot[pants].equip($item[pantogram pants]);
 
 		// try to intergnat "Rational Thought"
@@ -1707,7 +1715,7 @@ void Day2()
 		}
 		$familiar[Baby Sandworm].use_familiar(); // should be the heaviest familiar at this point
 		$slot[familiar].equip($item[amulet coin]); // add 10 pounds
-		DoQuest(5, 37); // familiar weight
+		DoQuest(5, 41); // familiar weight
 		ChooseFamiliar();
 	}
 
@@ -1768,15 +1776,16 @@ void Day2()
 		CastGiantGrowth();
 		$slot[hat].equip($item[FantasyRealm Warrior's Helm]);
 		$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
-		$slot[off-hand].equip($item[A Light that Never Goes Out]);
-		$slot[pants].equip($item[Vicar's Tutu]);
+		if ($item[cosmetic football].HaveItem())
+			$slot[off-hand].equip($item[cosmetic football]);
+		$slot[pants].equip($item[pantogram pants]);
 		$slot[acc3].equip($item[Brutal Brogues]);
 		if ($item[abstraction: action].item_amount() > 0 && $effect[Action].have_effect() <= 0)
 			chew(1, $item[abstraction: action]);
 		if ($item[Mer-kin strongjuice].item_amount() > 0 && $effect[Juiced Out].have_effect() <= 0)
 			use(1, $item[Mer-kin strongjuice]);
 	// flaskfull of hollow
-		DoQuest(2, 33); // Bonus Muscle
+		DoQuest(2, 36); // Bonus Muscle
 	}
 
 	if (!completedQuests[4])
@@ -1786,6 +1795,8 @@ void Day2()
 
 		if ($effect[Sensation].have_effect() == 0 && $item[abstraction: sensation].item_amount() > 0)
 			chew(1, $item[abstraction: sensation]);
+
+		UseItemForEffect($item[runproof mascara], $effect[Unrunnable Face]);
 
 		use($item[rhinestone].item_amount(), $item[rhinestone]);
 
@@ -1821,15 +1832,15 @@ void Day2()
 			use_skill(1, $skill[The Ode to Booze]);
 		}
 		while ($item[astral pilsner].item_amount() > 0)
-			if (!DrinkItem($item[astral pilsner], 1))
+			if (!DrinkForTurns($item[astral pilsner], 1))
 				break;
 
 		while ($effect[Beer Barrel Polka].have_effect() >= 5 && my_inebriety() < 14) // use up remaining barrel prayer buff
 		{
 			if ($item[sacramento wine].item_amount() > 1)
-				DrinkItem($item[sacramento wine], 1);
+				DrinkForTurns($item[sacramento wine], 1);
 			if ($item[splendid martini].item_amount() > 0)
-				DrinkItem($item[splendid martini], 1);
+				DrinkForTurns($item[splendid martini], 1);
 		}
 	}
 
@@ -1847,7 +1858,7 @@ void Day2()
 			$slot[acc3].equip($item[training legwarmers]);
 		SweetSynthesisEffect($effect[Synthesis: Smart], 1, 1);
 		CastGiantGrowth();
-		DoQuest(3, 40); // Bonus Myst
+		DoQuest(3, 42); // Bonus Myst
 	}
 
 	if (!completedQuests[9])
@@ -1870,6 +1881,8 @@ void Day2()
 		$slot[familiar].equip($item[li'l ninja costume]);
 		$slot[off-hand].equip($item[A Light that Never Goes Out]);
 		$slot[pants].equip($item[Vicar's Tutu]);
+		$slot[acc2].equip($item[gold detective badge]);
+		$slot[acc3].equip($item[your cowboy boots]);
 		SweetSynthesisEffect($effect[Synthesis: Collection], 2, 1);
 		// todo: run LOV tunnel, grab earrings, eye surgery (choice 3), chocolate
 		if (get_property("_steelyEyedSquintUsed") != "true")

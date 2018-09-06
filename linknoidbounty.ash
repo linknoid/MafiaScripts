@@ -448,7 +448,7 @@ monster matingCalled;
 void ResetCombatState()
 {
 	whiffed = false;
-	matingCalled = false;
+	matingCalled = $monster[none];
 }
 
 string Filter_Combat(int round, monster mon, string page)
@@ -460,21 +460,21 @@ string Filter_Combat(int round, monster mon, string page)
 	}
 	if (mon == current.source)
 	{
-		if (!whiffed && my_mp() > 40 && $skill[Transcendant Olfaction].have_skill()
+		if (!whiffed && my_mp() > 40 && $skill[Transcendent Olfaction].have_skill()
 			&& $effect[On the Trail].have_effect() <= 0)
 		{
 			whiffed = true;
-			return "skill " + $skill[Transcendant Olfaction];
+			return "skill " + $skill[Transcendent Olfaction];
 		}
 		if (!whiffed && my_familiar() == nosyNose)
 		{
 			whiffed = true;
 			return "skill " + $skill[Get a Good Whiff of This Guy];
 		}
-		if (matingCalled != mon && my_mp() > 25 && $skill[Gallapagonsian Mating Call].have_skill())
+		if (matingCalled != mon && my_mp() > 25 && $skill[Gallapagosian Mating Call].have_skill())
 		{
 			matingCalled = mon;
-			return "skill " + $skill[Gallapagonsian Mating Call];
+			return "skill " + $skill[Gallapagosian Mating Call];
 		}
 	}
 	else
@@ -507,8 +507,9 @@ boolean PromptToUnlock()
 	return true;
 }
 
-void UnlockGuild()
+boolean UnlockGuild()
 {
+	return false;
 	// todo
 }
 
@@ -882,6 +883,11 @@ void DoBounty(BountyDetails b)
 				run_choice(5); // Raid some guest rooms
 				return;
 			}
+			else if (page.contains_text("Finger-Lickin'... Death."))
+			{
+				run_choice(3); // Walk away in disgust
+				return;
+			}
                 	else if (page.contains_text("Random Lack of an Encounter"))
 			{
 				run_choice(1);
@@ -982,10 +988,11 @@ void DoBounty(BountyDetails b)
 		}
 		else if (page.contains_text("Remember that devilish folio you read?"))
 		{
-			print("Devilish folia ran out");
-			if ($item[devilish folio].item_amount() == 0)
-				cli_execute("acquire devilish folio");
-			use(1, $item[devilish folio]);
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
 		}
 		else if (page.contains_text("Set an Open Course for the Virgin Booty"))
 		{
