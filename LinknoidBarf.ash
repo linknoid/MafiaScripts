@@ -890,6 +890,7 @@ void ReadSettings()
     item[slot] InitOutfit(string outfitName, item[slot] result);
     void DebugOutfit(string name, item[slot] o);
     item ChooseCheapestThanksgetting();
+    boolean TryHandleNonCombat(string page);
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -970,6 +971,10 @@ void ReadSettings()
     boolean LoadChoiceAdventure(string url, string loc, boolean optional)
     {
         string page = visit_url(url);
+
+        if (TryHandleNonCombat(page))
+            return false; // already handled, don't make caller think they get to choose
+
         if (page.contains_text("choice.php"))
             return true;
 
@@ -1368,41 +1373,48 @@ DebugOutfit("Goal outfit", outfitDef);
         string result = run_combat(filter);
         CheckPostCombat(result, filter);
     }
+    boolean TryHandleNonCombat(string page)
+    {
+        if (!page.contains_text("choice.php"))
+            return false;
+        if (page.contains_text("Tame it"))
+        {
+            run_choice(1); // tame the turtle
+            return true;
+        }
+        if (page.contains_text("A little") && page.contains_text(", familiar, beckoning"))
+        {
+            if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
+                abort("Aborting so you can choose whether to duplicate an item");
+        }
+        if (page.contains_text("A path away. All ways. Always."))
+        {
+            run_choice(6); // skip the adventure
+            return true;
+        }
+        if (page.contains_text("Wooof! Wooooooof!"))
+        {
+            run_choice(3); // ghost dog chow
+            return true;
+        }
+        if (page.contains_text("Playing Fetch"))
+        {
+            run_choice(1); // tennis ball
+            return true;
+        }
+        if (page.contains_text("Your Dog Found Something Again"))
+        {
+            run_choice(2); // gimme booze
+            return true;
+        }
+        return false;
+    }
+
     void RunAdventure(location loc, string filter)
     {
         string page = visit_url(loc.to_url().to_string());
-        if (page.contains_text("choice.php"))
-        {
-            if (page.contains_text("Tame it"))
-            {
-                run_choice(1); // tame the turtle
-                return;
-            }
-            if (page.contains_text("A little") && page.contains_text(", familiar, beckoning"))
-            {
-                if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
-                    abort("Aborting so you can choose whether to duplicate an item");
-            }
-            if (page.contains_text("A path away. All ways. Always."))
-            {
-                run_choice(6); // skip the adventure
-            }
-            if (page.contains_text("Wooof! Wooooooof!"))
-            {
-                run_choice(3); // ghost dog chow
-                return;
-            }
-            if (page.contains_text("Playing Fetch"))
-            {
-                run_choice(1); // tennis ball
-                return;
-            }
-            if (page.contains_text("Your Dog Found Something Again"))
-            {
-                run_choice(2); // gimme booze
-                return;
-            }
-        }
+        if (TryHandleNonCombat(page))
+            return;
         string combatResult = run_combat(filter);
         CheckPostCombat(combatResult, filter);
     }
@@ -1539,7 +1551,7 @@ DebugOutfit("Goal outfit", outfitDef);
             cli_execute("nuns");
             return true;
         }
-        if (restoreLimit >= 1000 && get_property("_aprilShower") != true && vipKey.item_amount() > 0 && get_clan_lounge() contains aprilShower)
+        if (restoreLimit >= 1000 && get_property("_aprilShower") != "true" && vipKey.item_amount() > 0 && get_clan_lounge() contains aprilShower)
         {
             cli_execute("shower hot");
             return true;

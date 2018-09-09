@@ -177,7 +177,7 @@ BountyDetails[string] GetAllBounties()
 	StringToBountyDetails(result, "Easy"   , 7 , "empty greasepaint tube");
 	StringToBountyDetails(result, "Easy"   , 13, "half-empty bottle of eyedrops");
 	StringToBountyDetails(result, "Easy"   , 7 , "handful of meatberries");
-	StringToBountyDetails(result, "Easy"   , 7 , "important bat file");
+	StringToBountyDetails(result, "Easy"   , 6 , "important bat file");
 	StringToBountyDetails(result, "Easy"   , 8 , "paper towel");
 	StringToBountyDetails(result, "Easy"   , 13, "pink bat eye");
 	StringToBountyDetails(result, "Easy"   , 6 , "triffid bark");
@@ -616,8 +616,11 @@ void DoBounty(BountyDetails b)
 		if (nosyNose.have_familiar() && my_familiar() != nosyNose)
 			nosyNose.use_familiar();
 		PrepareBanishers();
-		if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail)
+		if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail
+			&& b.details.location != $location[Lair of the Ninja Snowmen]) // +combat means you only get assassins eventually
+		{
 			$slot[acc3].equip(bait);
+		}
 		if (current.details.location == $location[The Poop Deck])
 		{
 			item fledges = $item[pirate fledges];
@@ -943,7 +946,7 @@ void DoBounty(BountyDetails b)
 			use(1, $item[transporter transponder]);
 		}
 		else if (page.contains_text("You shouldn't be here.")
-			&& (current.details.location == $location[Anger Man's Level]))
+			&& current.details.location == $location[Anger Man's Level])
 		{
 			if (!PromptToUnlock())
 			{
@@ -961,7 +964,9 @@ void DoBounty(BountyDetails b)
 			}
 		}
 		else if (page.contains_text("That isn't a place you can go.")
-			&& (current.details.location == $location[The Secret Government Laboratory]))
+			&& ((current.details.location == $location[The Secret Government Laboratory])
+			|| (current.details.location == $location[LavaCo&trade; Lamp Factory]))
+			)
 		{
 			if (!PromptToUnlock())
 			{
@@ -969,8 +974,7 @@ void DoBounty(BountyDetails b)
 				return;
 			}
 		}
-		else if (page.contains_text("Whuzzat now?")
-			|| page.contains_text("You don't know where that place is."))
+		else if (page.contains_text("You don't know where that place is."))
 		{
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
 			current.NoAccess = true;
@@ -987,6 +991,15 @@ void DoBounty(BountyDetails b)
 			return;
 		}
 		else if (page.contains_text("Remember that devilish folio you read?"))
+		{
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
+		else if (page.contains_text("Whuzzat now?")
+			&& current.details.location == $location[The Nightmare Meatrealm])
 		{
 			if (!PromptToUnlock())
 			{
