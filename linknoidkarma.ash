@@ -36,17 +36,48 @@ void UseItemForEffect(item i, effect e)
 		use(1, i);
 	}
 }
+
+boolean UseStill(item target)
+{
+	item source;
+	int row;
+	switch (target)
+	{
+		case $item[cocktail onion]: source = $item[olive]; row = 277; break;
+		case $item[kiwi]:           source = $item[lemon]; row = 276; break;
+		case $item[kumquat]:        source = $item[orange]; row = 278; break;
+		case $item[raspberry]:      source = $item[strawberry]; row = 280; break;
+		case $item[tangerine]:      source = $item[grapefruit]; row = 275; break;
+		case $item[tonic water]:    source = $item[soda water]; row = 279; break;
+		default: return false;
+	}
+	if (source.item_amount() == 0)
+	{
+		print("No " + source + " available to make " + target);
+		return false;
+	}
+	print("Using still to convert " + source + " to " + target);
+	visit_url("shop.php?whichshop=still&action=buyitem&quantity=1&whichrow=" + row + "&pwd=" + my_hash());
+	return true;
+}
 void CraftPotionForEffect(item pot, item ingredient, boolean isHighPotion, effect e)
 {
 	if (e.have_effect() > 0)
 		return;
-	if (pot.item_amount() == 0)
+	if (pot.item_amount() > 0)
 	{
 		use(1, pot);
 		return;
 	}
-	if (ingredient.item_amount() == 0)
-		return;
+	print ("ingredient amount = " + ingredient.item_amount());
+	if (ingredient.item_amount() <= 0)
+	{
+		if (!UseStill(ingredient))
+			return;
+		if (ingredient.item_amount() <= 0)
+			return;
+	}
+
 	item ingredient2;
 	if (isHighPotion)
 	{
@@ -62,8 +93,21 @@ void CraftPotionForEffect(item pot, item ingredient, boolean isHighPotion, effec
 		ingredient2 = $item[scrumptious reagent];
 	if (ingredient2.item_amount() > 0)
 	{
+		print("Trying to craft " + ingredient + " with " + ingredient2 + " to create " + pot);
 		craft("cook", 1, ingredient, ingredient2);
 	}
+	if (pot.item_amount() > 0)
+	{
+		use(1, pot);
+	}
+}
+boolean AmDrunk()
+{
+	int limit = inebriety_limit();
+	// stooper can make it temporarily 15, but then we switch to another familiar and end up in a stupor
+	if (my_familiar() == $familiar[Stooper])
+		limit--;
+	return my_inebriety() > limit;
 }
 void UseSkillForEffect(skill s, effect e)
 {
@@ -131,8 +175,6 @@ item CraftPerfectDrink()
 
 boolean DrinkForTurns(item i, int liverReq)
 {
-	if (i == $item[Dinsey whinskey] && $item[Dinsey whinskey].item_amount() == 0 && $item[FunFunds&trade;].item_amount() >= 2)
-		buy(1, $item[Dinsey whinskey]);
 	if (i.item_amount() == 0)
 		return false;
 	if (liverReq > inebriety_limit() - my_inebriety())
@@ -152,9 +194,43 @@ boolean DrinkForEffect(item i, effect e, int liverReq)
 {
 	if (e.have_effect() > 0)
 		return false;
+	if (i.item_amount() == 0 && i == $item[Dinsey whinskey] && $item[FunFunds&trade;].item_amount() >= 2)
+	{
+		visit_url("place.php?whichplace=airport_stench&intro=1");
+		buy(1, $item[Dinsey whinskey]);
+	}
 	return DrinkForTurns(i, liverReq);
 }
 
+boolean[31] completedQuests; // last quest is 30
+boolean questStatusValid = false;
+string UpdateQuestStatus(string councilPhpText)
+{
+	string page = councilPhpText;
+	if (page.contains_text("The door to the Council of Loathing building is locked"))
+	{
+		page = visit_url("council.php"); // first time in, it has intro text, need to skip past that
+	}
+	if (!page.contains_text("community services so far."))
+		abort("Unexpected council text");
+	for (int i = 1; i <= 11; i++)
+	{
+		string text = "name=option value=" + i; // not sure if it's followed by " " or " >", so check both
+		if (!page.contains_text(text + " ") && !page.contains_text(text + ">"))
+		{
+			completedQuests[i] = true;
+			print("Quest already complete: " + i);
+		}		
+	}
+	questStatusValid = true;
+	return page;
+}
+void UpdateQuestStatus()
+{
+	if (questStatusValid)
+		return;
+	UpdateQuestStatus(visit_url("council.php"));
+}
 
 void DailySummons()
 {
@@ -332,6 +408,12 @@ cane-mail pants,
 cane-mail shirt,
 children of the candy corn,
 chocolate-covered caviar,
+chocolate stolen accordion,
+chocolate disco ball,
+chocolate seal-clubbing club,
+chocolate turtle totem,
+chocolate pasta spoon,
+chocolate saucepan,
 delicious comfit?,
 double-ice gum,
 dubious peppermint,
@@ -409,206 +491,139 @@ yam candy,
 yellow drunki-bear,
 ];
 
-void SweetSynthesisEffect(effect e, int level, int total)
+record candyplan
 {
-	if (e.have_effect() > 0)
-		return;
-	item candy1, candy2;
-	int bestPrice = 999999999;
+	// fixed fields:
+	effect buff;
+	int total;
+	int quality;
+	int day;
 
-	foreach it1,count1 in get_inventory()
+	// calculated dynamically:
+	item candy1;
+	item candy2;
+	int price;
+};
+static candyplan[12] candyQuests;
+void SetCandyPlan(int quest, int quality, int total, int day, effect buff)
+{
+	candyQuests[quest].buff = buff;
+	candyQuests[quest].total = total;
+	candyQuests[quest].quality = quality;
+}
+boolean FutureNeedsSynthEffect(int futureQuestNum, int currentQuestNum)
+{
+	if (futureQuestNum == currentQuestNum)
+		return false;
+	UpdateQuestStatus();
+	if (completedQuests[futureQuestNum])
+		return false;
+	candyplan plan = candyQuests[futureQuestNum];
+	if (plan.day == 0)
+		return false;
+	if (plan.buff.have_effect() > 0)
+		return false;
+	if (plan.day != candyQuests[currentQuestNum].day) // only worry about the current day
+		return false;
+	return true;
+}
+
+candyplan CalculateCandyPlan(candyplan plan, int[item] lowCandyCount, int[item] highCandyCount)
+{
+	int[item] candyCounts1 = plan.quality <= 1 ? lowCandyCount : highCandyCount;
+	int[item] candyCounts2 = plan.quality < 1 ? lowCandyCount : highCandyCount;
+	plan.price = 999999999;
+	plan.candy1 = $item[none];
+	plan.candy2 = $item[none];
+	foreach it1,count1 in candyCounts1
 	{
-		if (!it1.candy)
-			continue;
-		if (level == 2)
+		foreach it2,count2 in candyCounts2
 		{
-			if (!(highCandy contains it1)) // only take highCandy for level 2
-				continue;
-		}
-		else
-		{
-			if (!(lowCandy contains it1)) // lowCandy for 0 or 1
-				continue;
-		}
-
-
-		foreach it2,count2 in get_inventory()
-		{
-			if (!it2.candy)
-				continue;
-			if (level == 0)
-			{
-				if (!(lowCandy contains it2)) // only take lowCandy for level 0
-					continue;
-			}
-			else
-			{
-				if (!(highCandy contains it2)) // highCandy for 1 or 2
-					continue;
-			}
 			if (it1 == it2 && count1 < 2)
 				continue;
 
-			if (((it1.to_int() + it2.to_int()) % 5) != total)
+			if (((it1.to_int() + it2.to_int()) % 5) != plan.total)
 				continue;
 
 			int price = it1.historical_price() + it2.historical_price();
-			if (price < bestPrice)
+			if (price < plan.price)
 			{
-				candy1 = it1;
-				candy2 = it2;
-				bestPrice = price;
+				plan.candy1 = it1;
+				plan.candy2 = it2;
+				plan.price = price;
 			}
 
 			print("SweetSynth option = " + it1 + " / " + it2 + " price = " + price);
 		}
 	}
-	if (candy1 == $item[none])
-	{
-		if (user_confirm("No candy could be found to synthesize " + e + ", do you wish to continue without it?"))
-			return;
-		abort("Sweet synthesis failed " + e);
-	}
-	if (user_confirm("Do you wish to sweet synthesize " + e + " using candies "
-		+ candy1 + " (" + candy1.item_amount() + ") / " + candy2 + " (" + candy2.item_amount() + ") for price " + bestPrice + "?"))
-	{
-		sweet_synthesis(candy1, candy2);
-	}
-	if (e.have_effect() <= 0)
-		abort("Please cast sweet synthesis " + e + " and then resume execution");
+	if (plan.candy1 != $item[none])
+		candyCounts1[plan.candy1]--;
+	if (plan.candy2 != $item[none])
+		candyCounts2[plan.candy2]--;
+	return plan;
 }
-
-
-void InitCharacter()
+candyplan CreateCandyPlan(int questNum)
 {
-	// burn initial MP
-	use_skill(1, $skill[Perfect Freeze]);
-	use_skill(1, $skill[Pastamastery]);
-
-	if (!HaveItem($item[gold detective badge]))
-		visit_url("place.php?whichplace=town_wrong&action=townwrong_precinct");
-
-	if (!HaveItem($item[your cowboy boots]))
-		visit_url("place.php?whichplace=town_right&action=townright_ltt");
-
-	if (!HaveItem($item[Bastille Battalion control rig]))
-		take_storage(1, $item[Bastille Battalion control rig]);
-
-	if ($item[porquoise].item_amount() == 0
-		&& $item[hamethyst].item_amount() == 0
-		&& $item[baconstone].item_amount() == 0)
+	// Cheapest isn't always best.  Candy supply is very limited, and we have to make sure we
+	// don't use up candy we need later
+	static boolean created = false;
+	if (!created)
 	{
-		visit_url("tutorial.php?action=toot");
-		use(1, $item[letter from King Ralph XI]);
-		use(1, $item[pork elf goodies sack]);
-	}
-	if ($item[astral six-pack].item_amount() > 0)
-		use(1, $item[astral six-pack]);
-
-	while (get_property("_genieWishesUsed").to_int() < 3)
-		cli_execute("genie wish for more wishes");
-
-	visit_url("place.php?whichplace=chateau&action=chateau_desk2");
-
-	if (my_meat() == 0)
-	{
-		cli_execute("numberology 14");
-		cli_execute("numberology 14");
-		cli_execute("numberology 14");
-		autosell(3 * 14, $item[moxie weed]);
-		buy(1, $item[li'l unicorn costume]);
+		created = true;
+		SetCandyPlan(1, 1, 3, 2, $effect[Synthesis: Hardy]); // HP
+		SetCandyPlan(2, 1, 0, 2, $effect[Synthesis: Strong]); // muscle
+		SetCandyPlan(3, 1, 1, 2, $effect[Synthesis: Smart]); // myst
+		SetCandyPlan(4, 1, 2, 2, $effect[Synthesis: Cool]); // moxie
+		SetCandyPlan(9, 2, 1, 2, $effect[Synthesis: Collection]); // item drop
+		SetCandyPlan(10, 0, 0, 1, $effect[Synthesis: Hot]); // hot resist
+		SetCandyPlan(11, 2, 4, 1, $effect[Synthesis: Style]); // bonus moxie gain
 	}
 
-	if (!HaveItem($item[turtle totem]))
+	int[item] lowCandyCount;
+	int[item] highCandyCount;
+	foreach it1,count1 in get_inventory()
 	{
-		buy(13, $item[chewing gum on a string]);
-		use(13, $item[chewing gum on a string]);
-	}
-	if (!(get_campground() contains $item[Dramatic&trade; range]))
-	{
-		buy(1, $item[Dramatic&trade; range]);
-		use(1, $item[Dramatic&trade; range]);
-	}
-
-	if (!HaveItem($item[Shakespeare's Sister's Accordion]))
-	{
-		use_skill(2, $skill[Summon Smithsness]);
-		visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=04&clip2=04&clip3=04&pwd");
-		create(1, $item[Shakespeare's Sister's Accordion]);
-		if ($item[maiden wig].item_amount() == 0)
-			buy(1, $item[maiden wig]);
-		create(1, $item[Hairpiece on Fire]);
+		if (highCandy contains it1)
+			highCandyCount[it1] = it1.item_amount();
+		else if (lowCandy contains it1)
+			lowCandyCount[it1] = it1.item_amount();
 	}
 
-	if (!HaveItem($item[makeshift garbage shirt]))
+	for (int i = 11; i > 0; i--)
 	{
-		visit_url("inv_use.php?pwd=" + my_hash() + "&which=3&whichitem=9690");
-		run_choice(5); // garbage shirt
+		if (FutureNeedsSynthEffect(i, questNum))
+			candyQuests[i] = CalculateCandyPlan(candyQuests[i], lowCandyCount, highCandyCount);
 	}
 
-	
-	if (!HaveItem($item[pantogram pants]))
-	{
-		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9573");
-		visit_url("choice.php?whichchoice=1270&pwd&option=1&m=1&e=1&s1=-1,0&s2=-1,0&s3=-1,0");
-	}
-
-	if (!HaveItem($item[FantasyRealm Mage's Hat]))
-	{
-		visit_url("place.php?whichplace=realm_fantasy&action=fr_initcenter");
-		visit_url("choice.php?pwd&whichchoice=1280&option=2"); // mage's hat
-	}
-
-	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
-	$slot[shirt].equip($item[makeshift garbage shirt]);
-	$slot[back].equip($item[protonic accelerator pack]);
-	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
-	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
-	$slot[pants].equip($item[pantogram pants]);
-	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
-	$slot[acc2].equip($item[gold detective badge]);
-	$slot[acc3].equip($item[your cowboy boots]);
-
-
-	if (visit_url("shop.php?whichshop=doc").contains_text("Problem?"))
-	{
-		visit_url("shop.php?whichshop=doc&action=talk");
-		run_choice(1); // go pick some flowers
-	}
-	if (visit_url("shop.php?whichshop=armory").contains_text("The sign says there's a sale?"))
-	{
-		visit_url("shop.php?whichshop=armory&action=talk");
-		run_choice(1); // I'll get your pie
-	}
-	if (visit_url("shop.php?whichshop=meatsmith").contains_text("What do you need?"))
-	{
-		visit_url("shop.php?whichshop=meatsmith&action=talk");
-		run_choice(1); // open skeleton shop
-	}
-
-	DailySummons();
-
-	if ($effect[Big].have_effect() == 0)
-		use_skill(1, $skill[Get Big]);
-	// add more skills here as they are hardcore permed
-
-	if (get_property("_pottedTeaTreeUsed") != "true")
-		cli_execute("teatree royal");
-	ChooseEducates("extract", "duplicate");
-	if (get_property("sourceTerminalEnquiry") != "stats.enq")
-		cli_execute("terminal enquiry stats.enq");
-	if ($effect[substats.enh].have_effect() <= 0)
-		cli_execute("terminal enhance substats.enh");
-	if (get_property("_horsery") == "")
-		cli_execute("horsery dark");
-	if (get_property("boomBoxSong") != "Total Eclipse of Your Meat")
-		cli_execute("boombox meat");
-	if ($item[green mana].item_amount() == 0)
-	{
-		MakeGreenMana();
-		MakeGreenMana();
-	}
+	candyplan result = CalculateCandyPlan(candyQuests[questNum], lowCandyCount, highCandyCount);
+	candyQuests[questNum] = result;
+	return result;
 }
+
+void SweetSynthesisEffect(int questNum)
+{
+	candyplan plan = CreateCandyPlan(questNum);
+	if (plan.day == 0)
+		return;
+	if (plan.buff.have_effect() > 0)
+		return;
+	if (plan.candy1 == $item[none])
+	{
+		if (user_confirm("No candy could be found to synthesize " + plan.buff + ", do you wish to continue without it?"))
+			return;
+		abort("Sweet synthesis failed " + plan.buff);
+	}
+	if (user_confirm("Do you wish to sweet synthesize " + plan.buff + " using candies "
+		+ plan.candy1 + " (" + plan.candy1.item_amount() + ") / "
+		+ plan.candy2 + " (" + plan.candy2.item_amount() + ") for price " + plan.price + "?"))
+	{
+		sweet_synthesis(plan.candy1, plan.candy2);
+	}
+	if (plan.buff.have_effect() <= 0)
+		abort("Please cast sweet synthesis " + plan.buff + " and then resume execution");
+}
+
+
 
 boolean canCurse;
 boolean canMortar;
@@ -917,10 +932,10 @@ string Filter_EscapeCombat(int round, monster mon, string page)
 
 string Filter_GiantGrowth(int round, monster mon, string page)
 {
-	if ($effect[Giant Growth].have_effect() == 0 && $item[green mana].item_amount() > 0)
-		return "skill " + $skill[Giant Growth];
 	if ($skill[Mighty Shout].have_skill() && $effect[Mighty Shout].have_effect() == 0)
 		return "skill " + $skill[Mighty Shout];
+	if ($effect[Giant Growth].have_effect() == 0 && $item[green mana].item_amount() > 0)
+		return "skill " + $skill[Giant Growth];
 	if (mon == $monster[The Icewoman])
 		return Filter_Ghost(round, mon, page);
 	if (mon.to_string().contains_text("itchess"))
@@ -942,8 +957,73 @@ void PrepareRunaway()
 		$familiar[Artistic Goth Kid].use_familiar();
 }
 
+void ChooseFamiliar()
+{
+	if (get_property("_aguaDrops").to_int() < 3)
+	{
+		$familiar[Baby Sandworm].use_familiar();
+	}
+	else if (get_property("garbageFireProgress").to_int() >= 25)
+	{
+		$familiar[Garbage Fire].use_familiar();
+	}
+	else
+	{
+		$familiar[XO Skeleton].use_familiar();
+	}
+	//else if (get_property("optimisticCandleProgress").to_int() >= 25)
+	//{
+	//	$familiar[Optimistic Candle].use_familiar();
+	//}
+}
+
+void SmashBarrels()
+{
+	string page = visit_url("barrel.php");
+	matcher m = "\\<div\\s+class=\"?ex\"?(.*?)\\<a\\s+class=\"?spot\"? href=\"?choice.php\\?whichchoice=1099&[^>]*slot=(\\d*)\"?\\s*\\>.*?title=\"(.*?)\"".create_matcher(page);
+	string[int] barrels;
+	while (m.find())
+	{
+		boolean isMimic = m.group(1).contains_text("class=\"mimic\"");
+		int pos = m.group(2).to_int();
+		string type = m.group(3);
+		print("slot " + pos + " mimic = " + isMimic + " (" + type + ")");
+		if (isMimic)
+			barrels[pos] = "mimic";
+		else
+			barrels[pos] = type;
+	}
+	foreach key,value in barrels
+	{
+		if (value == "A barrel")
+		{
+			visit_url("choice.php?whichchoice=1099&pwd=" + my_hash() + "&option=1&slot=" + key);
+		}
+	}
+}
+
+void GearForCombat()
+{
+	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
+	$slot[back].equip($item[protonic accelerator pack]);
+	if ($item[makeshift garbage shirt].HaveItem())
+		$slot[shirt].equip($item[makeshift garbage shirt]);
+	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]); // for bashing
+	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	$slot[pants].equip($item[pantogram pants]); // make sure we're wearing pants first
+	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]); // for escaping
+	$slot[acc2].equip($item[gold detective badge]);
+	if ($item[LOV earrings].HaveItem())
+		$slot[acc3].equip($item[LOV earrings]);
+	else
+		$slot[acc3].equip($item[your cowboy boots]);
+}
+
+
 void UnlockGuildAndForest()
 {
+	if (AmDrunk())
+		return;
 	string state = get_property("questG08Moxie");
 	if (state == "unstarted")
 	{
@@ -953,6 +1033,7 @@ void UnlockGuildAndForest()
 	while (state == "started")
 	{
 		UseSkillForEffect($skill[Musk of the Moose], $effect[Musk of the Moose]);
+		GearForCombat();
 		PrepareRunaway();
 		$slot[pants].equip($item[pantogram pants]); // make sure we're wearing pants first
 		ResetCombatState();
@@ -1035,8 +1116,12 @@ void UnlockGuildAndForest()
 
 void RunLOVTunnel()
 {
+	if (AmDrunk())
+		return;
 	if (get_property("loveTunnelAvailable") != "true" || get_property("_loveTunnelUsed") == "true")
 		return;
+	GearForCombat();
+	ChooseFamiliar();
 	visit_url("place.php?whichplace=town_wrong");
 	if (!visit_url("place.php?whichplace=town_wrong&action=townwrong_tunnel").contains_text("choice.php"))
 		return;
@@ -1063,26 +1148,6 @@ void RunLOVTunnel()
 }
 
 
-void ChooseFamiliar()
-{
-	if (get_property("_aguaDrops").to_int() < 3)
-	{
-		$familiar[Baby Sandworm].use_familiar();
-	}
-	else if (get_property("garbageFireProgress").to_int() >= 25)
-	{
-		$familiar[Garbage Fire].use_familiar();
-	}
-	else
-	{
-		$familiar[XO Skeleton].use_familiar();
-	}
-	//else if (get_property("optimisticCandleProgress").to_int() >= 25)
-	//{
-	//	$familiar[Optimistic Candle].use_familiar();
-	//}
-}
-
 void RecoverHPorMP(boolean force)
 {
 	if ($effect[Beaten Up].have_effect() > 0) // should never get beaten up
@@ -1106,8 +1171,9 @@ void FightTentacle()
 	if (get_property("_eldritchTentacleFought") != "false")
 		return;
 
-	ResetCombatState();
+	GearForCombat();
 	RecoverHPorMP(false);
+	ResetCombatState();
 	string page = visit_url("place.php?whichplace=forestvillage&action=fv_scientist");
 	string[int] choices = available_choice_options();
 
@@ -1133,6 +1199,8 @@ void FightTentacle()
 
 void RunNeverendingParty(int freeTurnCount)
 {
+	if (AmDrunk())
+		return;
 	location loc = $location[The Neverending Party];
 
 	while (true)
@@ -1144,6 +1212,7 @@ void RunNeverendingParty(int freeTurnCount)
 		if (usedTurns == 0 && prop != "0")
 			abort("Missing KoLMafia property _neverendingPartyFreeTurns");
 			
+		GearForCombat();
 		RecoverHPorMP(false);
 		ResetCombatState();
 		string page = visit_url(loc.to_url());
@@ -1186,6 +1255,8 @@ void GetNeverendingPartyBuff()
 
 void RunSnojo(boolean stopAfterSourceEssence)
 {
+	if (AmDrunk())
+		return;
 	while (true)
 	{
 		int freeFights = get_property("_snojoFreeFights").to_int();
@@ -1220,6 +1291,7 @@ void RunSnojo(boolean stopAfterSourceEssence)
 		}
 
 		RecoverHPorMP(false);
+		GearForCombat();
 
 		ResetCombatState();
 		visit_url($location[The X-32-F Combat Training Snowman].to_url());
@@ -1227,10 +1299,14 @@ void RunSnojo(boolean stopAfterSourceEssence)
 	}
 }
 
-void FightGhost(location loc)
+void FightGhost()
 {
-	if (get_property("ghostLocation") != loc.to_string())
+	if (AmDrunk())
 		return;
+	location loc = get_property("ghostLocation").to_location();
+	if (loc == $location[none])
+		return;
+	GearForCombat();
 	RecoverHPorMP(true);
 	ChooseFamiliar();
 	ResetCombatState();
@@ -1242,6 +1318,7 @@ void FaxNinja()
 {
 	if (get_property("_photocopyUsed") != "false")
 		return;
+	GearForCombat();
 	RecoverHPorMP(false);
 	if ($item[photocopied monster].item_amount() == 0)
 	{
@@ -1266,7 +1343,7 @@ void FaxDairyGoat()
 {
 	if (get_property("_photocopyUsed") != "false")
 		return;
-	$slot[acc3].equip($item[your cowboy boots]);
+	GearForCombat();
 	while (my_mp() < 160)
 	{
 		if (my_maxmp() < 160)
@@ -1295,6 +1372,8 @@ void FaxDairyGoat()
 
 void YellowRayGarbage()
 {
+	if (AmDrunk())
+		return;
 	if ($effect[Everything Looks Yellow].have_effect() > 0)
 	{
 		print("Can't yellow ray while everything is still yellow");
@@ -1309,6 +1388,7 @@ void YellowRayGarbage()
 		else
 			ChateauRest(160);
 	}
+	GearForCombat();
 	ResetCombatState();
 	visit_url($location[Barf Mountain].to_url()); // first time in, need to skip past intro text
 	string page = visit_url($location[Barf Mountain].to_url());
@@ -1323,17 +1403,18 @@ void YellowRayGarbage()
 
 void FightWitchessRook()
 {
-	if (get_property("_witchessFights").to_int() == 0)
-	{
-		RecoverHPorMP(false);
-		ResetCombatState();
-		visit_url("campground.php?action=witchess", false);
-		run_choice(1); // Examine the shrink ray
-		visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1938", false);
-		run_combat("Filter_Standard");
-		if ($item[Greek fire].item_amount() > 0)
-			use(1, $item[Greek fire]);
-	}
+	if (get_property("_witchessFights").to_int() != 0)
+		return;
+
+	GearForCombat();
+	RecoverHPorMP(false);
+	ResetCombatState();
+	visit_url("campground.php?action=witchess", false);
+	run_choice(1); // Examine the shrink ray
+	visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1938", false);
+	run_combat("Filter_Standard");
+	if ($item[Greek fire].item_amount() > 0)
+		use(1, $item[Greek fire]);
 }
 
 void FightWitchessBishop(int fightNum, boolean makeCopies)
@@ -1353,6 +1434,7 @@ void FightWitchessBishop(int fightNum, boolean makeCopies)
 	else
 		ChooseFamiliar();
 
+	GearForCombat();
 	RecoverHPorMP(false);
 	ResetCombatState();
 	visit_url("campground.php?action=witchess", false);
@@ -1366,9 +1448,12 @@ void FightWitchessBishop(int fightNum, boolean makeCopies)
 
 void FightMachineTunnels()
 {
+	if (AmDrunk())
+		return;
 	while (get_property("_machineTunnelsAdv").to_int() < 5)
 	{
 		$familiar[Machine Elf].use_familiar();
+		GearForCombat();
 		RecoverHPorMP(false);
 		ResetCombatState();
 		string page = visit_url("adventure.php?snarfblat=458");
@@ -1389,6 +1474,8 @@ int GingerbreadTurns()
 
 void RunGingerbread()
 {
+	if (AmDrunk())
+		return;
 	if (GingerbreadTurns() > 10)
 		return;
 
@@ -1399,6 +1486,7 @@ void RunGingerbread()
 	}
 	while (GingerbreadTurns() < 9) // already ran turns
 	{
+		GearForCombat();
 		ChateauRest(40); // need 30 to shattering punch, an extra 10 to be safe
 		ResetCombatState();
         	string page = visit_url($location[Gingerbread Upscale Retail District].to_url(), false);
@@ -1426,6 +1514,8 @@ void CurePoison()
 
 void CastGiantGrowth(boolean WithMightyShout) // can only be cast in combat, with free kill or runaway
 {
+	if (AmDrunk())
+		return;
 	if ($item[green mana].item_amount() == 0)
 	{
 		MakeGreenMana();
@@ -1435,8 +1525,7 @@ void CastGiantGrowth(boolean WithMightyShout) // can only be cast in combat, wit
 	if ($effect[Giant Growth].have_effect() > 0)
 		return;
 	
-	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]); // for bashing
-	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]); // for escaping
+	GearForCombat();
 	RecoverHPorMP(false);
 	ResetCombatState();
 
@@ -1450,9 +1539,15 @@ void CastGiantGrowth(boolean WithMightyShout) // can only be cast in combat, wit
 		if (page.contains_text("The Story So Far"))
 			continue; // intro text, retry
 		if (page.contains_text("Entrance to the Forgotten City"))
+		{
 			run_choice(2); // Leave
+			continue;
+		}
 		else if (page.contains_text("Cavern Entrance"))
+		{
 			run_choice(2); // Leave
+			continue;
+		}
 		run_combat("Filter_GiantGrowth");
 		break;
 	}
@@ -1500,27 +1595,6 @@ void EatBrowserCookie()
 	}
 }
 
-boolean[31] completedQuests; // last quest is 30
-string UpdateQuestStatus(string councilPhpText)
-{
-	string page = councilPhpText;
-	if (page.contains_text("The door to the Council of Loathing building is locked"))
-	{
-		page = visit_url("council.php"); // first time in, it has intro text, need to skip past that
-	}
-	if (!page.contains_text("community services so far."))
-		abort("Unexpected council text");
-	for (int i = 1; i <= 11; i++)
-	{
-		string text = "name=option value=" + i; // not sure if it's followed by " " or " >", so check both
-		if (!page.contains_text(text + " ") && !page.contains_text(text + ">"))
-		{
-			completedQuests[i] = true;
-			print("Quest already complete: " + i);
-		}		
-	}
-	return page;
-}
 void DoQuest(int questNum, int maxTurns)
 {
 	print("Requesting to do quest " + questNum);
@@ -1555,7 +1629,8 @@ void DoQuest(int questNum, int maxTurns)
 		}
 //abort("Quest " + questNum + " in " + turns + " turns, max = " + maxTurns);
 		run_choice(questNum);
-		UpdateQuestStatus(visit_url("council.php"));
+		questStatusValid = false;
+		UpdateQuestStatus();
 		if (!completedQuests[questNum])
 			abort("Failed to complete quest " + questNum);
 	}
@@ -1693,32 +1768,37 @@ void FightChateauPainting()
 
 void FightWanderers()
 {
-	boolean hasWanderer = false;
-	string[int] counters = get_property("relayCounters").split_string(":");
-	for (int i = 2 ; i < counters.count(); i += 3)
+	boolean hasWanderer = true;
+	while (hasWanderer)
 	{
-		int turns = counters[i - 2].to_int();
-		string type = counters[i - 1];
-		if (type.contains_text("Digitize Monster") || type.contains_text("Romantic Monster window end"))
+		hasWanderer = false;
+		string[int] counters = get_property("relayCounters").split_string(":");
+		for (int i = 2 ; i < counters.count(); i += 3)
 		{
-			if (turns < my_turncount())
-				hasWanderer = true;
+			int turns = counters[i - 2].to_int();
+			string type = counters[i - 1];
+			if (type.contains_text("Digitize Monster") || type.contains_text("Romantic Monster window end"))
+			{
+				if (turns < my_turncount())
+					hasWanderer = true;
+			}
 		}
-	}
-	if (!hasWanderer)
-		return;
+		if (!hasWanderer)
+			return;
 
-	ChooseFamiliar();
+		ChooseFamiliar();
 
-	int turnsBefore = my_adventures();
-	while (turnsBefore == my_adventures())
-	{
+		int turnsBefore = my_adventures();
+
 		ResetCombatState();
 		string page = visit_url($location[The Haunted Kitchen].to_url());
 		if (page.contains_text($monster[The Icewoman].to_string()))
 			run_combat("Filter_Ghost");
 		else
 			run_combat("Filter_Standard");
+
+		if (turnsBefore != my_adventures())
+			return;
 	}
 }
 
@@ -1783,7 +1863,7 @@ void DoSleep()
 	if (get_property("_clanFortuneConsultUses").to_int() < 3)
 		if (!user_confirm("Do you want to sleep without consulting the fortune teller?"))
 			return;
-	if ($item[garbage shirt].HaveItem())
+	if ($item[makeshift garbage shirt].HaveItem())
 	{
 		visit_url("inv_use.php?pwd=" + my_hash() + "&which=3&whichitem=9690");
 		run_choice(1); // put away garbage shirt so it starts fresh tomorrow
@@ -1813,8 +1893,8 @@ void DoQuest1()
 			cli_execute("cheat Strength");
 
 
-		SweetSynthesisEffect($effect[Synthesis: Strong], 1, 0);
-		SweetSynthesisEffect($effect[Synthesis: Hardy], 1, 3);
+		SweetSynthesisEffect(2); // muscle
+		SweetSynthesisEffect(1); // HP
 		ChallengeGodLobster(1, 3);
 		ChallengeGodLobster(2, 3);
 		ChallengeGodLobster(3, 3);
@@ -1884,7 +1964,7 @@ void DoQuest3()
 		$slot[off-hand].equip($item[A Light that Never Goes Out]);
 		if ($item[training legwarmers].item_amount() > 0)
 			$slot[acc3].equip($item[training legwarmers]);
-		SweetSynthesisEffect($effect[Synthesis: Smart], 1, 1);
+		SweetSynthesisEffect(3); // myst
 
 		CraftPotionForEffect($item[Hawking's Elixir of Brilliance], $item[tangerine], true, $effect[On the Shoulders of Giants]);
 		CraftPotionForEffect($item[ointment of the occult], $item[grapefruit], false, $effect[Mystically Oiled]);
@@ -1923,7 +2003,7 @@ void DoQuest4()
 		visit_url("showplayer.php?who=2807390");
 		visit_url("showplayer.php?action=crossthestreams&pwd=" + my_hash() + "&who=2807390"); // cross the streams
 
-		SweetSynthesisEffect($effect[Synthesis: Cool], 1, 2);
+		SweetSynthesisEffect(4); // moxie
 		$slot[hat].equip($item[Hairpiece on Fire]);
 		$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
 		$slot[off-hand].equip($item[A Light that Never Goes Out]);
@@ -1931,16 +2011,17 @@ void DoQuest4()
 		if ($item[noticeable pumps].HaveItem())
 			$slot[acc2].equip($item[noticeable pumps]);
 		$slot[acc3].equip($item[your cowboy boots]);
-		if ($effect[A Contender].have_effect() <= 0)
-		{
-			cli_execute("genie wish to be A Contender");
-		}
 
 		CraftPotionForEffect($item[Connery's Elixir of Audacity], $item[cocktail onion], true, $effect[Cock of the Walk]);
 		CraftPotionForEffect($item[serum of sarcasm], $item[olive], false, $effect[Superhuman Sarcasm]);
 
 		CastGiantGrowth(true);
 		CurePoison();
+		if ($effect[A Contender].have_effect() <= 0)
+		{
+//			abort("check for A Contender");
+			cli_execute("genie wish to be A Contender");
+		}
 		DoQuest(4, 3); // Bonus Moxie
 	}
 }
@@ -1970,8 +2051,7 @@ void DoQuest6()
 {
 	if (!completedQuests[6])
 	{
-		FightGhost($location[The Haunted Conservatory]);
-		FightGhost($location[The Haunted Kitchen]);
+		FightGhost();
 
 		//BuyCoinItemForEffect($coinmaster[Game Shoppe], $item[wasabi marble soda], $effect[Wasabi With You]);
 		//BuyItemForEffect($item[wasabi marble soda], $effect[Wasabi With You]);
@@ -1981,6 +2061,7 @@ void DoQuest6()
 			{
 				visit_url("gamestore.php?action=buysnack&whichsnack=5019");
 			}
+			cli_execute("cast * summon resolutions");
 			use(1, $item[wasabi marble soda]);
 		}
 
@@ -1991,7 +2072,7 @@ void DoQuest7()
 {
 	if (!completedQuests[7])
 	{
-		FightGhost($location[The Haunted Conservatory]);
+		FightGhost();
 		UseItemForEffect($item[LOV Elixir #6], $effect[The Magic of LOV]);
 		DoQuest(7, 58); // (+spell damage)
 	}
@@ -2044,7 +2125,7 @@ void DoQuest9()
 			$slot[pants].equip($item[Vicar's Tutu]);
 		$slot[acc2].equip($item[gold detective badge]);
 		$slot[acc3].equip($item[your cowboy boots]);
-		SweetSynthesisEffect($effect[Synthesis: Collection], 2, 1);
+		SweetSynthesisEffect(9); // item drop
 		// todo: run LOV tunnel, grab earrings, eye surgery (choice 3), chocolate
 		if (get_property("_steelyEyedSquintUsed") != "true")
 		{
@@ -2077,7 +2158,7 @@ void DoQuest10()
 		cli_execute("Briefcase enchantment hot");
 		$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
 		// pale horse?  500 meat to switch
-		SweetSynthesisEffect($effect[Synthesis: Hot], 0, 0);
+		SweetSynthesisEffect(10); // hot resist
 		DoQuest(10, 20); // (+hot resist)
 	}
 }
@@ -2114,18 +2195,150 @@ void Day2DrinkForTurns()
 	}
 }
 
+void InitCharacter()
+{
+	// burn initial MP
+	use_skill(1, $skill[Perfect Freeze]);
+	use_skill(1, $skill[Pastamastery]);
+
+	if (!HaveItem($item[gold detective badge]))
+		visit_url("place.php?whichplace=town_wrong&action=townwrong_precinct");
+
+	if (!HaveItem($item[your cowboy boots]))
+		visit_url("place.php?whichplace=town_right&action=townright_ltt");
+
+	if (!HaveItem($item[Bastille Battalion control rig]))
+		take_storage(1, $item[Bastille Battalion control rig]);
+
+	if ($item[porquoise].item_amount() == 0
+		&& $item[hamethyst].item_amount() == 0
+		&& $item[baconstone].item_amount() == 0)
+	{
+		visit_url("tutorial.php?action=toot");
+		use(1, $item[letter from King Ralph XI]);
+		use(1, $item[pork elf goodies sack]);
+	}
+	if ($item[astral six-pack].item_amount() > 0)
+		use(1, $item[astral six-pack]);
+
+	while (get_property("_genieWishesUsed").to_int() < 3)
+		cli_execute("genie wish for more wishes");
+
+	visit_url("place.php?whichplace=chateau&action=chateau_desk2");
+
+	if (my_meat() == 0)
+	{
+		cli_execute("numberology 14");
+		cli_execute("numberology 14");
+		cli_execute("numberology 14");
+		autosell(3 * 14, $item[moxie weed]);
+		buy(1, $item[li'l unicorn costume]);
+	}
+
+	if (!HaveItem($item[turtle totem]))
+	{
+		buy(13, $item[chewing gum on a string]);
+		use(13, $item[chewing gum on a string]);
+		cli_execute("hermit * clover");
+	}
+	if (!(get_campground() contains $item[Dramatic&trade; range]))
+	{
+		buy(1, $item[Dramatic&trade; range]);
+		use(1, $item[Dramatic&trade; range]);
+	}
+
+	if (!HaveItem($item[Shakespeare's Sister's Accordion]))
+	{
+		use_skill(2, $skill[Summon Smithsness]);
+		visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=04&clip2=04&clip3=04&pwd");
+		create(1, $item[Shakespeare's Sister's Accordion]);
+		if ($item[maiden wig].item_amount() == 0)
+			buy(1, $item[maiden wig]);
+		create(1, $item[Hairpiece on Fire]);
+	}
+
+	if (!HaveItem($item[makeshift garbage shirt]))
+	{
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=3&whichitem=9690");
+		run_choice(5); // garbage shirt
+	}
+
+	
+	if (!HaveItem($item[pantogram pants]))
+	{
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9573");
+		visit_url("choice.php?whichchoice=1270&pwd&option=1&m=1&e=1&s1=-1,0&s2=-1,0&s3=-1,0");
+	}
+
+	if (!HaveItem($item[FantasyRealm Mage's Hat]))
+	{
+		visit_url("place.php?whichplace=realm_fantasy&action=fr_initcenter");
+		visit_url("choice.php?pwd&whichchoice=1280&option=2"); // mage's hat
+	}
+
+	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
+	$slot[shirt].equip($item[makeshift garbage shirt]);
+	$slot[back].equip($item[protonic accelerator pack]);
+	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
+	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	$slot[pants].equip($item[pantogram pants]);
+	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
+	$slot[acc2].equip($item[gold detective badge]);
+	$slot[acc3].equip($item[your cowboy boots]);
+
+
+	if (visit_url("shop.php?whichshop=doc").contains_text("Problem?"))
+	{
+		visit_url("shop.php?whichshop=doc&action=talk");
+		run_choice(1); // go pick some flowers
+	}
+	if (visit_url("shop.php?whichshop=armory").contains_text("The sign says there's a sale?"))
+	{
+		visit_url("shop.php?whichshop=armory&action=talk");
+		run_choice(1); // I'll get your pie
+	}
+	if (visit_url("shop.php?whichshop=meatsmith").contains_text("What do you need?"))
+	{
+		visit_url("shop.php?whichshop=meatsmith&action=talk");
+		run_choice(1); // open skeleton shop
+	}
+	SmashBarrels();
+
+	DailySummons();
+
+	if ($effect[Big].have_effect() == 0)
+		use_skill(1, $skill[Get Big]);
+	// add more skills here as they are hardcore permed
+
+	if (get_property("_pottedTeaTreeUsed") != "true")
+		cli_execute("teatree royal");
+	ChooseEducates("extract", "duplicate");
+	if (get_property("sourceTerminalEnquiry") != "stats.enq")
+		cli_execute("terminal enquiry stats.enq");
+	if ($effect[substats.enh].have_effect() <= 0)
+		cli_execute("terminal enhance substats.enh");
+	if (get_property("_horsery") == "")
+		cli_execute("horsery dark");
+	if (get_property("boomBoxSong") != "Total Eclipse of Your Meat")
+		cli_execute("boombox meat");
+	if ($item[green mana].item_amount() == 0)
+	{
+		MakeGreenMana();
+		MakeGreenMana();
+	}
+}
+
 void Day1()
 {
 	UnlockGuildAndForest();
 	RunLOVTunnel();
-	$slot[acc3].equip($item[LOV earrings]);
 
 	RunSnojo(true);
 
 	if ($item[Source essence].item_amount() >= 10 && get_property("_sourceTerminalExtrudes").to_int() == 0)
 		cli_execute("terminal extrude food");
 
-	FightGhost($location[The Overgrown Lot]);
+	FightGhost();
 
 	FaxDairyGoat();
 	EatBrowserCookie();
@@ -2143,7 +2356,7 @@ void Day1()
 	RunGingerbread();
 	if ($item[a ten-percent Bonus].item_amount() > 0)
 	{
-		SweetSynthesisEffect($effect[Synthesis: Style], 2, 4);
+		SweetSynthesisEffect(11); // bonus moxie exp
 		GetNeverendingPartyBuff();
 		use(1, $item[a ten-percent Bonus]);
 		cli_execute("cheat lovers");
@@ -2163,7 +2376,7 @@ void Day1()
 	FightChateauPainting();
 
 	FightWitchessBishop(1, true);
-	FightGhost($location[Madness Bakery]);
+	FightGhost();
 	FightWitchessBishop(2, false);
 	FightWitchessBishop(3, false);
 	FightWitchessBishop(4, false);
@@ -2200,7 +2413,7 @@ void Day1()
 
 	UseSkillForEffect($skill[Inscrutable Gaze], $effect[Inscrutable Gaze]);
 	FightWanderers();
-	FightGhost($location[Madness Bakery]);
+	FightGhost();
 
 	DoQuest10();
 
@@ -2223,12 +2436,12 @@ void Day1()
 			DrinkForTurns($item[Sacramento wine], 1);
 	}
 
-	while (my_spleen_use() < 15 && $item[agua de vida].item_amount() > 0)
+	while (my_spleen_use() < 12 && $item[agua de vida].item_amount() > 0)
 		chew(1, $item[agua de vida]);
 	DoQuest8();
 
 	FightWanderers();
-	FightGhost($location[The Haunted Kitchen]);
+	FightGhost();
 	MakeStenchJelly(); // this should trigger creating the last Poke fertilizer
 
 
@@ -2327,8 +2540,7 @@ void main(int DayNum1or2)
 		if (!user_confirm("You entered day " + DayNum1or2 + " but actual day is " + my_daycount() + ".  Are you sure you wish to proceed?"))
 			return;
 	}
-	string page = visit_url("council.php");
-	UpdateQuestStatus(page);
+	UpdateQuestStatus();
 	if (DayNum1or2 == 1)
 	{
 		InitCharacter();
