@@ -95,7 +95,7 @@ void StringToBanisher(Banisher[string] coll, string SkillName, string ItemName, 
 Banisher[string] GetAllBanishers()
 {
 	Banisher[string] result;
-	StringToBanisher(result, "Batter Up!",                      "",                                    -1, -1, "");
+	StringToBanisher(result, "Batter Up!",                      "",                                   999, -1, "");
 	StringToBanisher(result, "Snokebomb",                       "",                                     3, 30, "_snokebombUsed");
 	StringToBanisher(result, "Show them your ring",             "mafia middle finger ring",             1, 60, "_mafiaMiddleFinderRingUsed");
 	StringToBanisher(result, "Breath Out",                      "hot jelly",                           -1, 20, "");
@@ -204,21 +204,21 @@ BountyDetails[string] GetAllBounties()
 	StringToBountyDetails(result, "Hard"   , 13, "spent handwarmer");
 	StringToBountyDetails(result, "Hard"   , 6 , "warrrrrt");
 	StringToBountyDetails(result, "Hard"   , 6 , "worthless piece of yellow glass");
-	StringToBountyDetails(result, "Special", 13, "pixellated ashes"    , "jar of psychoses (The Crackpot Mystic)",        -1, "");
-	StringToBountyDetails(result, "Special", 10, "empty rum bottle"    , "one-day ticket to Dinseylandfill",              -1, "");
-	StringToBountyDetails(result, "Special", 8 , "frozen clipboard"    , "one-day ticket to The Glaciest",                -1, "");
-	StringToBountyDetails(result, "Special", 8 , "glittery skate key"  , "tiny bottle of absinthe",                       10, "Absinthe-Minded");
-	StringToBountyDetails(result, "Special", 9 , "grizzled stubble"    , "transporter transponder",                       30, "Transpondent");
-	StringToBountyDetails(result, "Special", 10, "hardened lava glob"  , "one-day ticket to That 70s Volcano",            -1, "");
-	StringToBountyDetails(result, "Special", 6 , "hickory daiquiri"    , "devilish folio",                                30, "Dis Abled");
-	StringToBountyDetails(result, "Special", 8 , "greasy string"       , "jar of psychoses (The Meatsmith)",              -1, "");
-	StringToBountyDetails(result, "Special", 13, "pickle chip"         , "one-day ticket to Spring Break Beach",          -1, "");
-	StringToBountyDetails(result, "Special", 8 , "country guano"       , "astral mushroom",                               5, "Half-Astral");
-	StringToBountyDetails(result, "Special", 10, "wig powder"          , "\"DRINK ME\" potion",                           20, "Down the Rabbit Hole");
-	StringToBountyDetails(result, "Special", 6 , "pop art banana peel" , "llama lama gong",                               12, "Shape of...Mole!");
-	StringToBountyDetails(result, "Special", 9 , "purple butt"         , "empty agua de vida bottle",                           10, "");
-	StringToBountyDetails(result, "Special", 13, "unlucky claw"        , "jar of psychoses (The Suspicious-Looking Guy)", -1, "");
-	StringToBountyDetails(result, "Special", 10, "vivisected hair"     , "one-day ticket to Conspiracy Island",           -1, "");
+	StringToBountyDetails(result, "Special", 13, "pixellated ashes"      , "jar of psychoses (The Crackpot Mystic)",        -1, "");
+	StringToBountyDetails(result, "Special", 10, "empty rum bottle"      , "one-day ticket to Dinseylandfill",              -1, "");
+	StringToBountyDetails(result, "Special", 8 , "frozen clipboard"      , "one-day ticket to The Glaciest",                -1, "");
+	StringToBountyDetails(result, "Special", 8 , "glittery skate key"    , "tiny bottle of absinthe",                       10, "Absinthe-Minded");
+	StringToBountyDetails(result, "Special", 9 , "grizzled stubble"      , "transporter transponder",                       30, "Transpondent");
+	StringToBountyDetails(result, "Special", 10, "hardened lava glob"    , "one-day ticket to That 70s Volcano",            -1, "");
+	StringToBountyDetails(result, "Special", 6 , "hickory daiquiri"      , "devilish folio",                                30, "Dis Abled");
+	StringToBountyDetails(result, "Special", 8 , "greasy string"         , "jar of psychoses (The Meatsmith)",              -1, "");
+	StringToBountyDetails(result, "Special", 13, "pickle chip"           , "one-day ticket to Spring Break Beach",          -1, "");
+	StringToBountyDetails(result, "Special", 8 , "pile of country guano" , "astral mushroom",                               5, "Half-Astral");
+	StringToBountyDetails(result, "Special", 10, "wig powder"            , "\"DRINK ME\" potion",                           20, "Down the Rabbit Hole");
+	StringToBountyDetails(result, "Special", 6 , "pop art banana peel"   , "llama lama gong",                               12, "Shape of...Mole!");
+	StringToBountyDetails(result, "Special", 9 , "purple butt"           , "empty agua de vida bottle",                           10, "");
+	StringToBountyDetails(result, "Special", 13, "unlucky claw"          , "jar of psychoses (The Suspicious-Looking Guy)", -1, "");
+	StringToBountyDetails(result, "Special", 10, "vivisected hair"       , "one-day ticket to Conspiracy Island",           -1, "");
 	return result;
 }
 
@@ -417,6 +417,11 @@ string TryBanish(monster mon)
 			else if (ban.AsSkill.mp_cost() > my_mp())
 			{
 				PrintDebug("Don't have enough MP");
+				continue;
+			}
+			else if (ban.AsSkill == $skill[Batter Up!] && my_fury() < 5)
+			{
+				PrintDebug("Don't have enough fury");
 				continue;
 			}
 		}
@@ -907,6 +912,16 @@ void DoBounty(BountyDetails b)
 				run_choice(3);
 				return;
 			}
+			else if (page.contains_text("Take the Bad Trip"))
+			{
+				run_choice(1); // Bad Trip
+				return;
+			}
+			else if (page.contains_text("Violet Fog"))
+			{
+				run_choice(4); // Escape
+				return;
+			}
 			else
 			{
 				print(page);
@@ -965,7 +980,8 @@ void DoBounty(BountyDetails b)
 		}
 		else if (page.contains_text("That isn't a place you can go.")
 			&& ((current.details.location == $location[The Secret Government Laboratory])
-			|| (current.details.location == $location[LavaCo&trade; Lamp Factory]))
+			|| (current.details.location == $location[LavaCo&trade; Lamp Factory])
+			|| (current.details.location == $location[The Ice Hotel]))
 			)
 		{
 			if (!PromptToUnlock())
@@ -979,6 +995,16 @@ void DoBounty(BountyDetails b)
 			print("Cannot visit " + current.details.location + ", skipping bounty", printColor);
 			current.NoAccess = true;
 			return;
+		}
+		else if (page.contains_text("You're in the regular dimension now, and don't remember how to get back there."))
+		{
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
+			if (available_choice_options()[1] == "Take the Bad Trip")
+				run_choice(1);
 		}
 		else if (page.contains_text("adventure.php?snarfblat=") && page.contains_text("Adventure Again"))
 		{

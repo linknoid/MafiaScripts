@@ -894,6 +894,7 @@ void ReadSettings()
     void DebugOutfit(string name, item[slot] o);
     item ChooseCheapestThanksgetting();
     boolean TryHandleNonCombat(string page);
+    boolean TryScratchNSniff();
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -1094,6 +1095,11 @@ void ReadSettings()
         {
             if (user_confirm("Spend 10 of your guild's fish to make a carpe?  (Make sure you refill it if you do.)"))
                 cli_execute("create carpe");
+        }
+        if ((!HaveEquipment(scratchXbow) && OutfitContains(outfitDef, scratchXbow))
+		|| (!HaveEquipment(scratchSword) && OutfitContains(outfitDef, scratchSword)))
+        {
+            TryScratchNSniff();
         }
     }
 
@@ -1391,7 +1397,7 @@ DebugOutfit("Goal outfit", outfitDef);
             {
                 print("Duplicating item " + elfDuplicateItem);
                 visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1119&option=4");
-                page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1125&option=1&value=" + elfDuplicateItem.to_int());
+                page = visit_url("choice.php?whichchoice=1125&pwd=" + my_hash() + "&option=1&iid=" + elfDuplicateItem.to_int());
                 if (!page.contains_text("Where it was, is another."))
                 {
                         print(page);
@@ -2631,24 +2637,26 @@ print("Running filter = " + result, printColor);
     }
     boolean TryScratchNSniff()
     {
-        if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
-            return false; // +200% for katana is better than +75% for scratch and sniff stickers
+        // disabled for now, don't check the price since this is only done as part of an outfit
+        //if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
+        //    return false; // +200% for katana is better than +75% for scratch and sniff stickers
 
-        float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
-        float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
-        float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
-        float difference = scratchMeat - currentWeaponMeat;
-        if (difference < 300 || scratchUPC.mall_price() * 3 > difference)
-            return false;
+        //float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
+        //float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
+        //float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
+        //float difference = scratchMeat - currentWeaponMeat;
+        //if (difference < 300 || scratchUPC.mall_price() * 3 > difference)
+        //    return false;
 
         item eq;
         if (HaveEquipment(scratchXbow))
             eq = scratchXbow;
         else
             eq = scratchSword;
-        if (sticker1.equipped_item() == noItem
+        if ((sticker1.equipped_item() == noItem
             && sticker2.equipped_item() == noItem
             && sticker3.equipped_item() == noItem)
+	    || (!HaveEquipment(scratchXbow) && !HaveEquipment(scratchSword)))
         {
             if (scratchUPC.item_amount() < 3)
             {
@@ -3310,23 +3318,27 @@ print("Running filter = " + result, printColor);
         }
         if (attunement.have_effect() > 0 && get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
         {
-            // you don't get bonus from these fights, but they should trigger eldritch attunement fights
-            if (scorpions.item_amount() < 11)
+            string page = visit_url("place.php?whichplace=hiddencity");
+            if (!page.contains_text("Uh Oh!"))  // city not unlocked
             {
-                buy(11 - scorpions.item_amount(), scorpions);
+                // you don't get bonus from these fights, but they should trigger eldritch attunement fights
+                if (scorpions.item_amount() < 11)
+                {
+                    buy(11 - scorpions.item_amount(), scorpions);
+                }
+                if (HaveEquipment(kgb)
+                    && selectedOutfit[acc1] != kgb
+                    && selectedOutfit[acc2] != kgb
+                    && selectedOutfit[acc3] != kgb)
+                {
+                    selectedOutfit[acc1] = kgb;
+                }
+                PrepareFreeCombat(selectedOutfit);
+                if (bowlingBall.item_amount() > 0)
+                    put_closet(bowlingBall.item_amount(), bowlingBall);
+                RunAdventure(bowlingAlley, "Filter_BowlingAlley");
+                return true;
             }
-            if (HaveEquipment(kgb)
-                && selectedOutfit[acc1] != kgb
-                && selectedOutfit[acc2] != kgb
-                && selectedOutfit[acc3] != kgb)
-            {
-                selectedOutfit[acc1] = kgb;
-            }
-            PrepareFreeCombat(selectedOutfit);
-            if (bowlingBall.item_amount() > 0)
-                put_closet(bowlingBall.item_amount(), bowlingBall);
-            RunAdventure(bowlingAlley, "Filter_BowlingAlley");
-            return true;
         }
         if (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
         {
@@ -4293,12 +4305,16 @@ print("Running filter = " + result, printColor);
         return true;
     }
 
+    int meatBuffCost;
     item meatBuffCandy1, meatBuffCandy2;
     void ChooseSweetMeat(int[item] candies1, int[item] candies2)
     {
+        item best1, best2;
         foreach candy1, count1 in candies1
         {
             if (count1 < 1)
+                continue;
+            if (candy1.historical_price() > meatBuffCost)
                 continue;
             foreach candy2, count2 in candies2
             {
@@ -4306,9 +4322,12 @@ print("Running filter = " + result, printColor);
                     continue;
                 if (candy1 == candy2 && count2 < 2)
                     continue;
+                int cost = candy1.historical_price() + candy2.historical_price();
+                if (cost > meatBuffCost)
+                    continue;
                 meatBuffCandy1 = candy1;
                 meatBuffCandy2 = candy2;
-                return;
+                meatBuffCost = cost;
             }
         }
     }
@@ -4421,6 +4440,7 @@ print("Running filter = " + result, printColor);
             print("Calculating candies...", printColor);
             meatBuffCandy1 = noItem;
             meatBuffCandy2 = noItem;
+            meatBuffCost = 250 * 3 * 30; // has to be less than 22500 meat to be worth buffing
             ChooseSweetMeat(candy3_1, candy3_2);
             ChooseSweetMeat(candy2_1, candy2_2);
             ChooseSweetMeat(candy1_1, candy1_1);
