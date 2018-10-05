@@ -209,7 +209,8 @@ boolean FuelAsdonMartin(int amount)
 		carob chunks, premium malt liquor, roll in the hay, pink pony, overcookie, enchanted bean burrito,
 		slap and tickle, extra-spicy bloody mary, open sauce, vodka and cranberry, snifter of thoroughly aged brandy,
 		smelted roe, philosopher's scone, tofu casserole, monkey wrench, moonberry wine cooler, salty dog, screwdriver,
-		tomato daiquiri, a little sump'm sump'm, Mon Tiki, dusty bottle of Port, plain old beer ]
+		tomato daiquiri, a little sump'm sump'm, Mon Tiki, dusty bottle of Port, plain old beer, whiskey and soda,
+		antique packet of ketchup, dusty bottle of Muscat ]
 	{
 		if (get_fuel() >= amount)
 			return true;
@@ -744,7 +745,7 @@ void SweetSynthesisEffect(int questNum)
 
 string AbortFilter(string message)
 {
-	abort(message);
+	print(message, "red");
 	return "abort";
 }
 
@@ -1258,7 +1259,8 @@ void GearForCombat()
 	else
 		$slot[shirt].equip($item[none]);
 	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]); // for bashing
-	$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	//$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
+	$slot[off-hand].equip($item[latte lovers member's mug]);
 	$slot[pants].equip($item[pantogram pants]); // make sure we're wearing pants first
 	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]); // for escaping
 	$slot[acc2].equip($item[gold detective badge]);
@@ -1558,7 +1560,8 @@ void RunNeverendingParty(int freeTurnCount)
 			break;
 		if (usedTurns == 0 && prop != "0")
 			abort("Missing KoLMafia property _neverendingPartyFreeTurns");
-			
+
+		UseSkillForEffect($skill[The Polka of Plenty], $effect[Polka of Plenty]);
 		GearForCombat();
 		RecoverHPorMP(false);
 		ResetCombatState();
@@ -1999,7 +2002,8 @@ void EatBrowserCookie()
 {
 	while (my_fullness() + 4 <= fullness_limit())
 	{
-		if (my_fullness() % 4 == 0 && my_meat() >= 1000 && fullness_limit() < 16)
+		if (my_fullness() % 4 == 0 && my_meat() >= 1000 && fullness_limit() < 16
+			&& get_campground() contains $item[portable Mayo Clinic])
 		{
 			buy(1, $item[Mayodiol]);
 			use(1, $item[Mayodiol]);
@@ -2320,8 +2324,12 @@ void MakeStenchJelly()
 {
 	if (AmDrunk())
 		return;
-	if (get_property("_spaceJellyfishDrops") > 1 && get_property("_macrometeoriteUses").to_int() >= 10)
+	if (get_property("_spaceJellyfishDrops") > 1
+		&& get_property("_macrometeoriteUses").to_int() >= 10
+		 && $item[Pok&eacute;-Gro fertilizer].item_amount() >= 3)
+	{
 		return;
+	}
 	$familiar[Space Jellyfish].use_familiar();
 	RecoverHPorMP(false);
 	ResetCombatState();
@@ -2385,6 +2393,8 @@ void DoSleep()
 	$slot[acc2].equip($item[tiny plastic golden gundam]);
 	$slot[acc3].equip($item[Draftsman's driving gloves]);
 	$familiar[Trick-or-Treating Tot].use_familiar();
+	if (!$item[li'l unicorn costume].HaveItem())
+		buy(1, $item[li'l unicorn costume]);
 	$slot[familiar].equip($item[li'l unicorn costume]);
 	if (!user_confirm("Are you ready for final combat of the day? (this will log out off in the middle of combat)"))
 		return;
@@ -2555,6 +2565,8 @@ void DoQuest5()
 	if (!completedQuests[5])
 	{
 		$slot[weapon].equip($item[rope]);
+		if (HaveItem($item[ghostly reins]))
+			$slot[off-hand].equip($item[ghostly reins]);
 		$slot[acc3].equip($item[Brutal brogues]);
 
 		UseSkillForEffect($skill[Empathy of the Newt], $effect[Empathy]);
@@ -2744,7 +2756,7 @@ void DoQuest10()
 			cli_execute("create burning cape");
 		$slot[back].equip($item[burning cape]);
 
-		if (get_property("_mayoTankSoaked") != "true")
+		if (get_property("_mayoTankSoaked") != "true" && get_campground() contains $item[portable Mayo Clinic])
 			visit_url("shop.php?action=bacta&whichshop=mayoclinic");
 		UseSkillForEffect($skill[Elemental Saucesphere], $effect[Elemental Saucesphere]);
 		UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
@@ -2753,7 +2765,7 @@ void DoQuest10()
 		cli_execute("Briefcase enchantment hot");
 		// pale horse?  500 meat to switch
 		SweetSynthesisEffect(10); // hot resist
-		DoQuest(10, 14); // (+hot resist)
+		DoQuest(10, 7); // (+hot resist)
 	}
 }
 void DoQuest11()
@@ -2776,6 +2788,8 @@ void Day1DrinkAndSpleen(boolean maxOut)
 			cli_execute("barrelprayer buff");
 		if ($effect[Ode to Booze].have_effect() < 10)
 		{
+			if ($effect[Polka of Plenty].have_effect() > 0)
+				cli_execute("shrug " + $effect[Polka of Plenty]);
 			ChateauRest(50);
 			use_skill(1, $skill[The Ode to Booze]);
 		}
@@ -2892,9 +2906,8 @@ void InitCharacter()
 	{
 		cli_execute("numberology 14");
 		cli_execute("numberology 14");
-		cli_execute("numberology 14");
-		autosell(3 * 14, $item[moxie weed]);
-		buy(1, $item[li'l unicorn costume]);
+		cli_execute("numberology 89");
+		autosell(2 * 14, $item[moxie weed]);
 	}
 
 	if (!HaveItem($item[turtle totem]))
@@ -3150,6 +3163,11 @@ void Day2()
 	{
 		visit_url("place.php?whichplace=realm_fantasy&action=fr_initcenter");
 		visit_url("choice.php?pwd&whichchoice=1280&option=1"); // warrior's helm
+	}
+
+	if ($effect[Meteor Showered].have_effect() <= 0)
+	{
+		FightGhost();
 	}
 
 	DoQuest5(); // familiar weight
