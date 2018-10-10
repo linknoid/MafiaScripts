@@ -71,11 +71,16 @@ void StringToBanisher(Banisher[string] coll, string SkillName, string ItemName, 
 {
 	Banisher result;
 	string name;
+	result.UsesPerDayCount = UsesPerDay;
 	if (SkillName != "")
 	{
 		name = SkillName;
 		result.AsSkill = SkillName.to_skill();
 		result.SkillProvider = ItemName.to_item();
+		if (!result.AsSkill.have_skill() && result.SkillProvider == $item[none])
+		{
+			result.UsesPerDayCount = 0;
+		}
 	}
 	else if (ItemName != "")
 	{
@@ -85,7 +90,6 @@ void StringToBanisher(Banisher[string] coll, string SkillName, string ItemName, 
 	}
 	else
 		abort("Must specify Skill or Item");
-	result.UsesPerDayCount = UsesPerDay;
 	result.UsedTodayCountProperty = UsedTodayCountProperty;
 	result.TurnsBanishedPerUse = TurnsBanished;
 	result.Key = name;
@@ -95,7 +99,7 @@ void StringToBanisher(Banisher[string] coll, string SkillName, string ItemName, 
 Banisher[string] GetAllBanishers()
 {
 	Banisher[string] result;
-	StringToBanisher(result, "Batter Up!",                      "",                                   999, -1, "");
+	StringToBanisher(result, "Batter Up!",                      "",                                    -1, -1, "");
 	StringToBanisher(result, "Snokebomb",                       "",                                     3, 30, "_snokebombUsed");
 	StringToBanisher(result, "Show them your ring",             "mafia middle finger ring",             1, 60, "_mafiaMiddleFinderRingUsed");
 	StringToBanisher(result, "Breath Out",                      "hot jelly",                           -1, 20, "");
@@ -120,6 +124,7 @@ Banisher[string] GetAllBanishers()
 		Banisher ban = result[src];
 		ban.UntilTurn = turnBanished + ban.TurnsBanishedPerUse;
 		ban.CurrentlyBanished = mon;
+		result[src] = ban;
 		print("Currently banished for " + (ban.UntilTurn - my_turnCount()) + " more turns = " + mon, printColor);
 	}
 	
@@ -453,7 +458,6 @@ monster matingCalled;
 void ResetCombatState()
 {
 	whiffed = false;
-	matingCalled = $monster[none];
 }
 
 string Filter_Combat(int round, monster mon, string page)
@@ -508,7 +512,10 @@ boolean PromptToUnlock()
 		buy(1, current.accessItem);
 	if (current.accessItem.item_amount() == 0)
 		return false;
-	use(1, current.accessItem);
+	if (current.accessItem == $item[llama lama gong])
+		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f-1&whichitem=3353"); // this item breaks out of the script, so use visit_url instead
+	else
+		use(1, current.accessItem);
 	return true;
 }
 
@@ -600,7 +607,8 @@ return false;
 
 void DoBounty(BountyDetails b)
 {
-	if (b.details.location == $location[The Degrassi Knoll Restroom]
+	if ((b.details.location == $location[The Degrassi Knoll Restroom]
+		|| b.details.location == $location[The Degrassi Knoll Gym])
 		&& (my_sign() == "Mongoose" || my_sign() == "Wallaby" || my_sign() == "Vole"))
 	{
 		print("Can't do Degrassi bounty under Degrassi moonsign:", printColor);
@@ -672,6 +680,12 @@ void DoBounty(BountyDetails b)
 				run_choice(1);
 				run_choice(1);
 			}
+			else if (page.contains_text("Lights Out in the Conservatory"))
+			{
+				run_choice(1); // make a torch
+				run_choice(2); // examine the graves
+				run_choice(2); // examine crumbles
+			}
 			else if (page.contains_text("Lights Out in the Wine Cellar"))
 			{
 				run_choice(1);
@@ -686,6 +700,10 @@ void DoBounty(BountyDetails b)
 				run_choice(2);
 			}
 			else if (page.contains_text("Off the Rack"))
+			{
+				run_choice(1);
+			}
+			else if (page.contains_text("The Fast and the Furry-ous"))
 			{
 				run_choice(1);
 			}
@@ -912,6 +930,11 @@ void DoBounty(BountyDetails b)
 				run_choice(3);
 				return;
 			}
+			else if (page.contains_text("The Gong Has Been Bung"))
+			{
+				run_choice(2); // Soul of the mole
+				return;
+			}
 			else if (page.contains_text("Take the Bad Trip"))
 			{
 				run_choice(1); // Bad Trip
@@ -920,6 +943,69 @@ void DoBounty(BountyDetails b)
 			else if (page.contains_text("Violet Fog"))
 			{
 				run_choice(4); // Escape
+				return;
+			}
+			else if (page.contains_text("Down by the Riverside"))
+			{
+				run_choice(3); // Play some volleyball
+				return;
+			}
+			else if (page.contains_text("Beyond Any Measure"))
+			{
+				run_choice(4); // Measure the caverns
+				return;
+			}
+			else if (page.contains_text("Death is a Boat"))
+			{
+				run_choice(3); // Check out the helm
+				return;
+			}
+			else if (page.contains_text("The Floor Is Yours"))
+			{
+				if ($item[fused fuse].item_amount() == 0)
+				{
+					run_choice(7); // Sabotage the machine
+					return;
+				}
+				if ($item[empty lava bottle].item_amount() > 0 && $item[full lava bottle].item_amount() == 0)
+				{
+					run_choice(3); // Use the kiln
+					return;
+				}
+				if ($item[New Age healing crystal].item_amount() > 0 && $item[empty lava bottle].item_amount() == 0)
+				{
+					run_choice(2); // Use the kiln
+					return;
+				}
+				if ($item[1,970 carat gold].item_amount() > 0 && $item[thin gold wire].item_amount() == 0)
+				{
+					run_choice(1); // Use the kiln
+					return;
+				}
+				if ($item[glowing New Age crystal].item_amount() > 0 && $item[crystalline light bulb].item_amount() == 0)
+				{
+					run_choice(5); // Use the bulber
+					return;
+				}
+				if ($item[viscous lava globs].item_amount() > 0)
+				{
+					if ($item[red lava globs].item_amount() == 0)
+					{
+						run_choice(6);
+						run_choice(1);
+					}
+					else if ($item[blue lava globs].item_amount() == 0)
+					{
+						run_choice(6);
+						run_choice(2);
+					}
+					else if ($item[green lava globs].item_amount() == 0)
+					{
+						run_choice(6);
+						run_choice(3);
+					}
+				}
+				run_choice(8); // leave the machine alone
 				return;
 			}
 			else
@@ -961,7 +1047,8 @@ void DoBounty(BountyDetails b)
 			use(1, $item[transporter transponder]);
 		}
 		else if (page.contains_text("You shouldn't be here.")
-			&& current.details.location == $location[Anger Man's Level])
+			&& (current.details.location == $location[Anger Man's Level]
+			|| current.details.location == $location[Mt. Molehill]))
 		{
 			if (!PromptToUnlock())
 			{
@@ -1005,6 +1092,14 @@ void DoBounty(BountyDetails b)
 			}
 			if (available_choice_options()[1] == "Take the Bad Trip")
 				run_choice(1);
+		}
+		else if (page.contains_text("For some reason, you can't find your way back there."))
+		{
+			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
 		}
 		else if (page.contains_text("adventure.php?snarfblat=") && page.contains_text("Adventure Again"))
 		{
