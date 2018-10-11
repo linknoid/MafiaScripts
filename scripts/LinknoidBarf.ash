@@ -69,7 +69,7 @@
     int saveSpleen = 0; // how many spleen points to save back
     int saveStomach = 0; // how many stomach points to save back
     int saveLiver = 0; // how many liver points to save back
-    int maxUsePrintScreens = 1; // how many print screens to use per day
+    int maxUsePrintScreens = 0; // how many print screens to use per day
     int maxUseEnamorangs = 1; // how many lov enamorangs to throw per day
     int turkeyLimit = 1; // how many ambitious turkeys to drink per day
     int sacramentoLimit = 0; // how many sacramento wines to drink per day
@@ -83,6 +83,7 @@
     string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
     string executeBeforeEat = ""; // If you want another script or command to do your eating, put it here
     string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
+    item elfDuplicateItem; // if you specify this, the machine elf adventure will automatically duplicate this instead of aborting
 
 void WriteSettings()
 {
@@ -112,6 +113,7 @@ void WriteSettings()
     map["hobopolisWhitelist"] = hobopolisWhitelist;
     map["executeBeforeEat"] = executeBeforeEat;
     map["executeAfterEat"] = executeAfterEat;
+    map["elfDuplicateItem"] = elfDuplicateItem.to_int().to_string();
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -146,6 +148,7 @@ void ReadSettings()
             case "hobopolisWhitelist": hobopolisWhitelist = value; break;
             case "executeBeforeEat": executeBeforeEat = value; break;
             case "executeAfterEat": executeAfterEat = value; break;
+            case "elfDuplicateItem": elfDuplicateItem = value.to_int().to_item(); break;
         }
     }
 }
@@ -890,6 +893,8 @@ void ReadSettings()
     item[slot] InitOutfit(string outfitName, item[slot] result);
     void DebugOutfit(string name, item[slot] o);
     item ChooseCheapestThanksgetting();
+    boolean TryHandleNonCombat(string page);
+    boolean TryScratchNSniff();
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -970,6 +975,10 @@ void ReadSettings()
     boolean LoadChoiceAdventure(string url, string loc, boolean optional)
     {
         string page = visit_url(url);
+
+        if (TryHandleNonCombat(page))
+            return false; // already handled, don't make caller think they get to choose
+
         if (page.contains_text("choice.php"))
             return true;
 
@@ -1086,6 +1095,11 @@ void ReadSettings()
         {
             if (user_confirm("Spend 10 of your guild's fish to make a carpe?  (Make sure you refill it if you do.)"))
                 cli_execute("create carpe");
+        }
+        if ((!HaveEquipment(scratchXbow) && OutfitContains(outfitDef, scratchXbow))
+		|| (!HaveEquipment(scratchSword) && OutfitContains(outfitDef, scratchSword)))
+        {
+            TryScratchNSniff();
         }
     }
 
@@ -1368,41 +1382,59 @@ DebugOutfit("Goal outfit", outfitDef);
         string result = run_combat(filter);
         CheckPostCombat(result, filter);
     }
+    boolean TryHandleNonCombat(string page)
+    {
+        if (!page.contains_text("choice.php"))
+            return false;
+        if (page.contains_text("Tame it"))
+        {
+            run_choice(1); // tame the turtle
+            return true;
+        }
+        if (page.contains_text("A little") && page.contains_text(", familiar, beckoning"))
+        {
+            if (elfDuplicateItem != noItem && elfDuplicateItem.item_amount() > 0)
+            {
+                print("Duplicating item " + elfDuplicateItem);
+                visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1119&option=4");
+                page = visit_url("choice.php?whichchoice=1125&pwd=" + my_hash() + "&option=1&iid=" + elfDuplicateItem.to_int());
+                if (!page.contains_text("Where it was, is another."))
+                {
+                        print(page);
+                        abort("Duplicate item failed");
+                }
+            }
+            else if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
+                abort("Aborting so you can choose whether to duplicate an item");
+        }
+        if (page.contains_text("A path away. All ways. Always."))
+        {
+            run_choice(6); // skip the adventure
+            return true;
+        }
+        if (page.contains_text("Wooof! Wooooooof!"))
+        {
+            run_choice(3); // ghost dog chow
+            return true;
+        }
+        if (page.contains_text("Playing Fetch"))
+        {
+            run_choice(1); // tennis ball
+            return true;
+        }
+        if (page.contains_text("Your Dog Found Something Again"))
+        {
+            run_choice(2); // gimme booze
+            return true;
+        }
+        return false;
+    }
+
     void RunAdventure(location loc, string filter)
     {
         string page = visit_url(loc.to_url().to_string());
-        if (page.contains_text("choice.php"))
-        {
-            if (page.contains_text("Tame it"))
-            {
-                run_choice(1); // tame the turtle
-                return;
-            }
-            if (page.contains_text("A little") && page.contains_text(", familiar, beckoning"))
-            {
-                if (UserConfirmDefault("Chance to duplicate a consumable, do you want to abort so you can choose (otherwise it will skip this adventure)?", true))
-                    abort("Aborting so you can choose whether to duplicate an item");
-            }
-            if (page.contains_text("A path away. All ways. Always."))
-            {
-                run_choice(6); // skip the adventure
-            }
-            if (page.contains_text("Wooof! Wooooooof!"))
-            {
-                run_choice(3); // ghost dog chow
-                return;
-            }
-            if (page.contains_text("Playing Fetch"))
-            {
-                run_choice(1); // tennis ball
-                return;
-            }
-            if (page.contains_text("Your Dog Found Something Again"))
-            {
-                run_choice(2); // gimme booze
-                return;
-            }
-        }
+        if (TryHandleNonCombat(page))
+            return;
         string combatResult = run_combat(filter);
         CheckPostCombat(combatResult, filter);
     }
@@ -1539,7 +1571,7 @@ DebugOutfit("Goal outfit", outfitDef);
             cli_execute("nuns");
             return true;
         }
-        if (restoreLimit >= 1000 && get_property("_aprilShower") != true && vipKey.item_amount() > 0 && get_clan_lounge() contains aprilShower)
+        if (restoreLimit >= 1000 && get_property("_aprilShower") != "true" && vipKey.item_amount() > 0 && get_clan_lounge() contains aprilShower)
         {
             cli_execute("shower hot");
             return true;
@@ -1601,7 +1633,7 @@ DebugOutfit("Goal outfit", outfitDef);
             {
                 cli_execute("nuns");
             }
-            else if (soulFood.have_skill()
+            else if (soulFood.have_skill() && my_soulsauce() >= 5
                 && ShouldSummonRestore(keepMana, 0, 15, soulsauceBonus))
             {
                 use_skill(1, soulFood);
@@ -2605,24 +2637,26 @@ print("Running filter = " + result, printColor);
     }
     boolean TryScratchNSniff()
     {
-        if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
-            return false; // +200% for katana is better than +75% for scratch and sniff stickers
+        // disabled for now, don't check the price since this is only done as part of an outfit
+        //if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
+        //    return false; // +200% for katana is better than +75% for scratch and sniff stickers
 
-        float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
-        float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
-        float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
-        float difference = scratchMeat - currentWeaponMeat;
-        if (difference < 300 || scratchUPC.mall_price() * 3 > difference)
-            return false;
+        //float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
+        //float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
+        //float scratchMeat = meatMultiplier * 75; // 75% from 3 stickers
+        //float difference = scratchMeat - currentWeaponMeat;
+        //if (difference < 300 || scratchUPC.mall_price() * 3 > difference)
+        //    return false;
 
         item eq;
         if (HaveEquipment(scratchXbow))
             eq = scratchXbow;
         else
             eq = scratchSword;
-        if (sticker1.equipped_item() == noItem
+        if ((sticker1.equipped_item() == noItem
             && sticker2.equipped_item() == noItem
             && sticker3.equipped_item() == noItem)
+	    || (!HaveEquipment(scratchXbow) && !HaveEquipment(scratchSword)))
         {
             if (scratchUPC.item_amount() < 3)
             {
@@ -3284,23 +3318,27 @@ print("Running filter = " + result, printColor);
         }
         if (attunement.have_effect() > 0 && get_property("_drunkPygmyBanishes").to_int() < 11 && scorpions.item_amount() > 0)
         {
-            // you don't get bonus from these fights, but they should trigger eldritch attunement fights
-            if (scorpions.item_amount() < 11)
+            string page = visit_url("place.php?whichplace=hiddencity");
+            if (!page.contains_text("Uh Oh!"))  // city not unlocked
             {
-                buy(11 - scorpions.item_amount(), scorpions);
+                // you don't get bonus from these fights, but they should trigger eldritch attunement fights
+                if (scorpions.item_amount() < 11)
+                {
+                    buy(11 - scorpions.item_amount(), scorpions);
+                }
+                if (HaveEquipment(kgb)
+                    && selectedOutfit[acc1] != kgb
+                    && selectedOutfit[acc2] != kgb
+                    && selectedOutfit[acc3] != kgb)
+                {
+                    selectedOutfit[acc1] = kgb;
+                }
+                PrepareFreeCombat(selectedOutfit);
+                if (bowlingBall.item_amount() > 0)
+                    put_closet(bowlingBall.item_amount(), bowlingBall);
+                RunAdventure(bowlingAlley, "Filter_BowlingAlley");
+                return true;
             }
-            if (HaveEquipment(kgb)
-                && selectedOutfit[acc1] != kgb
-                && selectedOutfit[acc2] != kgb
-                && selectedOutfit[acc3] != kgb)
-            {
-                selectedOutfit[acc1] = kgb;
-            }
-            PrepareFreeCombat(selectedOutfit);
-            if (bowlingBall.item_amount() > 0)
-                put_closet(bowlingBall.item_amount(), bowlingBall);
-            RunAdventure(bowlingAlley, "Filter_BowlingAlley");
-            return true;
         }
         if (get_property("snojoAvailable") == "true" && get_property("_snojoFreeFights").to_int() < 10)
         {
@@ -4267,12 +4305,16 @@ print("Running filter = " + result, printColor);
         return true;
     }
 
+    int meatBuffCost;
     item meatBuffCandy1, meatBuffCandy2;
     void ChooseSweetMeat(int[item] candies1, int[item] candies2)
     {
+        item best1, best2;
         foreach candy1, count1 in candies1
         {
             if (count1 < 1)
+                continue;
+            if (candy1.historical_price() > meatBuffCost)
                 continue;
             foreach candy2, count2 in candies2
             {
@@ -4280,9 +4322,12 @@ print("Running filter = " + result, printColor);
                     continue;
                 if (candy1 == candy2 && count2 < 2)
                     continue;
+                int cost = candy1.historical_price() + candy2.historical_price();
+                if (cost > meatBuffCost)
+                    continue;
                 meatBuffCandy1 = candy1;
                 meatBuffCandy2 = candy2;
-                return;
+                meatBuffCost = cost;
             }
         }
     }
@@ -4395,6 +4440,7 @@ print("Running filter = " + result, printColor);
             print("Calculating candies...", printColor);
             meatBuffCandy1 = noItem;
             meatBuffCandy2 = noItem;
+            meatBuffCost = 250 * 3 * 30; // has to be less than 22500 meat to be worth buffing
             ChooseSweetMeat(candy3_1, candy3_2);
             ChooseSweetMeat(candy2_1, candy2_2);
             ChooseSweetMeat(candy1_1, candy1_1);
@@ -5267,13 +5313,39 @@ print("Running filter = " + result, printColor);
         }
     }
 
+    int GingerbreadTurns()
+    {
+        int turns = get_property("_gingerbreadCityTurns").to_int();
+        if (get_property("_gingerbreadClockAdvanced") == "true")
+            turns += 5;
+        print("Gingerbread turns = " + turns);
+        return turns;
+    }
+    int GingerbreadVirtualTurns()
+    {
+        int turns = get_property("_gingerbreadCityTurns").to_int();
+        if (get_property("gingerAdvanceClockUnlocked") == "true")
+        {
+            turns += 6;
+        }
+        return turns;
+    }
+    boolean CanGingerbreadCandy(int runsAvail)
+    {
+        return GingerbreadTurns() <= 9
+            && GingerbreadVirtualTurns() + runsAvail >= 9;
+    }
+    boolean CanGingerbreadParty(int runsAvail)
+    {
+        return GingerbreadTurns() <= 19
+            && GingerbreadVirtualTurns() + runsAvail >= 19;
+    }
+
     void RunawayGingerbread()
     {
         visit_url("place.php?whichplace=gingerbreadcity");
         if (get_property("_gingerbreadCityToday") != "true" // not accessible
-            || get_property("_gingerbreadCityTurns").to_int() > 0 // already ran turns
-            || get_property("_gingerbreadClockAdvanced") != "false" // already advanced clock
-            || get_property("gingerAdvanceClockUnlocked") != "true") // can't advance the clock
+            || GingerbreadTurns() > 20) // already ran turns
         {
             return;
         }
@@ -5281,54 +5353,69 @@ print("Running filter = " + result, printColor);
             stompingBoots.use_familiar();
         else if (bandersnatch.have_familiar())
             bandersnatch.use_familiar();
-        if (GetFreeRunaways() < 3)
+        int runs = GetFreeRunaways();
+        iF (!CanGingerbreadCandy(runs) && !CanGingerbreadParty(runs))
             return;
-        if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture using free runaway familiar?", true))
+        if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture/ginger wine using free runaway familiar?", true))
         {
             return;
+        }
+        string page;
+        if (get_property("gingerAdvanceClockUnlocked") == "true"
+            && get_property("_gingerbreadClockAdvanced") != "true")
+        {
+            page = LoadChoiceAdventure(gingerCivic, false); // civic center
+            run_choice(1); // clock choice
         }
         CheesyRunaway(3);
         string filter = ReadyRunaway();
         if (filter != "Filter_Runaway")
             return;
-        string page = LoadChoiceAdventure(gingerCivic, false); // civic center
-        run_choice(1); // clock choice
-        for (int i = 0; i < 3; i++) // run away 3 times
+        runs = GetFreeRunaways();
+        while (CanGingerbreadCandy(runs))
         {
+            if (GingerbreadTurns() == 9)
+                break;
+
+            PrepareSmokeBomb();
             if (GetFreeRunaways() < 1)
             {
-                print("Out of free runaways, " + (3 - i) + " adventures left until train candy.", "red");
+                print("Out of free runaways, " + (9 - GingerbreadVirtualTurns()) + " adventures left until train candy.", "red");
                 return;
             }
-            PrepareSmokeBomb();
             gingerTrain.adv1(-1, filter);
+            runs--;
         }
-        page = LoadChoiceAdventure(gingerTrain, false);
-        run_choice(1); // dig for candy
-        if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
-            put_closet(swizzler.item_amount(), swizzler);
-
-        if (GetFreeRunaways() < 9)
+        if (GingerbreadTurns() == 9)
         {
-            print("9 adventures left until midnight, not enough free runaways.", "red");
-            return;
+            page = LoadChoiceAdventure(gingerTrain, false);
+            run_choice(1); // dig for candy
+            if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+                put_closet(swizzler.item_amount(), swizzler);
         }
+
         if (!HaveGingerbreadBest())
             return;
-        for (int i = 0; i < 9; i++) // run away 9 times
+        runs = GetFreeRunaways();
+        while (CanGingerbreadParty(runs))
         {
+            if (GingerbreadTurns() == 19)
+                break;
             PrepareSmokeBomb();
             gingerRetail.adv1(-1, filter);
         }
-        WearGingerbreadBest();
-        page = LoadChoiceAdventure(gingerRetail, false);
-        run_choice(2); // enter party
-        if (gingerSprinkles.item_amount() >= 300)
-            run_choice(2); // buy chocolate sculpture
-        else
+        if (GingerbreadTurns() == 19)
         {
-            print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
-            run_choice(1); // take a free drink
+            WearGingerbreadBest();
+            page = LoadChoiceAdventure(gingerRetail, false);
+            run_choice(2); // enter party
+            if (gingerSprinkles.item_amount() >= 300)
+                run_choice(2); // buy chocolate sculpture
+            else
+            {
+                print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
+                run_choice(1); // take a free drink
+            }
         }
     }
 
@@ -5396,10 +5483,12 @@ print("Running filter = " + result, printColor);
             if (filter != "Filter_Runaway")
                 return;
             print("Burning delay in " + zone, printColor);
+//waitq(3);
             RemoveConfusionEffects(false);
             HealUp(true);
             string page = visit_url(zone.to_url().to_string());
             run_combat(filter);
+//waitq(3);
         }
     }
 
@@ -5625,19 +5714,19 @@ print("Running filter = " + result, printColor);
         }
         if (MeatyPuttied())
         {
-            print("using spooky putty embezzler", printColor);
+            print("using spooky putty " + meatyMonster, printColor);
             needsSpookyPutty = get_property("spookyPuttyCopiesMade").to_int() < 5;
             return ActivateCopyItem(usedSpookyPutty);
         }
         else if (MeatyRainDohed())
         {
-            print("using rain doh embezzler", printColor);
+            print("using rain doh " + meatyMonster, printColor);
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
         else if (MeatyPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
         {
-            print("using print screen embezzler", printColor);
+            print("using print screen " + meatyMonster, printColor);
 
             set_property("_printscreensUsedToday", (get_property("_printscreensUsedToday").to_int() + 1).to_string()); // to avoid using all the print screens in one day
             needsPrintScreen = true;
@@ -5645,7 +5734,7 @@ print("Running filter = " + result, printColor);
         }
         else if (MeatyCameraed())
         {
-            print("using camera embezzler", printColor);
+            print("using camera " + meatyMonster, printColor);
             needsCamera = true;
             return ActivateCopyItem(usedcamera);
         }
@@ -5653,6 +5742,19 @@ print("Running filter = " + result, printColor);
         {
             print("using Chateau painting embezzler", printColor);
             visit_url("place.php?whichplace=chateau&action=chateau_painting");
+            RunCombat("Filter_Standard");
+            return true;
+        }
+        else if (get_property("_genieFightsUsed").to_int() < 3
+            && (PuttyCopiesRemaining() >= 4
+            || (get_property("_sourceTerminalDigitizeUses").to_int() == 0
+            && get_property("sourceTerminalEducateKnown").contains_text("digitize.edu"))))
+        {
+            // A wish is worth more than a single embezzler, but if we're copying a bunch,
+            // it's worth a wish.
+            print("Wishing for " + meatyMonster, printColor);
+            WishFor("to fight a " + meatyMonster);
+            visit_url("fight.php");
             RunCombat("Filter_Standard");
             return true;
         }
@@ -5784,9 +5886,9 @@ print("Running filter = " + result, printColor);
             return;
         boomedBox = true;
         if (!UserConfirmDefault("Do you wish to switch your BoomBox song to \"Total Eclipse of Your Meat\"?", true))
-		return;
-	visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9919");
-	run_choice(5); // Total Eclipse of Your Meat
+                return;
+        visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9919");
+        run_choice(5); // Total Eclipse of Your Meat
     }
 
     void RunBarfMountain(boolean requireOutfit)
