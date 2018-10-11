@@ -1633,7 +1633,7 @@ DebugOutfit("Goal outfit", outfitDef);
             {
                 cli_execute("nuns");
             }
-            else if (soulFood.have_skill()
+            else if (soulFood.have_skill() && my_soulsauce() >= 5
                 && ShouldSummonRestore(keepMana, 0, 15, soulsauceBonus))
             {
                 use_skill(1, soulFood);
