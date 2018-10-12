@@ -1018,6 +1018,12 @@ void DoBounty(BountyDetails b)
 		{
 			run_combat("Filter_Combat");
 		}
+		else if (page.contains_text("You find yourself strangely drawn to Mt. Molehill"))
+		{
+			visit_url($location[Mt. Molehill].to_url());
+			run_combat("Filter_Combat");
+			//abort("Can't adventure anywhere else while in Shape of...Mole!");
+		}
 		else if (page.contains_text("You're going to need some sort of stench protection if you want to adventure here."))
 		{
 			if ($item[ghost of a necklace].item_amount() > 0)
