@@ -512,6 +512,8 @@ void ReadSettings()
     item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
     item rope = ToItem("rope"); // from deck of every card
+    item bastille = ToItem("Bastille Battalion control rig");
+    item brogues = ToItem("Brutal brogues"); // from Bastille Battalion
 
     item mafiaPointerRing = ToItem("mafia pointer finger ring"); // gets +200% base meat from crits
     skill furiousWallop = ToSkill("Furious Wallop"); // seal clubber skill with guaranteed crit
@@ -652,6 +654,8 @@ void ReadSettings()
     location treasury = ToLocation("Cobb's Knob Treasury"); // semi-rare
     location barfMountain = ToLocation("Barf Mountain"); // main adventure location
     location snojo = ToLocation("The X-32-F Combat Training Snowman");
+    location neverParty = ToLocation("The Neverending Party");
+    item football = ToItem("cosmetic football");
 
 // Maximizing mana for summoning
     location TUNNEL = ToLocation("The Tunnel of L.O.V.E.");
@@ -1071,6 +1075,43 @@ void ReadSettings()
                 return true;
         return false;
     }
+    void SetBastilleBattalionMode(int option, string target)
+    {
+        if (target == "")
+            return;
+        string page;
+        for (int i = 0; i < 3; i++)
+        {
+            page = visit_url("choice.php?whichchoice=1313&option=" + option + "&pwd=" + my_hash());
+            if (page.contains_text(target))
+                return;
+        }
+        abort("Failed to set Bastille Battallion mode to " + target);
+    }
+    void ExecuteBastilleBattalion(string target1, string target2, string target3)
+    {
+        if (bastille.item_amount() == 0
+            && get_property("_bastilleGames").to_int() == 0)
+        {
+            return;
+        }
+        visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9928");
+        SetBastilleBattalionMode(1, target1);
+        SetBastilleBattalionMode(2, target2);
+        SetBastilleBattalionMode(3, target3);
+
+        visit_url("choice.php?whichchoice=1313&option=5&pwd=" + my_hash());
+        for (int i = 0; i < 31; i++) // up to 15 rounds, each round requires 2 choices
+        {
+            int choiceCount = available_choice_options().count();
+            if (choiceCount == 0)
+                return;
+            if (choiceCount != 3)
+                abort("Unexpected number of choices");
+            run_choice(3); // Always take the 3rd option, the last time #3 should be "I'm done for now"
+        }
+        run_choice(8); // just in case the last option required is "Walk Away", not sure what the difference is
+    }
     void MakeMeltingGear(item[slot] outfitDef)
     {
         if (!HaveEquipment(knife)
@@ -1086,6 +1127,13 @@ void ReadSettings()
             && get_property("_deckCardsDrawn").to_int() <= 10)
         {
             cli_execute("cheat rope");
+        }
+        if (!HaveEquipment(brogues)
+            && OutfitContains(outfitDef, brogues)
+            && bastille.item_amount() > 0
+            && get_property("_bastilleGames").to_int() == 0)
+        {
+            ExecuteBastilleBattalion("", "BRUTALIST", "GESTURE"); // BRUTALIST = brogues, GESTURE = +25 meat
         }
         if (!HaveEquipment(carpe)
             && OutfitContains(outfitDef, carpe)
@@ -2844,6 +2892,120 @@ print("Running filter = " + result, printColor);
         }
         return false;
     }
+    boolean TryRunNeverendingParty(string filter)
+    {
+        if (get_property("_neverendingPartyFreeTurns").to_int() >= 10)
+            return false;
+        if (get_property("_neverPartyQuest") == "Megawoots" && HaveEquipment(football))
+        {
+            offhand.equip(football);
+        }
+        string page = visit_url(neverParty.to_url());
+        if (page.contains_text("The Beginning of the Neverend"))
+        {
+            if (page.contains_text("Geraldine"))
+            {
+                set_property("_neverPartyQuest", "Geraldine");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("Gerald"))
+            {
+                set_property("_neverPartyQuest", "Gerald");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("megawoots right now"))
+            {
+                set_property("_neverPartyQuest", "Megawoots");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("wants a bunch of Meat"))
+            {
+                set_property("_neverPartyQuest", "Meat");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("It's the trash that they'll object to"))
+            {
+                set_property("_neverPartyQuest", "Trash");
+                run_choice(1); // accept quest
+                return true;
+            }
+            else if (page.contains_text("got all of the people to leave"))
+            {
+                set_property("_neverPartyQuest", "None");
+                run_choice(2); // reject quest
+                return true;
+            }
+            // todo: add these as they're encountered
+            //else if (page.contains_text(""))
+            //{
+            //}
+            else abort("Unhandled neverending party quest");
+        }
+        else if (page.contains_text("It Hasn't Ended, It's Just Paused"))
+        {
+            if (get_property("_neverPartyQuest") == "Geraldine")
+            {
+abort("Todo: what choice #s for kitchen?");
+                run_choice(3); // Go to the back yard
+                run_choice(3); // Talk to gerald
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Gerald")
+            {
+                run_choice(3); // Go to the back yard
+                run_choice(3); // Talk to gerald
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Megawoots")
+            {
+                run_choice(1); // Head upstairs
+                run_choice(5); // Toss the red dress on the lamp
+                set_property("_neverPartyQuest", "Megawoots2");
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Megawoots2")
+            {
+abort("Todo: what choice #s for basement");
+                run_choice(1); // Head upstairs
+                run_choice(5); // Toss the red dress on the lamp
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "None")
+            {
+                run_choice(1); // Go upstairs
+                run_choice(1); // Take a nap
+                BurnManaSummoning(100);
+                return true;
+            }
+            //else if (get_property("_neverPartyQuest") == )
+            //{
+            //}
+            else
+                abort("Unhandled adventure in neverending party");
+        }
+        else if (page.contains_text("You're fighting"))
+        {
+            RunCombat(filter);
+            return true;
+        }
+        else if (page.contains_text("All Done!"))
+        {
+            run_choice(1);
+            return false;
+        }
+        else if (page.contains_text("Party's Over"))
+        {
+            set_property("_neverendingPartyFreeTurns", 10);
+            return false;
+        }
+        else
+            abort("Unhandled adventure in neverending party");
+        return false;
+    }
     boolean TryFightSeal(string filter)
     {
         if (sealFigurine.item_amount() == 0)
@@ -3344,6 +3506,12 @@ print("Running filter = " + result, printColor);
         {
             PrepareFreeCombat(selectedOutfit);
             if (TryRunSnojo(filter))
+                return true;
+        }
+        if (get_property("neverendingPartyAlways") == "true" && get_property("_neverendingPartyFreeTurns").to_int() < 10)
+        {
+            PrepareFreeCombat(selectedOutfit);
+            if (TryRunNeverendingParty(filter))
                 return true;
         }
         if (get_campground() contains witchess
@@ -5235,7 +5403,7 @@ print("Running filter = " + result, printColor);
         }
         else if (bandersnatch.have_familiar())
         {
-            SwitchToFamiliar(stompingBoots);
+            SwitchToFamiliar(bandersnatch);
             CastSkill(odeToBooze, 1, true); // only need 1 turn of it
         }
         if (GetFreeRunaways() > 0)
