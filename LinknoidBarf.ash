@@ -75,6 +75,7 @@
     int sacramentoLimit = 0; // how many sacramento wines to drink per day
     int thanksgettingFoodCostLimit = 15000; // Don't thanksgetting foods that cost more than this
     int mojoCostLimit = 6000; // Don't thanksgetting foods that cost more than this
+    int votedMeatLimit = 0; // Wear "I voted sticker" at appropriate times when meat buff % is below this number
     boolean combatUserScript = false; // in barf mountain fights, use the user's default combat script instead of the built in logic
     boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
@@ -105,6 +106,7 @@ void WriteSettings()
     map["sacramentoLimit"] = sacramentoLimit.to_string();
     map["thanksgettingFoodCostLimit"] = thanksgettingFoodCostLimit.to_string();
     map["mojoCostLimit"] = mojoCostLimit.to_string();
+    map["votedMeatLimit"] = votedMeatLimit.to_string();
     map["combatUserScript"] = combatUserScript.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
@@ -140,6 +142,7 @@ void ReadSettings()
             case "sacramentoLimit": sacramentoLimit = value.to_int(); break;
             case "thanksgettingFoodCostLimit": thanksgettingFoodCostLimit = value.to_int(); break;
             case "mojoCostLimit": mojoCostLimit = value.to_int(); break;
+            case "votedMeatLimit": votedMeatLimit = value.to_int(); break;
             case "combatUserScript": combatUserScript = value == "true"; break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
@@ -781,6 +784,7 @@ void ReadSettings()
     monster bowler = ToMonster("pygmy bowler");
     monster janitor = ToMonster("pygmy janitor");
     monster orderlies = ToMonster("pygmy orderlies");
+    item votedSticker = ToItem("\"I Voted!\" sticker");
 // seal clubber supplies
     item bludgeon = ToItem("Brimstone Bludgeon");
     item tenderizer = ToItem("Meat Tenderizer is Murder");
@@ -2828,6 +2832,14 @@ print("Running filter = " + result, printColor);
             }
             needsMayfly = true;
         }
+        if (meat_drop_modifier() < votedMeatLimit
+            && (total_turns_played() % 11) == 1
+            && HaveEquipment(votedSticker)
+            && !OutfitContains(barfOutfitPieces, votedSticker))
+        {
+            print("Wearing I Voted sticker for wandering monsters", printColor);
+            barfOutfitPieces[acc3] = votedSticker;
+        }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
         {
             if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
@@ -2949,9 +2961,8 @@ print("Running filter = " + result, printColor);
         {
             if (get_property("_neverPartyQuest") == "Geraldine")
             {
-abort("Todo: what choice #s for kitchen?");
-                run_choice(3); // Go to the back yard
-                run_choice(3); // Talk to gerald
+                run_choice(2); // Check out the kitchen
+                run_choice(3); // Talk to the woman
                 return true;
             }
             else if (get_property("_neverPartyQuest") == "Gerald")
