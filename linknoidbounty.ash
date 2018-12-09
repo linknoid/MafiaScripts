@@ -629,8 +629,22 @@ void DoBounty(BountyDetails b)
 		if (nosyNose.have_familiar() && my_familiar() != nosyNose)
 			nosyNose.use_familiar();
 		PrepareBanishers();
-		if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail
-			&& b.details.location != $location[Lair of the Ninja Snowmen]) // +combat means you only get assassins eventually
+		if (b.details.location == $location[Lair of the Ninja Snowmen]) // +combat means you only get assassins eventually
+		{
+			if ($slot[acc1].equipped_item() == bait)
+			{
+				$slot[acc1].equip($item[none]);
+			}
+			if ($slot[acc2].equipped_item() == bait)
+			{
+				$slot[acc2].equip($item[none]);
+			}
+			if ($slot[acc3].equipped_item() == bait)
+			{
+				$slot[acc3].equip($item[none]);
+			}
+		}
+		else if (bait.item_amount() > 0 && !bait.have_equipped() && slot3Avail)
 		{
 			$slot[acc3].equip(bait);
 		}
@@ -655,6 +669,17 @@ void DoBounty(BountyDetails b)
 				b.NoAccess = true;
 				return;
 			}
+		}
+		else if (current.details.location == $location[The Secret Government Laboratory])
+		{
+			item ventUnit = $item[Personal Ventilation Unit];
+			if (ventUnit.item_amount() > 0)
+				$slot[acc2].equip(ventUnit);
+			//if (!ventUnit.have_equipped())
+			//{
+			//	b.NoAccess = true;
+			//	return;
+			//}
 		}
 		ResetCombatState();
 		string page = visit_url(current.details.location.to_url());
@@ -699,6 +724,14 @@ void DoBounty(BountyDetails b)
 			{
 				run_choice(2);
 			}
+			else if (page.contains_text("Lights Out in the Gallery"))
+			{
+				run_choice(2); // Check out the paper collage
+			}
+			else if (page.contains_text("Louvre It or Leave It"))
+			{
+				run_choice(2); // Pass on by
+			}
 			else if (page.contains_text("Off the Rack"))
 			{
 				run_choice(1);
@@ -706,6 +739,22 @@ void DoBounty(BountyDetails b)
 			else if (page.contains_text("The Fast and the Furry-ous"))
 			{
 				run_choice(1);
+			}
+			else if (page.contains_text("The Entertainer"))
+			{
+				run_choice(4); // Introduce them to avant-garde
+			}
+			else if (page.contains_text("Dumpster Diving"))
+			{
+				run_choice(1); // Punch the hobo
+			}
+			else if (page.contains_text("Under the Knife"))
+			{
+				run_choice(1); // Yes!
+			}
+			else if (page.contains_text("Aww, Craps"))
+			{
+				run_choice(4); // Walk away
 			}
 			else if (page.contains_text("All Over the Map"))
 			{
@@ -792,6 +841,14 @@ void DoBounty(BountyDetails b)
 			else if (page.contains_text("Copper Feel"))
 			{
 				run_choice(2);
+			}
+			else if (page.contains_text("Please, Hammer"))
+			{
+				run_choice(2); // Sorry, no time.
+			}
+			else if (page.contains_text("Hammering the Armory"))
+			{
+				run_choice(2); // Blow this popsicle stand
 			}
 			else if (page.contains_text("Welcome to the Copperhead Club"))
 			{
@@ -960,6 +1017,16 @@ void DoBounty(BountyDetails b)
 				run_choice(3); // Check out the helm
 				return;
 			}
+			else if (page.contains_text("Courier? I don't even..."))
+			{
+				run_choice(1); // Hell.  This is gonna hurt.
+				return;
+			}
+			else if (page.contains_text("Out in the Garden"))
+			{
+				run_choice(4); // None of the above
+				return;
+			}
 			else if (page.contains_text("The Floor Is Yours"))
 			{
 				if ($item[fused fuse].item_amount() == 0)
@@ -1054,6 +1121,7 @@ void DoBounty(BountyDetails b)
 		}
 		else if (page.contains_text("You shouldn't be here.")
 			&& (current.details.location == $location[Anger Man's Level]
+			|| current.details.location == $location[Chinatown Shops]
 			|| current.details.location == $location[Mt. Molehill]))
 		{
 			if (!PromptToUnlock())
@@ -1074,10 +1142,22 @@ void DoBounty(BountyDetails b)
 		else if (page.contains_text("That isn't a place you can go.")
 			&& ((current.details.location == $location[The Secret Government Laboratory])
 			|| (current.details.location == $location[LavaCo&trade; Lamp Factory])
+			|| (current.details.location == $location[Sloppy Seconds Diner])
 			|| (current.details.location == $location[The Ice Hotel]))
 			)
 		{
 			if (!PromptToUnlock())
+			{
+				b.NoAccess = true;
+				return;
+			}
+		}
+		else if (page.contains_text("You can't go in there without wearing a Personal Ventilation Unit."))
+		{
+			item ventUnit = $item[Personal Ventilation Unit];
+			if (ventUnit.item_amount() > 0)
+				$slot[acc2].equip(ventUnit);
+			else
 			{
 				b.NoAccess = true;
 				return;
@@ -1138,6 +1218,16 @@ void DoBounty(BountyDetails b)
 		{
 			visit_url("ocean.php?lon=59+lat=10");
 			return;
+		}
+		else if (page.contains_text("This zone might be too tough for you."))
+		{
+			item pot = $item[potion of temporary gr8tness];
+			if ($effect[Gr8tness].have_effect() == 0)
+			{
+				if (pot.item_amount() == 0)
+					buy(10, pot);
+				use(1, pot);
+			}
 		}
 		else
 		{

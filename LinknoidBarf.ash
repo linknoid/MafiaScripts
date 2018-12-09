@@ -645,6 +645,7 @@ void ReadSettings()
     item sugarShorts = ToItem("sugar shorts");
     skill quietJudgement = ToSkill("Quiet Judgement");
     effect quietJudgementEffect = ToEffect("Quiet Judgement");
+    effect cucumberEffect = ToEffect("Uncucumbered");
 
 
 // locations for adventuring
@@ -6263,6 +6264,17 @@ abort("Todo: what choice #s for basement");
         if (get_property("_ballpit") != "true" && get_property("ballpitBonus").to_int() >= 1)
         {
             cli_execute("ballpit");
+        }
+        if (cucumberEffect.have_effect() == 0 && get_property("daycareOpen") == "true")
+        {
+            string page = visit_url("place.php?whichplace=town_wrong&action=townwrong_boxingdaycare");
+            if (page.contains_text("Boxing Daycare (Lobby)"))
+            {
+                run_choice(1); // Have a Boxing Daydream
+                run_choice(2); // Visit the Boxing Day Spa
+                run_choice(3); // Get a Cucumber Eye Treatment
+                run_choice(4); // Leave
+            }
         }
 
         if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))

@@ -34,135 +34,106 @@ void ReadSettings()
     }
 }
 
-slot ToSlot(string s)
-{
-	slot result = s.to_slot();
-	if (result.to_string() != s)
-		abort("Illegal slot " + s);
-	return result;
-}
-item ToItem(string s)
-{
-	item result = s.to_item();
-	if (result.to_int() < 0)
-		abort("Illegal item " + s);
-	return result;
-}
-skill ToSkill(string s)
-{
-	skill result = s.to_skill();
-	if (result.to_int() < 0)
-		abort("Illegal skill " + s);
-	return result;
-}
-effect ToEffect(string s)
-{
-	effect result = s.to_effect();
-	if (result.to_int() < 0)
-		abort("Illegal effect " + s);
-	return result;
-}
 
-
-slot head = ToSlot("hat");
-slot back = ToSlot("back");
-slot shirt = ToSlot("shirt");
-slot weapon = ToSlot("weapon");
-slot offhand = ToSlot("off-hand");
-slot pants = ToSlot("pants");
-slot acc1 = ToSlot("acc1");
-slot acc2 = ToSlot("acc2");
-slot acc3 = ToSlot("acc3");
-slot famEqp = ToSlot("familiar");
+slot head = $slot[hat];
+slot back = $slot[back];
+slot shirt = $slot[shirt];
+slot weapon = $slot[weapon];
+slot offhand = $slot[off-hand];
+slot pants = $slot[pants];
+slot acc1 = $slot[acc1];
+slot acc2 = $slot[acc2];
+slot acc3 = $slot[acc3];
+slot famEqp = $slot[familiar];
 
 item noItem = "none".to_item();
 
 // mining gear
-item mask = ToItem("high-temperature mining mask");
-item cloak = ToItem("Misty Cloak");
-item cloak2 = ToItem("Misty Cape");
-item drill = ToItem("high-temperature mining drill");
-item lavaPants = ToItem("lava-proof pants");
-item gloves = ToItem("heat-resistant gloves");
-item necktie = ToItem("heat-resistant necktie");
+item mask = $item[high-temperature mining mask];
+item cloak = $item[Misty Cloak];
+item cloak2 = $item[Misty Cape];
+item drill = $item[high-temperature mining drill];
+item lavaPants = $item[lava-proof pants];
+item gloves = $item[heat-resistant gloves];
+item necktie = $item[heat-resistant necktie];
 
-item xibPuterCode = ToItem("Xiblaxian holo-wrist-puter simcode");
-item xibPuter = ToItem("Xiblaxian holo-wrist-puter");
+item xibPuterCode = $item[Xiblaxian holo-wrist-puter simcode];
+item xibPuter = $item[Xiblaxian holo-wrist-puter];
 
-item brokenDrill = ToItem("broken high-temperature mining drill");
-item fixDrill = ToItem("heat-resistant sheet metal");
+item brokenDrill = $item[broken high-temperature mining drill];
+item fixDrill = $item[heat-resistant sheet metal];
 
 
 // volcoinos and day passes
-item dayPass = ToItem("one-day ticket to That 70s Volcano");
-item volcoino = ToItem("Volcoino");
+item dayPass = $item[one-day ticket to That 70s Volcano];
+item volcoino = $item[Volcoino];
 
-item velvetHead = ToItem("smooth velvet hat");
-item velvetShirt = ToItem("smooth velvet shirt");
-item velvetPants = ToItem("smooth velvet pants");
-item velvetAcc1 = ToItem("smooth velvet hanky");
-item velvetAcc2 = ToItem("smooth velvet socks");
-item velvetAcc3 = ToItem("smooth velvet pocket square");
-item velvet = ToItem("unsmoothed velvet");
+item velvetHead = $item[smooth velvet hat];
+item velvetShirt = $item[smooth velvet shirt];
+item velvetPants = $item[smooth velvet pants];
+item velvetAcc1 = $item[smooth velvet hanky];
+item velvetAcc2 = $item[smooth velvet socks];
+item velvetAcc3 = $item[smooth velvet pocket square];
+item velvet = $item[unsmoothed velvet];
 
 // eating and drinking and spleening
-item borrowedTime = ToItem("borrowed time");
-item swizzler = ToItem("Swizzler");
+item borrowedTime = $item[borrowed time];
+item swizzler = $item[Swizzler];
 
-item spleen4_1 = ToItem("powdered gold");
-item spleen4_2 = ToItem("agua de vida");
-item spleen4_3 = ToItem("groose grease");
-item spleen4_4 = ToItem("Unconscious Collective Dream Jar");
-item spleen3_1 = ToItem("carrot juice");
-item spleen3_2 = ToItem("prismatic wad");
-item spleen1_1 = ToItem("nasty snuff");
-item spleen1_2 = ToItem("homeopathic mint tea");
-item spleen1_3 = ToItem("transdermal smoke patch");
+item spleen4_1 = $item[powdered gold];
+item spleen4_2 = $item[agua de vida];
+item spleen4_3 = $item[groose grease];
+item spleen4_4 = $item[Unconscious Collective Dream Jar];
+item spleen3_1 = $item[carrot juice];
+item spleen3_2 = $item[prismatic wad];
+item spleen1_1 = $item[nasty snuff];
+item spleen1_2 = $item[homeopathic mint tea];
+item spleen1_3 = $item[transdermal smoke patch];
 
-item perfect1 = ToItem("perfect cosmopolitan");
-item perfect2 = ToItem("perfect dark and stormy");
-item perfect3 = ToItem("perfect mimosa");
-item perfect4 = ToItem("perfect negroni");
-item perfect5 = ToItem("perfect old-fashioned");
-item perfect6 = ToItem("perfect paloma");
+item perfect1 = $item[perfect cosmopolitan];
+item perfect2 = $item[perfect dark and stormy];
+item perfect3 = $item[perfect mimosa];
+item perfect4 = $item[perfect negroni];
+item perfect5 = $item[perfect old-fashioned];
+item perfect6 = $item[perfect paloma];
 
-item robodrink1 = ToItem("gunner's daughter");
-item robodrink2 = ToItem("Gnollish sangria");
-item robodrink3 = ToItem("Elemental caipiroska");
-item robodrink4 = ToItem("Bloody Nora");
-item robodrink5 = ToItem("Mysterious Island iced tea");
-item robodrink6 = ToItem("reverse Tantalus");
+item robodrink1 = $item[gunner's daughter];
+item robodrink2 = $item[Gnollish sangria];
+item robodrink3 = $item[Elemental caipiroska];
+item robodrink4 = $item[Bloody Nora];
+item robodrink5 = $item[Mysterious Island iced tea];
+item robodrink6 = $item[reverse Tantalus];
 
-item himein1 = ToItem("cold hi mein");
-item himein2 = ToItem("hot hi mein");
-item himein3 = ToItem("sleazy hi mein");
-item himein4 = ToItem("spooky hi mein");
-item himein5 = ToItem("stinky hi mein");
+item himein1 = $item[cold hi mein];
+item himein2 = $item[hot hi mein];
+item himein3 = $item[sleazy hi mein];
+item himein4 = $item[spooky hi mein];
+item himein5 = $item[stinky hi mein];
 
-item lasagna1 = ToItem("fishy fish lasagna");
-item lasagna2 = ToItem("gnat lasagna");
-item lasagna3 = ToItem("long pork lasagna");
+item lasagna1 = $item[fishy fish lasagna];
+item lasagna2 = $item[gnat lasagna];
+item lasagna3 = $item[long pork lasagna];
 
-item burrito1 = ToItem("insanely spicy bean burrito");
-item burrito2 = ToItem("insanely spicy jumping bean burrito");
-item burrito3 = ToItem("insanely spicy enchanted bean burrito");
+item burrito1 = $item[insanely spicy bean burrito];
+item burrito2 = $item[insanely spicy jumping bean burrito];
+item burrito3 = $item[insanely spicy enchanted bean burrito];
 
-item milk = ToItem("milk of magnesium");
-effect gotmilk = ToEffect("Got Milk");
-item ruby = ToItem("Tuesday's Ruby");
-item gar = ToItem("Potion of Field Gar");
-effect garEffect = ToEffect("Garish");
-skill odeToBooze = ToSkill("The Ode to Booze");
-effect odeToBoozeEffect = ToEffect("Ode to Booze");
-item shotglass = ToItem("mime army shotglass");
+item milk = $item[milk of magnesium];
+effect gotmilk = $effect[Got Milk];
+item ruby = $item[Tuesday's Ruby];
+item gar = $item[Potion of Field Gar];
+effect garEffect = $effect[Garish];
+skill odeToBooze = $skill[The Ode to Booze];
+effect odeToBoozeEffect = $effect[Ode to Booze];
+item shotglass = $item[mime army shotglass];
 
-item Xtattoo = ToItem("temporary X tattoos");
-effect straightEdge = ToEffect("Straight-Edgy");
-item skeletonX = ToItem("X");
+item Xtattoo = $item[temporary X tattoos];
+effect straightEdge = $effect[Straight-Edgy];
+item skeletonX = $item[X];
 
 // sleep gear
-item weirdness = ToItem("solid shifting time weirdness");
-familiar stooper = "Stooper".to_familiar();
+item weirdness = $item[solid shifting time weirdness];
+familiar stooper = $familiar[Stooper];
 
 
 
@@ -321,24 +292,27 @@ void DoVelvet()
 	run_choice(7); // Go to the sixth floor, Get a Volcoino
 
 }
-item bunker1 = ToItem("New Age healing crystal");
-item bunker3 = ToItem("gooey lava globs");
-item bunker4 = ToItem("Mr. Cheeng's 'stache");
-item bunker5 = ToItem("Lavalos core");
-item bunker6 = ToItem("Saturday Night thermometer");
-item bunker7 = ToItem("glass ceiling fragments");
-item bunker8 = ToItem("SMOOCH bracers");
-item bunker9 = ToItem("SMOOCH bottlecap");
-item bunker10 = ToItem("Mr. Choch's bone");
-item bunker11 = ToItem("smooth velvet bra");
-item bunker12 = ToItem("The One Mood Ring");
-item bunker13 = ToItem("fused fuse");
-item bunker14 = ToItem("half-melted hula girl");
-item bunker15 = ToItem("Pener's crisps");
-item bunker16 = ToItem("signed deuce");
-item bunker17 = ToItem("the tongue of Smimmons");
-item bunker18 = ToItem("Raul's guitar pick");
-item bunker2 = ToItem("superduperheated metal"); // this tends to be really expensive, so check it last
+int[item] bunkerItems =
+{
+	$item[New Age healing crystal] : 5 , // from mining
+	$item[SMOOCH bottlecap] : 1 ,        // from SMOOCH HQ
+	$item[gooey lava globs] : 5 ,        // from golem in factory
+	$item[SMOOCH bracers] : 5 ,          // craft from superheated metal
+	$item[fused fuse] : 1 ,              // easy to get from non-combat
+	$item[smooth velvet bra] : 3 ,       // craft from velvet
+	$item[Lavalos core] : 1 ,
+	$item[Mr. Cheeng's 'stache] : 1 ,
+	$item[Saturday Night thermometer] : 1 ,
+	$item[glass ceiling fragments] : 1 ,
+	$item[Mr. Choch's bone] : 1 ,
+	$item[The One Mood Ring] : 1 ,
+	$item[half-melted hula girl] : 1 ,
+	$item[Pener's crisps] : 1 ,
+	$item[signed deuce] : 1 ,
+	$item[the tongue of Smimmons] : 1 ,
+	$item[Raul's guitar pick] : 1 ,
+	$item[superduperheated metal] : 1  // this tends to be really expensive, so check it last
+};
 int FindVariableChoice(string page, string match)
 {
 	int ix = page.index_of(match);
@@ -366,6 +340,12 @@ boolean CheckForBunkerTurnin(string page, item i, int count)
 			availableItemPrompt += i.to_string() + "\r\n";
 		return false;
 	}
+	if (i == $item[SMOOCH bracers])
+	{
+		count = 15 - (i.item_amount() * 5);
+		if (count > 0)
+			i = $item[superheated metal];
+	}
 	if (i.item_amount() < count)
 	{
 		if (i.is_tradeable())
@@ -382,6 +362,15 @@ boolean CheckForBunkerTurnin(string page, item i, int count)
 			return false;
 		}
 	}
+	if (i == $item[superheated metal])
+	{
+		i = $item[SMOOCH bracers];
+		while (i.item_amount() < 3)
+		{
+			if (!create(1, i))
+				break;
+		}
+	}
 	if (i.item_amount() >= count)
 	{
 		page = visit_url("place.php?whichplace=airport_hot&action=airport4_questhub");
@@ -395,29 +384,15 @@ void DoBunker()
 	string page = visit_url("place.php?whichplace=airport_hot&action=airport4_questhub");
 	if (page.contains_text("You've already done your day's work"))
 		return;
-	if (	   !CheckForBunkerTurnin(page, bunker1, 5)
-		&& !CheckForBunkerTurnin(page, bunker3, 5)
-		&& !CheckForBunkerTurnin(page, bunker4, 1)
-		&& !CheckForBunkerTurnin(page, bunker5, 1)
-		&& !CheckForBunkerTurnin(page, bunker6, 1)
-		&& !CheckForBunkerTurnin(page, bunker7, 1)
-		&& !CheckForBunkerTurnin(page, bunker8, 3)
-		&& !CheckForBunkerTurnin(page, bunker9, 1)
-		&& !CheckForBunkerTurnin(page, bunker10, 1)
-		&& !CheckForBunkerTurnin(page, bunker11, 3)
-		&& !CheckForBunkerTurnin(page, bunker12, 1)
-		&& !CheckForBunkerTurnin(page, bunker13, 1)
-		&& !CheckForBunkerTurnin(page, bunker14, 1)
-		&& !CheckForBunkerTurnin(page, bunker15, 1)
-		&& !CheckForBunkerTurnin(page, bunker16, 1)
-		&& !CheckForBunkerTurnin(page, bunker17, 1)
-		&& !CheckForBunkerTurnin(page, bunker18, 1)
-		&& !CheckForBunkerTurnin(page, bunker2, 1))
+	foreach target, count in bunkerItems
 	{
-		if (!UserConfirmDefault("Cannot acquire WLF bunker quest items.\r\n\r\nSkip getting that volcoino and start mining?", true))
-		{
-			abort(availableItemPrompt);
-		}
+		if (CheckForBunkerTurnin(page, target, count))
+			return;
+	}
+
+	if (!UserConfirmDefault("Cannot acquire WLF bunker quest items.\r\n\r\nSkip getting that volcoino and start mining?", true))
+	{
+		abort(availableItemPrompt);
 	}
 }
 
@@ -425,7 +400,7 @@ void DoVolcoino()
 {
 	DoVelvet();
 	DoBunker();
-	if (get_property("hotAirportAlways") != "true" && volcoino.item_amount() >= 3 && dayPass.item_amount() == 0)
+	if (get_property("hotAirportAlways") != "true" && volcoino.item_amount() >= 3)
 	{
 		cli_execute("coinmaster buy disco " + dayPass.to_string());
 	}
