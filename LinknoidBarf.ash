@@ -500,7 +500,7 @@ void ReadSettings()
 // skills for pet bonus
     skill leash = ToSkill("Leash of Linguini");
     skill empathy = ToSkill("Empathy of the Newt");
-    item petBuff = ToItem("Knob Goblin pet-buffing spray");
+    //item petBuff = ToItem("Knob Goblin pet-buffing spray");
     item kinder = ToItem("resolution: be kinder");
     item joy = ToItem("abstraction: joy");
 
@@ -528,7 +528,7 @@ void ReadSettings()
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
-    item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
+    //item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
     item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
     item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
     item avoidScams = ToItem("How to Avoid Scams"); // only relevant for barf mountain
@@ -558,7 +558,7 @@ void ReadSettings()
 // effects for +meat bonus
     effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
     effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
-    effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
+    //effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
     effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
@@ -5190,7 +5190,7 @@ abort("Todo: what choice #s for basement");
             use(1, gameToken);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
-        UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
+        //UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
         if (summonRes.have_skill())
             UseItem(wealthy, resolve, turns, 20);
         else
@@ -5372,11 +5372,11 @@ abort("Todo: what choice #s for basement");
         TryReduceManaCost(leer);
         BuffInRun(turns, false);
 
-        if (needWeightBuffs)
-        {
-            // this reduces all stats, so use after MaxManaSummons
-            UseItem(petBuff, petBuffEffect, turns, 10, 250);
-        }
+        //if (needWeightBuffs)
+        //{
+        //    // this reduces all stats, so use after MaxManaSummons
+        //    UseItem(petBuff, petBuffEffect, turns, 10, 250);
+        //}
     }
 
 
