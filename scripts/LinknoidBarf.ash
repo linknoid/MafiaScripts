@@ -75,6 +75,7 @@
     int sacramentoLimit = 0; // how many sacramento wines to drink per day
     int thanksgettingFoodCostLimit = 15000; // Don't thanksgetting foods that cost more than this
     int mojoCostLimit = 6000; // Don't thanksgetting foods that cost more than this
+    int votedMeatLimit = 0; // Wear "I voted sticker" at appropriate times when meat buff % is below this number
     boolean combatUserScript = false; // in barf mountain fights, use the user's default combat script instead of the built in logic
     boolean allowExpensiveBuffs = true; // certain buffs may not be worth using
     boolean abortOnBeatenUp = false; // if you get beaten up while the script is running, abort so it just doesn't keep dying over and over
@@ -105,6 +106,7 @@ void WriteSettings()
     map["sacramentoLimit"] = sacramentoLimit.to_string();
     map["thanksgettingFoodCostLimit"] = thanksgettingFoodCostLimit.to_string();
     map["mojoCostLimit"] = mojoCostLimit.to_string();
+    map["votedMeatLimit"] = votedMeatLimit.to_string();
     map["combatUserScript"] = combatUserScript.to_string();
     map["allowExpensiveBuffs"] = allowExpensiveBuffs.to_string();
     map["abortOnBeatenUp"] = abortOnBeatenUp.to_string();
@@ -140,6 +142,7 @@ void ReadSettings()
             case "sacramentoLimit": sacramentoLimit = value.to_int(); break;
             case "thanksgettingFoodCostLimit": thanksgettingFoodCostLimit = value.to_int(); break;
             case "mojoCostLimit": mojoCostLimit = value.to_int(); break;
+            case "votedMeatLimit": votedMeatLimit = value.to_int(); break;
             case "combatUserScript": combatUserScript = value == "true"; break;
             case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
             case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
@@ -497,7 +500,7 @@ void ReadSettings()
 // skills for pet bonus
     skill leash = ToSkill("Leash of Linguini");
     skill empathy = ToSkill("Empathy of the Newt");
-    item petBuff = ToItem("Knob Goblin pet-buffing spray");
+    //item petBuff = ToItem("Knob Goblin pet-buffing spray");
     item kinder = ToItem("resolution: be kinder");
     item joy = ToItem("abstraction: joy");
 
@@ -512,6 +515,8 @@ void ReadSettings()
     item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
     item knife = ToItem("knife"); // from deck of every card
     item rope = ToItem("rope"); // from deck of every card
+    item bastille = ToItem("Bastille Battalion control rig");
+    item brogues = ToItem("Brutal brogues"); // from Bastille Battalion
 
     item mafiaPointerRing = ToItem("mafia pointer finger ring"); // gets +200% base meat from crits
     skill furiousWallop = ToSkill("Furious Wallop"); // seal clubber skill with guaranteed crit
@@ -523,7 +528,7 @@ void ReadSettings()
     item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
     item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
     item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
-    item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
+    //item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
     item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
     item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
     item avoidScams = ToItem("How to Avoid Scams"); // only relevant for barf mountain
@@ -553,7 +558,7 @@ void ReadSettings()
 // effects for +meat bonus
     effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
     effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
-    effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
+    //effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
     effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
     effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
     effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
@@ -640,6 +645,7 @@ void ReadSettings()
     item sugarShorts = ToItem("sugar shorts");
     skill quietJudgement = ToSkill("Quiet Judgement");
     effect quietJudgementEffect = ToEffect("Quiet Judgement");
+    effect cucumberEffect = ToEffect("Uncucumbered");
 
 
 // locations for adventuring
@@ -652,6 +658,8 @@ void ReadSettings()
     location treasury = ToLocation("Cobb's Knob Treasury"); // semi-rare
     location barfMountain = ToLocation("Barf Mountain"); // main adventure location
     location snojo = ToLocation("The X-32-F Combat Training Snowman");
+    location neverParty = ToLocation("The Neverending Party");
+    item football = ToItem("cosmetic football");
 
 // Maximizing mana for summoning
     location TUNNEL = ToLocation("The Tunnel of L.O.V.E.");
@@ -777,6 +785,7 @@ void ReadSettings()
     monster bowler = ToMonster("pygmy bowler");
     monster janitor = ToMonster("pygmy janitor");
     monster orderlies = ToMonster("pygmy orderlies");
+    item votedSticker = ToItem("\"I Voted!\" sticker");
 // seal clubber supplies
     item bludgeon = ToItem("Brimstone Bludgeon");
     item tenderizer = ToItem("Meat Tenderizer is Murder");
@@ -1071,6 +1080,43 @@ void ReadSettings()
                 return true;
         return false;
     }
+    void SetBastilleBattalionMode(int option, string target)
+    {
+        if (target == "")
+            return;
+        string page;
+        for (int i = 0; i < 3; i++)
+        {
+            page = visit_url("choice.php?whichchoice=1313&option=" + option + "&pwd=" + my_hash());
+            if (page.contains_text(target))
+                return;
+        }
+        abort("Failed to set Bastille Battallion mode to " + target);
+    }
+    void ExecuteBastilleBattalion(string target1, string target2, string target3)
+    {
+        if (bastille.item_amount() == 0
+            && get_property("_bastilleGames").to_int() == 0)
+        {
+            return;
+        }
+        visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=9928");
+        SetBastilleBattalionMode(1, target1);
+        SetBastilleBattalionMode(2, target2);
+        SetBastilleBattalionMode(3, target3);
+
+        visit_url("choice.php?whichchoice=1313&option=5&pwd=" + my_hash());
+        for (int i = 0; i < 31; i++) // up to 15 rounds, each round requires 2 choices
+        {
+            int choiceCount = available_choice_options().count();
+            if (choiceCount == 0)
+                return;
+            if (choiceCount != 3)
+                abort("Unexpected number of choices");
+            run_choice(3); // Always take the 3rd option, the last time #3 should be "I'm done for now"
+        }
+        run_choice(8); // just in case the last option required is "Walk Away", not sure what the difference is
+    }
     void MakeMeltingGear(item[slot] outfitDef)
     {
         if (!HaveEquipment(knife)
@@ -1086,6 +1132,13 @@ void ReadSettings()
             && get_property("_deckCardsDrawn").to_int() <= 10)
         {
             cli_execute("cheat rope");
+        }
+        if (!HaveEquipment(brogues)
+            && OutfitContains(outfitDef, brogues)
+            && bastille.item_amount() > 0
+            && get_property("_bastilleGames").to_int() == 0)
+        {
+            ExecuteBastilleBattalion("", "BRUTALIST", "GESTURE"); // BRUTALIST = brogues, GESTURE = +25 meat
         }
         if (!HaveEquipment(carpe)
             && OutfitContains(outfitDef, carpe)
@@ -2780,6 +2833,14 @@ print("Running filter = " + result, printColor);
             }
             needsMayfly = true;
         }
+        if (meat_drop_modifier() < votedMeatLimit
+            && (total_turns_played() % 11) == 1
+            && HaveEquipment(votedSticker)
+            && !OutfitContains(barfOutfitPieces, votedSticker))
+        {
+            print("Wearing I Voted sticker for wandering monsters", printColor);
+            barfOutfitPieces[acc3] = votedSticker;
+        }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
         {
             if (total_turns_played() > get_property("nextParanormalActivity").to_int() + 5)
@@ -2842,6 +2903,119 @@ print("Running filter = " + result, printColor);
             RunAdventure(snojo, filter);
             return true;
         }
+        return false;
+    }
+    boolean TryRunNeverendingParty(string filter)
+    {
+        if (get_property("_neverendingPartyFreeTurns").to_int() >= 10)
+            return false;
+        if (get_property("_neverPartyQuest") == "Megawoots" && HaveEquipment(football))
+        {
+            offhand.equip(football);
+        }
+        string page = visit_url(neverParty.to_url());
+        if (page.contains_text("The Beginning of the Neverend"))
+        {
+            if (page.contains_text("Geraldine"))
+            {
+                set_property("_neverPartyQuest", "Geraldine");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("Gerald"))
+            {
+                set_property("_neverPartyQuest", "Gerald");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("megawoots right now"))
+            {
+                set_property("_neverPartyQuest", "Megawoots");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("wants a bunch of Meat"))
+            {
+                set_property("_neverPartyQuest", "Meat");
+                run_choice(1); // take the quest
+                return true;
+            }
+            else if (page.contains_text("It's the trash that they'll object to"))
+            {
+                set_property("_neverPartyQuest", "Trash");
+                run_choice(1); // accept quest
+                return true;
+            }
+            else if (page.contains_text("got all of the people to leave"))
+            {
+                set_property("_neverPartyQuest", "None");
+                run_choice(2); // reject quest
+                return true;
+            }
+            // todo: add these as they're encountered
+            //else if (page.contains_text(""))
+            //{
+            //}
+            else abort("Unhandled neverending party quest");
+        }
+        else if (page.contains_text("It Hasn't Ended, It's Just Paused"))
+        {
+            if (get_property("_neverPartyQuest") == "Geraldine")
+            {
+                run_choice(2); // Check out the kitchen
+                run_choice(3); // Talk to the woman
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Gerald")
+            {
+                run_choice(3); // Go to the back yard
+                run_choice(3); // Talk to gerald
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Megawoots")
+            {
+                run_choice(1); // Head upstairs
+                run_choice(5); // Toss the red dress on the lamp
+                set_property("_neverPartyQuest", "Megawoots2");
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "Megawoots2")
+            {
+abort("Todo: what choice #s for basement");
+                run_choice(1); // Head upstairs
+                run_choice(5); // Toss the red dress on the lamp
+                return true;
+            }
+            else if (get_property("_neverPartyQuest") == "None")
+            {
+                run_choice(1); // Go upstairs
+                run_choice(1); // Take a nap
+                BurnManaSummoning(100);
+                return true;
+            }
+            //else if (get_property("_neverPartyQuest") == )
+            //{
+            //}
+            else
+                abort("Unhandled adventure in neverending party");
+        }
+        else if (page.contains_text("You're fighting"))
+        {
+            RunCombat(filter);
+            return true;
+        }
+        else if (page.contains_text("All Done!"))
+        {
+            run_choice(1);
+            return false;
+        }
+        else if (page.contains_text("Party's Over"))
+        {
+            set_property("_neverendingPartyFreeTurns", 10);
+            return false;
+        }
+        else
+            abort("Unhandled adventure in neverending party");
         return false;
     }
     boolean TryFightSeal(string filter)
@@ -3344,6 +3518,12 @@ print("Running filter = " + result, printColor);
         {
             PrepareFreeCombat(selectedOutfit);
             if (TryRunSnojo(filter))
+                return true;
+        }
+        if (get_property("neverendingPartyAlways") == "true" && get_property("_neverendingPartyFreeTurns").to_int() < 10)
+        {
+            PrepareFreeCombat(selectedOutfit);
+            if (TryRunNeverendingParty(filter))
                 return true;
         }
         if (get_campground() contains witchess
@@ -5010,7 +5190,7 @@ print("Running filter = " + result, printColor);
             use(1, gameToken);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
-        UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
+        //UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
         if (summonRes.have_skill())
             UseItem(wealthy, resolve, turns, 20);
         else
@@ -5192,11 +5372,11 @@ print("Running filter = " + result, printColor);
         TryReduceManaCost(leer);
         BuffInRun(turns, false);
 
-        if (needWeightBuffs)
-        {
-            // this reduces all stats, so use after MaxManaSummons
-            UseItem(petBuff, petBuffEffect, turns, 10, 250);
-        }
+        //if (needWeightBuffs)
+        //{
+        //    // this reduces all stats, so use after MaxManaSummons
+        //    UseItem(petBuff, petBuffEffect, turns, 10, 250);
+        //}
     }
 
 
@@ -5235,7 +5415,7 @@ print("Running filter = " + result, printColor);
         }
         else if (bandersnatch.have_familiar())
         {
-            SwitchToFamiliar(stompingBoots);
+            SwitchToFamiliar(bandersnatch);
             CastSkill(odeToBooze, 1, true); // only need 1 turn of it
         }
         if (GetFreeRunaways() > 0)
@@ -6084,6 +6264,17 @@ print("Running filter = " + result, printColor);
         if (get_property("_ballpit") != "true" && get_property("ballpitBonus").to_int() >= 1)
         {
             cli_execute("ballpit");
+        }
+        if (cucumberEffect.have_effect() == 0 && get_property("daycareOpen") == "true")
+        {
+            string page = visit_url("place.php?whichplace=town_wrong&action=townwrong_boxingdaycare");
+            if (page.contains_text("Boxing Daycare (Lobby)"))
+            {
+                run_choice(1); // Have a Boxing Daydream
+                run_choice(2); // Visit the Boxing Day Spa
+                run_choice(3); // Get a Cucumber Eye Treatment
+                run_choice(4); // Leave
+            }
         }
 
         if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
