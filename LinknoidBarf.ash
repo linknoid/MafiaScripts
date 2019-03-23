@@ -797,6 +797,7 @@ void ReadSettings()
     item mutantArm = ToItem("mutant arm");
     item mutantLegs = ToItem("mutant legs");
     item mutantCrown = ToItem("mutant crown");
+    item doctorBag = ToItem("Lil' Doctor&trade; Bag");
 // seal clubber supplies
     item bludgeon = ToItem("Brimstone Bludgeon");
     item tenderizer = ToItem("Meat Tenderizer is Murder");
@@ -6596,7 +6597,11 @@ print("mob = " + canMobHit);
         if (!OutfitContains(localOutfit, votedSticker))
         {
             print("Wearing I Voted sticker for wandering monsters", printColor);
-            barfOutfitPieces[acc3] = votedSticker;
+            localOutfit[acc3] = votedSticker;
+        }
+        if (HaveEquipment(doctorBag) && !OutfitContains(localOutfit, doctorBag) && get_property("doctorBagQuestLocation") == "")
+        {
+            localOutfit[acc2] = doctorBag;
         }
         if (mon == mutant)
         {
@@ -6605,10 +6610,15 @@ print("mob = " + canMobHit);
             if (!HaveEquipment(mutantLegs) && HaveEquipment(mutantArm))
                 localOutfit[weapon] = mutantArm;
         }
-        WearOutfit(localOutfit);
-
         location zone = ChooseWandererZone();
+        if (zone == noLocation)
+            return false;
+        WearOutfit(localOutfit);
+        ChooseDropsFamiliar(false);
+        ChooseBjornCrownFamiliars(false);
+
         HealUp(true);
+        print("Sending wandering vote monster to " + zone, printColor);
         string page = visit_url(zone.to_url().to_string());
         if (TryHandleNonCombat(page))
             return false;
