@@ -241,6 +241,7 @@ void ReadSettings()
     slot sticker3 = ToSlot("sticker3");
 
     item noItem = "none".to_item();
+    location noLocation = "none".to_location();
     familiar noFamiliar = "none".to_familiar();
 
 // getting access to dinsey
@@ -352,6 +353,7 @@ void ReadSettings()
 
 // other familiars of interest
     familiar sandworm = ToFamiliar("Baby Sandworm");
+    familiar xenomorph = ToFamiliar("Li'l Xenomorph");
     familiar fistTurkey = ToFamiliar("Fist Turkey");
     familiar intergnat = ToFamiliar("Intergnat");
     familiar jellyfish = ToFamiliar("Space Jellyfish");
@@ -503,6 +505,9 @@ void ReadSettings()
     //item petBuff = ToItem("Knob Goblin pet-buffing spray");
     item kinder = ToItem("resolution: be kinder");
     item joy = ToItem("abstraction: joy");
+    skill bloodBond = ToSkill("Blood Bond");
+    effect bloodBondEffect = ToEffect("Blood Bond");
+    skill antibiotic = ToSkill("Antibiotic Saucesphere"); // to help cancel the HP drain of blood bond, in case you're missing HP regen
 
 // items for +meat bonus
     item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
@@ -684,6 +689,8 @@ void ReadSettings()
     effect snowFortified = ToEffect("Snow Fortified");
     item clarasBell = ToItem("Clara's bell");
     item hoboBinder = ToItem("hobo code binder");
+    skill getBig = ToSkill("Get Big");
+    effect big = ToEffect("Big");
 
 // healing between turns
     effect beatenUp = ToEffect("Beaten Up");
@@ -786,6 +793,10 @@ void ReadSettings()
     monster janitor = ToMonster("pygmy janitor");
     monster orderlies = ToMonster("pygmy orderlies");
     item votedSticker = ToItem("\"I Voted!\" sticker");
+    monster mutant = ToMonster("terrible mutant");
+    item mutantArm = ToItem("mutant arm");
+    item mutantLegs = ToItem("mutant legs");
+    item mutantCrown = ToItem("mutant crown");
 // seal clubber supplies
     item bludgeon = ToItem("Brimstone Bludgeon");
     item tenderizer = ToItem("Meat Tenderizer is Murder");
@@ -845,6 +856,7 @@ void ReadSettings()
     boolean canMortar = mortarShell.have_skill();
     int digitizeCounter = 0;
     int enamorangCounter = 0;
+    int voteCounter = 0;
     int fortuneCookieCounter = 0;
     int spookyravenCounter = 0;
     int maxItemUse = funkslinging.have_skill() ? 2 : 1;
@@ -1886,6 +1898,7 @@ DebugOutfit("Goal outfit", outfitDef);
         fortuneCookieCounter = 0;
         digitizeCounter = 0;
         enamorangCounter = 0;
+        voteCounter = 0;
         for (int i = 2; i < counters.count(); i += 3)
         {
             int turns = counters[i - 2].to_int();
@@ -1897,6 +1910,10 @@ DebugOutfit("Goal outfit", outfitDef);
             else if (type.index_of("Enamorang Monster") >= 0)
             {
                 enamorangCounter = turns;
+            }
+            else if (type.index_of("Vote Monster") >= 0)
+            {
+                voteCounter = turns;
             }
             else if (type.index_of("Fortune Cookie") >= 0)
             {
@@ -1983,6 +2000,27 @@ DebugOutfit("Goal outfit", outfitDef);
 
         RemoveConfusionEffects(false);
         HealUp();
+    }
+
+    location ChooseRunawayZone()
+    {
+        if (keyCardDelta.item_amount() == 0)
+            return uncleGator;
+        else if (keyCardBeta.item_amount() == 0)
+            return garbagePirates;
+        else if (keyCardGamma.item_amount() == 0)
+            return toxicTeacups;
+        return noLocation;
+    }
+    location ChooseWandererZone()
+    {
+        location zone = get_property("doctorBagQuestLocation").to_location();
+        if (zone != noLocation)
+            return zone;
+        zone = ChooseRunawayZone();
+        if (zone != noLocation)
+            return zone;
+        return barfMountain; // last resort
     }
 
     string ChooseFreeKillMethodForFilter()
@@ -2216,7 +2254,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
             canSingAlong = false;
             result += "; skill Sing Along";
         }
-        if (needsMayfly)
+        if (needsMayfly && mayfly.have_equipped())
         {
             needsMayfly = false;
             result += "; skill Summon Mayfly Swarm";
@@ -2303,7 +2341,7 @@ print("Running filter = " + result, printColor);
                 result += "; combo rave steal";
             }
         }
-            
+
 print("Running filter = " + result, printColor);
         return result;
     }
@@ -2832,14 +2870,6 @@ print("Running filter = " + result, printColor);
                     barfOutfitPieces[acc3] = mayfly;
             }
             needsMayfly = true;
-        }
-        if (meat_drop_modifier() < votedMeatLimit
-            && (total_turns_played() % 11) == 1
-            && HaveEquipment(votedSticker)
-            && !OutfitContains(barfOutfitPieces, votedSticker))
-        {
-            print("Wearing I Voted sticker for wandering monsters", printColor);
-            barfOutfitPieces[acc3] = votedSticker;
         }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
         {
@@ -3814,6 +3844,11 @@ abort("Todo: what choice #s for basement");
             SwitchToFamiliar(fistTurkey); // drops booze
             return;
         }
+        if (xenomorph.have_familiar() && get_property("_transponderDrops").to_int() < 5)
+        {
+            SwitchToFamiliar(xenomorph); // drops transporter transponder
+            return;
+        }
         if (isElemental && jellyfish.have_familiar() && get_property("_spaceJellyfishDrops").to_int() < 3)
         {
             SwitchToFamiliar(jellyfish); // drops jelly
@@ -3960,7 +3995,7 @@ abort("Todo: what choice #s for basement");
     boolean TryFightGhost()
     {
         location loc = get_property("ghostLocation").to_location();
-        if (loc.to_string() == "none")
+        if (loc == noLocation)
             return false;
         EquipGhostGear(loc);
         ChooseDropsFamiliar(true);
@@ -5061,6 +5096,12 @@ abort("Todo: what choice #s for basement");
         {
             CastSkill(leash, turns, restoreMP);
             CastSkill(empathy, turns, restoreMP);
+            if (bloodBond.have_skill())
+            {
+                if (bloodBondEffect.have_effect() < 3 && my_hp() > 100) // special case, uses HP instead of MP
+                    use_skill(1, bloodBond);
+                CastSkill(antibiotic, turns, restoreMP);
+            }
         }
         if (phatLooted.have_effect() > 0 ||  EnsureOneSongSpace())
         {
@@ -5206,6 +5247,11 @@ abort("Todo: what choice #s for basement");
         {
             CastSkill(leash, 10, true);
             CastSkill(empathy, 10, true);
+            if (bloodBond.have_skill())
+            {
+                if (bloodBondEffect.have_effect() < 3 && my_hp() > 100) // special case, uses HP instead of MP
+                    use_skill(1, bloodBond);
+            }
             TrySpleen(joy, joyEffect, 1, 1);
 
             if (vipKey.item_amount() > 0 && get_clan_lounge() contains poolTable)
@@ -5637,22 +5683,9 @@ abort("Todo: what choice #s for basement");
             return;
         while (TryPrepareFamiliarRunaways(first, weightOF))
         {
-            location zone;
-            if (keyCardDelta.item_amount() == 0)
-            {
-                zone = uncleGator;
-            }
-            else if (keyCardBeta.item_amount() == 0)
-            {
-                zone = garbagePirates;
-            }
-            else if (keyCardGamma.item_amount() == 0)
-            {
-                zone = toxicTeacups;
-                return; // not supported yet, need to deal with getting blinded
-            }
-            else
-                return; // shouldn't get here, it checked earlier in the loop
+            location zone = ChooseRunawayZone();
+            if (zone == barfMountain)
+                return;
             if (first)
             {
                 first = false;
@@ -5668,6 +5701,12 @@ abort("Todo: what choice #s for basement");
             HealUp(true);
             string page = visit_url(zone.to_url().to_string());
             run_combat(filter);
+            if (tempBlind.have_effect() > 0 && (my_familiar() == bandersnatch || my_familiar() == stompingBoots))
+            {
+                // experimental, this needs to be incremented because Mafia can't track it if you get blinded
+                set_property("_banderRunaways", (get_property("_banderRunaways").to_int() + 1).to_string());
+            }
+
 //waitq(3);
         }
     }
@@ -5816,11 +5855,11 @@ abort("Todo: what choice #s for basement");
 
     boolean MeatyScheduled()
     {
-        if (my_turnCount() == digitizeCounter)
+        if (my_turncount() == digitizeCounter)
         {
             return IsMeatyMonster(get_property("_sourceTerminalDigitizeMonster"));
         }
-        if (my_turnCount() == enamorangCounter)
+        if (my_turncount() == enamorangCounter)
         {
             return IsMeatyMonster(get_property("enamorangMonster"));
         }
@@ -5988,6 +6027,7 @@ abort("Todo: what choice #s for basement");
                 return;
             }
         }
+        print("Numberology not available this turn", printColor);
     }
 
     void ActivateChibiBuddy()
@@ -6073,17 +6113,21 @@ abort("Todo: what choice #s for basement");
 
     void RunBarfMountain(boolean requireOutfit)
     {
+        location zone = barfMountain;
         if (MeatyScheduled())
         {
             PrepareMeaty();
+            zone = ChooseWandererZone();
+            if (zone == noLocation)
+                zone = barfMountain;
         }
         else
         {
             PrepareBarf(requireOutfit);
+            CheckLubeQuest();
         }
-        CheckLubeQuest();
 
-        if (LoadChoiceAdventure(barfMountain, true))
+        if (LoadChoiceAdventure(zone, true))
         {
             if (needsLube)
             {
@@ -6240,6 +6284,9 @@ abort("Todo: what choice #s for basement");
         visit_url("place.php?whichplace=spacegate"); // have to visit it to see if we have access
         if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
+
+        if (big.have_effect() == 0)
+            use_skill(1, getBig);
 
         if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
         {
@@ -6527,6 +6574,50 @@ print("mob = " + canMobHit);
         }
     }
 
+    boolean HandleVoteMonster()
+    {
+        if (get_property("voteAlways") != "true" && get_property("_voteToday") != "true")
+            return false;
+
+        if ((total_turns_played() % 11) != 1 || get_property("lastVoteMonsterTurn").to_int() == total_turns_played())
+            return false;
+
+        if (!HaveEquipment(votedSticker))
+            return false;
+
+        if (meat_drop_modifier() >= votedMeatLimit && get_property("_voteFreeFights").to_int() >= 3)
+            return false;
+
+        monster mon = get_property("_voteMonster").to_monster();
+        if (mon == $monster[none]) // already voted, but don't know who it is yet
+            visit_url("place.php?whichplace=town_right&action=townright_vote");
+
+        item[slot] localOutfit = CopyOutfit(dropsOutfitPieces);
+        if (!OutfitContains(localOutfit, votedSticker))
+        {
+            print("Wearing I Voted sticker for wandering monsters", printColor);
+            barfOutfitPieces[acc3] = votedSticker;
+        }
+        if (mon == mutant)
+        {
+            if (!HaveEquipment(mutantCrown) && HaveEquipment(mutantLegs))
+                localOutfit[pants] = mutantLegs;
+            if (!HaveEquipment(mutantLegs) && HaveEquipment(mutantArm))
+                localOutfit[weapon] = mutantArm;
+        }
+        WearOutfit(localOutfit);
+
+        location zone = ChooseWandererZone();
+        HealUp(true);
+        string page = visit_url(zone.to_url().to_string());
+        if (TryHandleNonCombat(page))
+            return false;
+        else if (page.contains_text("choice.php"))
+            abort("TODO: unhandled non-combat when wanderer expected");
+        RunCombat("Filter_Standard");
+        return true;
+    }
+
     void RunTurns(int turnCount)
     {
         if (turnCount == 0)
@@ -6554,8 +6645,11 @@ print("mob = " + canMobHit);
                 TryAutoExtendThanksGetting(turnCount - i);
                 BuffInRun(turnCount - i, false);
                 BurnManaAndRestores(20, false);
-              
                 PrepareFilterState();
+
+                if (HandleVoteMonster())
+                    continue;
+              
                 if (turnCount < 0 && !hasFreeKillRemaining)
                     return;
                 if (needBagOTricks)
