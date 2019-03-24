@@ -301,6 +301,12 @@ void ReadSettings()
     item turkey = ToItem("Ambitious Turkey"); // from hand turkey
     item sacramento = ToItem("Sacramento wine"); // from witchess
     effect sacramentoEffect = ToEffect("Sacré Mental");
+    item hauntedScrewdriver = ToItem("twice-haunted screwdriver"); // from voting ghost
+    item hauntedOrange = ToItem("haunted orange"); // to make screwdriver
+    item hauntedVodka = ToItem("haunted bottle of vodka"); // to make haunted screwdriver
+    item vodka = ToItem("bottle of vodka"); // to make haunted screwdriver
+    item ectoplasm = ToItem("ghostly ectoplasm"); // to make haunted screwdriver
+    effect hauntedLiver = ToEffect("Haunted Liver"); // from any of the haunted items
     item pinkyRing = ToItem("mafia pinky ring"); // increases adventure yield from wine
     effect beerPolka = ToEffect("Beer Barrel Polka"); // increases adventure yield for up to 10 drunk, but only once a day
 
@@ -917,6 +923,7 @@ void ReadSettings()
     item ChooseCheapestThanksgetting();
     boolean TryHandleNonCombat(string page);
     boolean TryScratchNSniff();
+    void DoVoting();
 
 // general utility functions
     boolean RoomToEat(int size)
@@ -1493,6 +1500,17 @@ DebugOutfit("Goal outfit", outfitDef);
             run_choice(2); // gimme booze
             return true;
         }
+        if (page.contains_text("Is There A Doctor In The House?"))
+        {
+            run_choice(1); // Accept the case
+            return true;
+        }
+        if (page.contains_text("A Pound of Cure"))
+        {
+            run_choice(1); // Cure patient
+            return true;
+        }
+
         return false;
     }
 
@@ -2017,7 +2035,13 @@ DebugOutfit("Goal outfit", outfitDef);
     {
         location zone = get_property("doctorBagQuestLocation").to_location();
         if (zone != noLocation)
-            return zone;
+        {
+            item questItem = get_property("doctorBagQuestItem").to_item();
+            if (questItem.item_amount() == 0)
+                buy(1, questItem, 10000); // Not everything is buyable, how should we deal with this then?
+            if (questItem.item_amount() > 0)
+                return zone;
+        }
         zone = ChooseRunawayZone();
         if (zone != noLocation)
             return zone;
@@ -2139,7 +2163,8 @@ DebugOutfit("Goal outfit", outfitDef);
                 needsDigitize = false;
                 return "skill " + digitize.to_string();
             }
-            if (needsMeteorShower)
+            if (needsMeteorShower
+                && my_familiar() != obtuseAngel && my_familiar() != reanimator) // if familiar was chosen for copying instead of meat, don't waste meteor
             {
                 needsMeteorShower = false;
                 return "skill " + meteorShower.to_string();
@@ -3700,7 +3725,7 @@ abort("Todo: what choice #s for basement");
     }
 
 
-    void TryActivateBagOTricks()
+    void TryActivateBagOTricks(item[slot] eqSet)
     {
         if (!HaveEquipment(bagOtricks))
             return;
@@ -3710,19 +3735,21 @@ abort("Todo: what choice #s for basement");
             return;
         if (get_property("_bagOTricksBuffs").to_int() >= 3) // max 3 per day
             return;
-        item[slot] eqSet = CopyOutfit(defaultOutfitPieces);
         item oldOffhand = offhand.equipped_item();
         eqSet[offhand] = bagOtricks;
         if (eqSet[weapon].weapon_hands() >= 2)
         {
             // two handed-weapon, how do we deal with this?  don't want to fight empty-handed
-            eqSet[weapon] = noItem;
+            if (HaveEquipment(cheeseSword))
+                eqSet[weapon] = cheeseSword;
+            else
+                eqSet[weapon] = noItem;
         }
         if (bagOtricks.have_equipped())
         {
             RunFreeCombat(eqSet, "Filter_BagOTricks", false);
         }
-        offhand.equip(oldOffhand);
+        offhand.equip(oldOffhand); // make sure we don't accidentally wear it when we don't intend to, or the buffs will get messed up
     }
     boolean TryActivatePantsgivingFullness()
     {
@@ -3731,7 +3758,7 @@ abort("Todo: what choice #s for basement");
         if (my_fullness() != fullness_limit())
             return false;
 
-        item[slot] eqSet = CopyOutfit(defaultOutfitPieces);
+        item[slot] eqSet = CopyOutfit(dropsOutfitPieces);
         eqSet[pants] = pantsGiving;
         print("Trying to activate Pantsgiving to increase max fullness by 1", printColor);
         boolean first = true;
@@ -3744,8 +3771,7 @@ abort("Todo: what choice #s for basement");
             if (first)
             {
                 first = false;
-                TryActivateBagOTricks();
-                continue;
+                TryActivateBagOTricks(eqSet);
             }
             else
             {
@@ -5168,6 +5194,7 @@ abort("Todo: what choice #s for basement");
             if (!nightBefore)
                 FeedRobotender();
         }
+        DoVoting();
         ActivateMumming();
         if (turns > 100 && runFamiliar != orphan)
             AcquireAmuletCoin();
@@ -5385,6 +5412,26 @@ abort("Todo: what choice #s for basement");
         }
         TryDrink(dirt, dirtEffect, 1, 1);
         TryDrink(gingerWine, gingerWineEffect, 2, 1);
+        if (hauntedLiver.have_effect() == 0 && get_property("voteAlways") == "true")
+        {
+            if (hauntedScrewdriver.item_amount() == 0 && ectoplasm.item_amount() >= 2)
+            {
+                if (hauntedOrange.item_amount() == 0)
+                {
+                    if (orange.item_amount() > 0)
+                        buy(1, orange);
+                    craft("cook", 1, orange, ectoplasm);
+                }
+                if (hauntedVodka.item_amount() == 0)
+                {
+                    if (vodka.item_amount() > 0)
+                        buy(1, vodka);
+                    craft("cocktail", 1, vodka, ectoplasm);
+                }
+                craft("cocktail", 1, hauntedVodka, hauntedOrange);
+            }
+            TryDrink(hauntedScrewdriver, hauntedLiver, 2, 1);
+        }
         if (!nightBefore)
         {
             if (fistTurkey.have_familiar())
@@ -6575,6 +6622,129 @@ print("mob = " + canMobHit);
         }
     }
 
+    int GetVotePriority(int num)
+    {
+        string value = get_property("_voteLocal" + num);
+        if (value == "")
+        {
+            visit_url("place.php?whichplace=town_right&action=townright_vote");
+            value = get_property("_voteLocal" + num);
+        }
+        switch (value) // not sure if all these texts match up exactly with expected, so there's an abort if none match
+        {
+            // positive effect sorted by usefulness:
+            case "Meat Drop: +30":
+                return 32;
+            case "Item Drop: +15":
+                return 31;
+            case "Adventures: +1":
+                return 30;
+            case "Maximum MP Percent: +30":
+                return 29;
+            case "Mysticality Percent: +25":
+                return 28;
+            case "Candy Drop: +30":
+            case "Food Drop: +30":
+            case "Booze Drop: +30":
+            case "Pants Drop: +30":
+            case "Gear Drop: +30":
+                return 27;
+            case "Familiar Experience: +2":
+                return 26;
+            case "Stats Per Fight: +3":
+                return 25;
+            case "Muscle Percent: +25":
+            case "Moxie Percent: +25":
+                return 24;
+            case "Maximum HP Percent: +30":
+                return 23;
+            case "Monster Level Percent: +10":
+                return 22;
+            case "Stench Resistance: +3":
+                return 21;
+            case "Hot Resistance: +3":
+            case "Cold Resistance: +3":
+            case "Spooky Resistance: +3":
+            case "Sleaze Resistance: +3":
+                return 20;
+            case "Hot Damage: +10":
+            case "Cold Damage: +10":
+            case "Stench Damage: +10":
+            case "Spooky Damage: +10":
+            case "Sleaze Damage: +10":
+            case "Ranged Damage Percent: +100":
+            case "Weapon Damage Percent: +100":
+            case "Spell Damage Percent: +20":
+            case "Unarmed Damage: +20":
+                return 19;
+            case "Monster Level Percent: -10":
+                return 18;
+
+            // negative effects
+            case "Muscle: -20":
+            case "Mysticality: -20":
+            case "Moxie: -20":
+            case "Maximum HP Percent: -50":
+            case "Maximum MP Percent: -50":
+            case "Familiar Experience: -2":
+            case "Weapon Damage Percent: -50":
+            case "Spell Damage Percent: -50":
+            case "Critical Hit: -10":
+            case "Combat Initiative: -30":
+            case "Adventures: -2":
+            case "Item Drop: -20":
+            case "Meat Drop: -30":
+            case "Gear Drop: -50":
+                return -1;
+
+            default:
+                abort("_voteLocal" + num + " preference '" + value + "' doesn't match any expected string"
+                    + " in this script, please fix this script to handle this case.");
+        }
+        return -1;
+    }
+
+    void DoVoting()
+    {
+        if (get_property("voteAlways") != "true" && get_property("_voteToday") != "true")
+            return;
+        if (HaveEquipment(votedSticker))
+            return;
+
+        static boolean votePrompted = false;
+        if (!votePrompted)
+        {
+            votePrompted = true;
+            if (!UserConfirmDefault("Do you wish to automatically vote?  Main candidate will be chosen randomly, so do your own voting if you care.", true))
+                return;
+        }
+        string page = visit_url("place.php?whichplace=town_right&action=townright_vote");
+        if (!page.contains_text("Daily Loathing Ballot"))
+            abort("Voting booth visit unexpectedly failed");
+
+        int candidate = 1 + random(2); // if multiple people run this and don't care, votes should cancel out in favor of people who do care
+        int[4] priorities;
+        for (int i = 0; i < 4; i++)
+            priorities[i] = GetVotePriority(i + 1);
+        int local1 = 0, local2 = 0;
+        for (int i = 1; i < 4; i++)
+            if (priorities[i] > priorities[local1])
+                local1 = i;
+        if (local1 == 0)
+            local2 = 1;
+        for (int i = 0; i < 4; i++)
+            if (i != local1 && priorities[i] > priorities[local2])
+                local2 = i;
+
+        print("Voting for "
+            + get_property("_voteLocal" + (local1 + 1))
+            + " and "
+            + get_property("_voteLocal" + (local2 + 1)),
+            printColor);
+        string voteURL = "choice.php?pwd=" + my_hash() + "&option=1&whichchoice=1331&g=" + candidate + "&local[]=" + local1 + "&local[]=" + local2;
+        page = visit_url(voteURL);
+    }
+
     boolean HandleVoteMonster()
     {
         if (get_property("voteAlways") != "true" && get_property("_voteToday") != "true")
@@ -6583,6 +6753,7 @@ print("mob = " + canMobHit);
         if ((total_turns_played() % 11) != 1 || get_property("lastVoteMonsterTurn").to_int() == total_turns_played())
             return false;
 
+        DoVoting();
         if (!HaveEquipment(votedSticker))
             return false;
 
@@ -6663,7 +6834,7 @@ print("mob = " + canMobHit);
                 if (turnCount < 0 && !hasFreeKillRemaining)
                     return;
                 if (needBagOTricks)
-                    TryActivateBagOTricks();
+                    TryActivateBagOTricks(CopyOutfit(dropsOutfitPieces));
 
                 TryAutoExtendThanksgetting(turnCount - i);
                 SoulSauceToMana();
