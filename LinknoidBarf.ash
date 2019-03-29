@@ -949,17 +949,6 @@ void ReadSettings()
         print("User responded to query '" + message + "' with value = " + result, printColor);
         return result;
     }
-    int LastIndexOf(string page, string match, int beforeIndex) // this doesn't appear to be part of the ASH standard API, not sure why
-    {
-        int ix = page.index_of(match);
-        int result = -1;
-        while (ix < beforeIndex && ix >= 0)
-        {
-            result = ix;
-            ix = page.index_of(match, ix + 1);
-        }
-        return result;
-    }
     int FindVariableChoice(string page, string match, boolean matchTextIsButtonText)
     {
         int ix = page.index_of(match);
@@ -968,7 +957,7 @@ void ReadSettings()
 
         string optionSearch = "<input type=hidden name=option value=";
         if (matchTextIsButtonText) // the name=option value=1 comes before the button text
-            ix = LastIndexOf(page, optionSearch, ix);
+            ix = last_index_of(page, optionSearch, ix);
         else // otherwise we found a prefix with that text
             ix = page.index_of(optionSearch, ix);
         if (ix <= 0)
@@ -1448,6 +1437,11 @@ DebugOutfit("Goal outfit", outfitDef);
             ResetCombatState();
             visit_url("fight.php");
             run_combat(combatFilter);
+        }
+        if (pageResult.contains_text("The phone in your doctor's bag rings"))
+        {
+            string page = visit_url("choice.php");
+            run_choice(1); // Accept the case
         }
     }
     void RunCombat(string filter)
@@ -2021,17 +2015,7 @@ DebugOutfit("Goal outfit", outfitDef);
         HealUp();
     }
 
-    location ChooseRunawayZone()
-    {
-        if (keyCardDelta.item_amount() == 0)
-            return uncleGator;
-        else if (keyCardBeta.item_amount() == 0)
-            return garbagePirates;
-        else if (keyCardGamma.item_amount() == 0)
-            return toxicTeacups;
-        return noLocation;
-    }
-    location ChooseWandererZone()
+    location GetDoctorBagQuestLocation()
     {
         location zone = get_property("doctorBagQuestLocation").to_location();
         if (zone != noLocation)
@@ -2042,7 +2026,39 @@ DebugOutfit("Goal outfit", outfitDef);
             if (questItem.item_amount() > 0)
                 return zone;
         }
-        zone = ChooseRunawayZone();
+        return noLocation;
+    }
+
+    boolean AllNoncombatsSkippable(location loc)
+    {
+        switch (loc)
+        {
+            case $location[The Castle in the Clouds in the Sky (Top Floor)]:
+            //case $location[The Castle in the Clouds in the Sky (Middle Floor)]:
+            //case $location[The Castle in the Clouds in the Sky (Bottom Floor)]:
+                return true;
+        }
+        return false;
+    }
+
+    location ChooseRunawayZone()
+    {
+        location zone = GetDoctorBagQuestLocation();
+        if (AllNoncombatsSkippable(zone))
+            return zone;
+        if (keyCardDelta.item_amount() == 0)
+            return uncleGator;
+        else if (keyCardBeta.item_amount() == 0)
+            return garbagePirates;
+        else if (keyCardGamma.item_amount() == 0)
+            return toxicTeacups;
+        return noLocation;
+    }
+    location ChooseWandererZone()
+    {
+        location zone = GetDoctorBagQuestLocation();
+        if (zone == noLocation)
+            zone = ChooseRunawayZone();
         if (zone != noLocation)
             return zone;
         return barfMountain; // last resort
@@ -5520,6 +5536,46 @@ abort("Todo: what choice #s for basement");
         else
             return "Filter_Standard";
     }
+
+    boolean TryChoose(string text)
+    {
+        foreach key, value in available_choice_options()
+            if (value == text)
+            {
+                print("Running choice " + key + " => " + value + " for adventure " + last_choice(), printColor);
+                visit_url("choice.php?option=" + key + "&pwd=" + my_hash() + "&whichchoice=" + last_choice());
+                return true;
+            }
+        return false;
+    }
+
+    boolean ChooseSkipNoncombat(string page)
+    {
+        if (!page.contains_text("choice.php"))
+            return false;
+
+        if (TryChoose("Get the heck out of here")) // lights out
+            return true;
+
+        // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
+        TryChoose("Check Behind the Giant Poster"); // goto punk rock
+        
+        if (!TryChoose("Check behind the trash can")) // goto punk rock
+            if (TryChoose("Get the Punk's Attention")) // goto punk rock
+                return false; // converted to combat
+        
+        if (!TryChoose("Gimme Steam")) // goto steampunk
+            if (TryChoose("End His Suffering")) // fight goth
+                return false; // converted to combat
+
+        if (TryChoose("Investigate the Whirligigs and Gimcrackery"))
+            return true;
+
+        foreach key, value in available_choice_options()
+            print(key + " = " + value, "red");
+        abort("Unhandled non-combat encountered, please fix this script");
+        return false;
+    }
       
     boolean IsPurpleLightAvailable()
     {
@@ -5732,7 +5788,7 @@ abort("Todo: what choice #s for basement");
         while (TryPrepareFamiliarRunaways(first, weightOF))
         {
             location zone = ChooseRunawayZone();
-            if (zone == barfMountain)
+            if (zone == noLocation)
                 return;
             if (first)
             {
@@ -5748,6 +5804,10 @@ abort("Todo: what choice #s for basement");
             RemoveConfusionEffects(false);
             HealUp(true);
             string page = visit_url(zone.to_url().to_string());
+            while (ChooseSkipNoncombat(page))
+            {
+                page = visit_url(zone.to_url().to_string());
+            }
             run_combat(filter);
             if (tempBlind.have_effect() > 0 && (my_familiar() == bandersnatch || my_familiar() == stompingBoots))
             {
@@ -5797,38 +5857,9 @@ abort("Todo: what choice #s for basement");
         string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
         //castleTopFloor.adv1(-1, filter);
         string page = visit_url("adventure.php?snarfblat=324"); // castle top floor
-        if (page.contains_text("choice.php"))
-        {
-            // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
-            if (page.contains_text("Check Behind the Giant Poster")) // goto punk rock
-            {
-                page = visit_url("choice.php?option=4&pwd=" + my_hash() + "&whichchoice=676", false); // check behind the giant poster
-            }
-            if (page.contains_text("Check behind the trash can")) // goto steampunk
-            {
-                page = visit_url("choice.php?option=3&pwd=" + my_hash() + "&whichchoice=678", false); // check behind the trash can
-            }
-            else if (page.contains_text("Get the Punk's Attention")) // fight punk rock
-            {
-                page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=678", false); // get the punk's attention
-                RunCombat(filter);
-                return;
-            }
-            if (page.contains_text("Gimme Steam")) // goto steampunk
-            {
-                page = visit_url("choice.php?option=4&pwd=" + my_hash() + "&whichchoice=675", false); // gimme steam
-            }
-            else if (page.contains_text("End His Suffering")) // fight goth
-            {
-                page = visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=675", false); // end his suffering
-                RunCombat(filter);
-                return;
-            }
-            if (page.contains_text("Copper Feel"))
-                run_choice(2); // investigate whirligigs, skip adventure
-        }
-        else
-            RunCombat(filter);
+        if (ChooseSkipNoncombat(page))
+            return;
+        RunCombat(filter);
     }
     void SemiRareBilliard()
     {
@@ -6651,22 +6682,29 @@ print("mob = " + canMobHit);
                 return 27;
             case "Familiar Experience: +2":
                 return 26;
-            case "Stats Per Fight: +3":
+            case "Experience (Mysticality): +4":
                 return 25;
+            case "Experience: +3":
+                return 24;
+            case "Experience (Muscle): +4":
+            case "Experience (Moxie): +4":
+                return 23;
             case "Muscle Percent: +25":
             case "Moxie Percent: +25":
-                return 24;
-            case "Maximum HP Percent: +30":
-                return 23;
-            case "Monster Level Percent: +10":
                 return 22;
-            case "Stench Resistance: +3":
+            case "Maximum HP Percent: +30":
                 return 21;
+            case "Monster Level: +10":
+                return 20;
+            case "Stench Resistance: +3":
+                return 19;
             case "Hot Resistance: +3":
             case "Cold Resistance: +3":
             case "Spooky Resistance: +3":
             case "Sleaze Resistance: +3":
-                return 20;
+                return 18;
+            case "Initiative: +25":
+                return 17;
             case "Hot Damage: +10":
             case "Cold Damage: +10":
             case "Stench Damage: +10":
@@ -6676,9 +6714,9 @@ print("mob = " + canMobHit);
             case "Weapon Damage Percent: +100":
             case "Spell Damage Percent: +20":
             case "Unarmed Damage: +20":
-                return 19;
-            case "Monster Level Percent: -10":
-                return 18;
+                return 16;
+            case "Monster Level: -10":
+                return 15;
 
             // negative effects
             case "Muscle: -20":
@@ -6690,7 +6728,7 @@ print("mob = " + canMobHit);
             case "Weapon Damage Percent: -50":
             case "Spell Damage Percent: -50":
             case "Critical Hit: -10":
-            case "Combat Initiative: -30":
+            case "Initiative: -30":
             case "Adventures: -2":
             case "Item Drop: -20":
             case "Meat Drop: -30":
