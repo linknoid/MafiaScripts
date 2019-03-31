@@ -475,6 +475,8 @@ void ReadSettings()
     skill duplicate = ToSkill("Duplicate");
     skill pocketCrumbs = ToSkill("Pocket Crumbs");
     item bittyMeat = ToItem("BittyCar MeatCar");
+    item vampCloake = ToItem("vampyric cloake");
+    skill wolfForm = ToSkill("Become a Wolf");
 
 // monster level so it can survive longer
     skill annoyingNoise = ToSkill("Drescher's Annoying Noise");
@@ -564,6 +566,7 @@ void ReadSettings()
     string summonGreed = "summon 2"; // summoning chamber if you've learned the Hoom-Ha name
     string meatEnh = "terminal enhance meat.enh"; // if you have a source terminal
     string concertWinklered = "concert Winklered"; // if you helped the Orcs in the island war and finished fliering for the concert
+    string concertOptimistPrimal = "concert Optimist Primal"; // if you helped the Hippies in the island war and finished fliering for the concert
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
 // effects for +meat bonus
@@ -740,8 +743,8 @@ void ReadSettings()
 
 // barf mountain quest
     item lubeShoes = ToItem("lube-shoes");
-    static string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
-    static string maintenanceUrl = "place.php?whichplace=airport_stench&action=airport3_tunnels";
+    string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
+    string maintenanceUrl = "place.php?whichplace=airport_stench&action=airport3_tunnels";
 
 // Gingerbread
     location gingerCivic = ToLocation("Gingerbread Civic Center");
@@ -850,6 +853,7 @@ void ReadSettings()
     boolean canExtract = false;
     boolean canDuplicate = false;
     boolean canTurbo = false;
+    boolean needWolfForm = false;
     int enamorangsUsed = 0;
     boolean digitizeActivationNeeded = false;
     boolean canJokesterGun = false;
@@ -922,7 +926,7 @@ void ReadSettings()
     void DebugOutfit(string name, item[slot] o);
     item ChooseCheapestThanksgetting();
     boolean TryHandleNonCombat(string page);
-    boolean TryScratchNSniff();
+    boolean TryScratchNSniff(item[slot] forOutfit);
     void DoVoting();
 
 // general utility functions
@@ -1161,7 +1165,7 @@ void ReadSettings()
         if ((!HaveEquipment(scratchXbow) && OutfitContains(outfitDef, scratchXbow))
 		|| (!HaveEquipment(scratchSword) && OutfitContains(outfitDef, scratchSword)))
         {
-            TryScratchNSniff();
+            TryScratchNSniff(outfitDef);
         }
     }
 
@@ -1191,9 +1195,9 @@ void ReadSettings()
     // lazy initialize, Mafia doesn't return the number of an outfit, so manually create the mapping
     // from custom outfit name to outfit #
     int[string] outfitsByNumber;
+    boolean outfitsByNumberInitialized = false;
     void CalcOutfitsByNumber()
     {
-        static boolean outfitsByNumberInitialized = false;
         if (outfitsByNumberInitialized)
             return;
         outfitsByNumberInitialized = true;
@@ -2004,6 +2008,7 @@ DebugOutfit("Goal outfit", outfitDef);
         {
             canMobHit = true;
         }
+        needWolfForm = false;
         hasFreeKillRemaining =
             canJokesterGun
             || canBatoomerang
@@ -2036,6 +2041,7 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[The Castle in the Clouds in the Sky (Top Floor)]:
             //case $location[The Castle in the Clouds in the Sky (Middle Floor)]:
             //case $location[The Castle in the Clouds in the Sky (Bottom Floor)]:
+            case $location[The Sleazy Back Alley]:
                 return true;
         }
         return false;
@@ -2178,6 +2184,11 @@ DebugOutfit("Goal outfit", outfitDef);
                 digitizeActivationNeeded = true;
                 needsDigitize = false;
                 return "skill " + digitize.to_string();
+            }
+            if (needWolfForm && vampCloake.have_equipped())
+            {
+                needWolfForm = false;
+                return "skill " + wolfForm.to_string();
             }
             if (needsMeteorShower
                 && my_familiar() != obtuseAngel && my_familiar() != reanimator) // if familiar was chosen for copying instead of meat, don't waste meteor
@@ -2458,9 +2469,9 @@ print("Running filter = " + result, printColor);
         return false;
     }
 
+    boolean isDebug = false;
     void DebugOutfit(string name, item[slot] o)
     {
-        static boolean isDebug = false;
         if (!isDebug)
             return;
         print("outfit " + name, printColor);
@@ -2768,11 +2779,15 @@ print("Running filter = " + result, printColor);
         result[matching] = best;
         return result;
     }
-    boolean TryScratchNSniff()
+    boolean TryScratchNSniff(item[slot] forOutfit)
     {
-        // disabled for now, don't check the price since this is only done as part of an outfit
-        //if (haikuKatana.have_equipped() && mafiaPointerRing.have_equipped())
-        //    return false; // +200% for katana is better than +75% for scratch and sniff stickers
+        if (forOutfit[weapon] == haikuKatana
+            && (forOutfit[acc1] == mafiaPointerRing
+            || forOutfit[acc2] == mafiaPointerRing
+            || forOutfit[acc3] == mafiaPointerRing))
+        {
+            return false; // +200% for katana is better than +75% for scratch and sniff stickers
+        }
 
         //float meatMultiplier = 1000 * 20 / 100; // 20 embezzlers * 1000 meat / 100 percent
         //float currentWeaponMeat = meatMultiplier * weapon.equipped_item().numeric_modifier("Meat Percent");
@@ -2804,7 +2819,7 @@ print("Running filter = " + result, printColor);
                 return false;
             }
         }
-        weapon.equip(eq);
+        forOutfit[weapon] = eq;
         return true;
     }
     void BuffNonPMThrall()
@@ -2820,19 +2835,14 @@ print("Running filter = " + result, printColor);
     }
     void PrepareMeaty()
     {
-        WearOutfit(meatyOutfitPieces);
-// free kills bad for meaty
-//        if (HaveEquipment(jokesterGun)
-//            && jokesterGun.can_equip()
-//            && get_property("_firedJokestersGun") == "false")
-//        {
-//            weapon.equip(jokesterGun);
-//            canJokesterGun = true;
-//        }
-//        else
-        if (!TryScratchNSniff())
+        item[slot] meatOutfit = CopyOutfit(meatyOutfitPieces);
+        TryScratchNSniff(meatOutfit);
+        if (vampCloake.HaveEquipment() && get_property("_vampyreCloakeFormUses").to_int() < 10)
         {
+            meatOutfit[back] = vampCloake;
+            needWolfForm = true;
         }
+        WearOutfit(meatOutfit);
 
         if (obtuseAngel.have_familiar())
         {
@@ -4351,6 +4361,7 @@ abort("Todo: what choice #s for basement");
         chew(1, spleenItem);
     }
 
+    boolean ignoreOde = false;
     void TryDrink(item booze, effect desiredEffect, int providedDrunk, int turnLimit)
     {
         if (booze.item_amount() < 1)
@@ -4388,7 +4399,6 @@ abort("Todo: what choice #s for basement");
                         break;
                     }
                 }
-                static boolean ignoreOde = false;
                 if (!ignoreOde
                     && odeToBoozeEffect.have_effect() < providedDrunk)
                 {
@@ -5216,9 +5226,15 @@ abort("Todo: what choice #s for basement");
             AcquireAmuletCoin();
 
         if (get_property("demonSummoned") != "true")
-            AdventureEffect(summonGreed, preternatualGreed, turns);
-        if (get_property("sidequestArenaCompleted") == "fratboy" && get_property("concertVisited") != "true")
-            AdventureEffect(concertWinklered, winklered, turns);
+            cli_execute(summonGreed);
+        if (get_property("concertVisited") != "true")
+        {
+            if (get_property("sidequestArenaCompleted") == "fratboy")
+                cli_execute(concertWinklered);
+            else if (get_property("sidequestArenaCompleted") == "hippy")
+                cli_execute(concertOptimistPrimal);
+        }
+
         if (nightBefore)
         {
             turns = 1;
@@ -5539,13 +5555,16 @@ abort("Todo: what choice #s for basement");
 
     boolean TryChoose(string text)
     {
+        string withQuotes = "&quot;" + text + "&quot;";
         foreach key, value in available_choice_options()
-            if (value == text)
+        {
+            if (value == text || value == withQuotes)
             {
                 print("Running choice " + key + " => " + value + " for adventure " + last_choice(), printColor);
                 visit_url("choice.php?option=" + key + "&pwd=" + my_hash() + "&whichchoice=" + last_choice());
                 return true;
             }
+        }
         return false;
     }
 
@@ -5556,6 +5575,16 @@ abort("Todo: what choice #s for basement");
 
         if (TryChoose("Get the heck out of here")) // lights out
             return true;
+        if (TryChoose("Walk Away")) // Aww, Craps
+            return true;
+        if (TryChoose("Punch the hobo")) // Dumpster Diving
+            return false;
+        if (TryChoose("Introduce them to avant-garde")) // The Entertainer
+            return false;
+        if (TryChoose("Sorry, no time.")) // Please, Hammer
+            return false;
+        if (TryChoose("Umm, no thanks. Seriously.")) // Under the Knife
+            return false;
 
         // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
         TryChoose("Check Behind the Giant Poster"); // goto punk rock
@@ -6060,9 +6089,9 @@ abort("Todo: what choice #s for basement");
         return false;
     }
 
+    boolean universesLeft = true;
     void TryCalculateUniverse()
     {
-        static boolean universesLeft = true;
         if (!universesLeft || my_mp() < 1)
             return;
         static int moonSignInt = -1;
@@ -6582,6 +6611,7 @@ print("mob = " + canMobHit);
         }
     }
 
+    boolean voraciTeaChecked = false;
     void TryAutoExtendThanksGetting(int turnsRemaining)
     {
         if (!autoVoraciThanksgetting || saveStomach > 0) // saving back stomach makes this pointless
@@ -6595,7 +6625,6 @@ print("mob = " + canMobHit);
             return;
         if (voraciTea.item_amount() == 0) // no tea?  too bad
             return;
-        static boolean voraciTeaChecked = false;
         if (voraciTeaChecked)
             return;
 
@@ -6680,7 +6709,7 @@ print("mob = " + canMobHit);
             case "Pants Drop: +30":
             case "Gear Drop: +30":
                 return 27;
-            case "Familiar Experience: +2":
+            case "Experience (familiar): +2":
                 return 26;
             case "Experience (Mysticality): +4":
                 return 25;
@@ -6742,6 +6771,7 @@ print("mob = " + canMobHit);
         return -1;
     }
 
+    boolean votePrompted = false;
     void DoVoting()
     {
         if (get_property("voteAlways") != "true" && get_property("_voteToday") != "true")
@@ -6749,7 +6779,6 @@ print("mob = " + canMobHit);
         if (HaveEquipment(votedSticker))
             return;
 
-        static boolean votePrompted = false;
         if (!votePrompted)
         {
             votePrompted = true;
@@ -6963,7 +6992,7 @@ print("mob = " + canMobHit);
         if (HasAccess())
             return;
     
-        if (!UserConfirmDefault("No access to Dinsey, use a day pass?", true))
+        if (!UserConfirmDefault("No access to Dinsey, use a day pass?", get_property("stenchAirportAlways") != "true"))
             abort("No access to Dinsey");
     
         if (dayPass.item_amount() == 0)
@@ -6977,6 +7006,8 @@ print("mob = " + canMobHit);
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
+        if (visit_url("main.php").contains_text("choice.php"))
+            abort("Script cannot start while you are stuck in a choice adventure");
         ReadSettings();
         WriteSettings(); // in case there are new properties
         autoConfirm = autoConfirmBarf || user_confirm("Auto-confirm all prompts this run?");
