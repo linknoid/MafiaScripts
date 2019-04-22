@@ -644,6 +644,11 @@ void ReadSettings()
 // max mana increase
     item hawkings = ToItem("Hawking's Elixir of Brilliance");
     effect hawkingsEffect = ToEffect("On the Shoulders of Giants");
+    item onePill = ToItem("one pill");
+    effect onePillLarge = ToEffect("Larger");
+    effect onePillSmall = ToEffect("Small");
+    skill notAKnife = ToSkill("That's Not a Knife");
+    item candyKnife = ToItem("candy knife");
     item occult = ToItem("ointment of the occult");
     effect occultEffect = ToEffect("Mystically Oiled");
     item tomatoJuice = ToItem("tomato juice of powerful power");
@@ -2040,8 +2045,12 @@ DebugOutfit("Goal outfit", outfitDef);
         {
             case $location[The Castle in the Clouds in the Sky (Top Floor)]:
             //case $location[The Castle in the Clouds in the Sky (Middle Floor)]:
-            //case $location[The Castle in the Clouds in the Sky (Bottom Floor)]:
+            case $location[The Castle in the Clouds in the Sky (Basement)]:
+            case $location[The Penultimate Fantasy Airship]:
             case $location[The Sleazy Back Alley]:
+            case $location[The Arid, Extra-Dry Desert]:
+            case $location[The Unquiet Garves]:
+            case $location[The Haunted Kitchen]:
                 return true;
         }
         return false;
@@ -5572,6 +5581,11 @@ abort("Todo: what choice #s for basement");
     {
         if (!page.contains_text("choice.php"))
             return false;
+        if (page.contains_text("A Pound of Cure"))
+        {
+            run_choice(1); // Cure patient
+            return true;
+        }
 
         if (TryChoose("Get the heck out of here")) // lights out
             return true;
@@ -5580,11 +5594,11 @@ abort("Todo: what choice #s for basement");
         if (TryChoose("Punch the hobo")) // Dumpster Diving
             return false;
         if (TryChoose("Introduce them to avant-garde")) // The Entertainer
-            return false;
+            return true;
         if (TryChoose("Sorry, no time.")) // Please, Hammer
-            return false;
+            return true;
         if (TryChoose("Umm, no thanks. Seriously.")) // Under the Knife
-            return false;
+            return true;
 
         // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
         TryChoose("Check Behind the Giant Poster"); // goto punk rock
@@ -5598,6 +5612,18 @@ abort("Todo: what choice #s for basement");
                 return false; // converted to combat
 
         if (TryChoose("Investigate the Whirligigs and Gimcrackery"))
+            return true;
+
+        TryChoose("Crawl Through the Heating Duct"); // neckbeard choice
+        TryChoose("Crawl through the Heating Vent"); // fitness choice
+        if (TryChoose("Check out the Mirror")) // skip the adventure
+            return true;
+
+        if (TryChoose("Investigate the crew quarters")) // Random Lack of an Encounter
+            return false; // converted to combat
+        if (TryChoose("Pay no attention to the stuff in front of the curtain")) // Curtains
+            return true;
+        if (TryChoose("Play 'Le Mie Cose Favorite'")) // Strung-Up Quartet
             return true;
 
         foreach key, value in available_choice_options()
@@ -6408,6 +6434,31 @@ abort("Todo: what choice #s for basement");
         {
             use_skill(1, quietJudgement);
         }
+
+        if (vipKey.item_amount() > 0 && get_property("_hotTubSoaks").to_int() < 5)
+        {
+            while (onePillLarge.have_effect() == 0)
+            {
+                if (onePill.item_amount() == 0)
+                    buy(20, onePill, 200);
+                if (onePill.item_amount() > 0)
+                {
+                    use(1, onePill);
+                }
+            }
+            if (onePillSmall.have_effect() > 0)
+            {
+                if (notAKnife.have_skill() && get_property("_discoKnife") == "false")
+                {
+                    int knifeamount = candyKnife.item_amount();
+                    put_closet(knifeamount, candyKnife);
+                    use_skill(1, notAKnife); // summon a candy knife, which can be used for sweet synthesis
+                    take_closet(knifeamount, candyKnife);
+                }
+                cli_execute("hottub");
+            }
+        }
+
         BuyAndUseOneTotal(hawkings, hawkingsEffect, 1000);
         BuyAndUseOneTotal(occult, occultEffect, 400);
         BuyAndUseOneTotal(tomatoJuice, tomatoJuiceEffect, 400);
@@ -6753,7 +6804,7 @@ print("mob = " + canMobHit);
             case "Moxie: -20":
             case "Maximum HP Percent: -50":
             case "Maximum MP Percent: -50":
-            case "Familiar Experience: -2":
+            case "Experience (familiar): -2":
             case "Weapon Damage Percent: -50":
             case "Spell Damage Percent: -50":
             case "Critical Hit: -10":
@@ -6765,6 +6816,11 @@ print("mob = " + canMobHit);
                 return -1;
 
             default:
+                if (value == "" // +20 Damage to Unarmed Attacks, shows up as "" in properties
+                    && get_property("_voteLocal" + ((num % 4) + 1)) != "") // and there's another property which isn't blank, so we know it found something
+                {
+                    return 16;
+                }
                 abort("_voteLocal" + num + " preference '" + value + "' doesn't match any expected string"
                     + " in this script, please fix this script to handle this case.");
         }
