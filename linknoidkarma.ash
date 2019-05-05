@@ -309,12 +309,12 @@ void UseStillIfNeeded(item target)
 		return;
 	UseStill(target);
 }
-void CraftPotionIfNeeded(item pot, item ingredient, boolean isHighPotion)
+void CraftPotionIfNeeded(item pot, item ingredient, boolean isHighPotion, boolean purchasable)
 {
 	if (pot.item_amount() > 0)
 		return;
 	print ("ingredient amount = " + ingredient.item_amount());
-	if (ingredient.item_amount() <= 0)
+	if (ingredient.item_amount() <= 0 && purchasable)
 	{
 		$slot[hat].equip($item[filthy knitted dread sack]);
 		$slot[pants].equip($item[filthy corduroys]);
@@ -352,11 +352,13 @@ void CraftPotionIfNeeded(item pot, item ingredient, boolean isHighPotion)
 		craft("cook", 1, ingredient, ingredient2);
 	}
 }
-void CraftPotionForEffect(item pot, item ingredient, boolean isHighPotion, effect e)
+void CraftPotionForEffect(item pot, item ingredient, boolean isHighPotion, effect e, boolean purchasable)
 {
 	if (e.have_effect() > 0)
 		return;
-	CraftPotionIfNeeded(pot, ingredient, isHighPotion);
+	if (ingredient.item_amount() == 0 && !purchasable)
+		return;
+	CraftPotionIfNeeded(pot, ingredient, isHighPotion, purchasable);
 	if (pot.item_amount() > 0)
 		use(1, pot);
 }
@@ -503,6 +505,13 @@ boolean DrinkForEffect(item i, effect e, int liverReq)
 	if (e.have_effect() > 0)
 		return false;
 	return DrinkForTurns(i, liverReq);
+}
+boolean ChewForEffect(item i, effect e)
+{
+	if (e.have_effect() > 0 || i.item_amount() == 0)
+		return false;
+	chew(1, i);
+	return true;
 }
 
 void GeneralBuffStats()
@@ -1068,8 +1077,8 @@ boolean NeedsVolcanoFactoryItem()
 }
 boolean NeedsVolcanoMineItem()
 {
-	return !$item[high-temperature mining mask].HaveItem()
-		|| !$item[fireproof megaphone].HaveItem();
+	return !$item[high-temperature mining mask].HaveItem();
+//		|| !$item[fireproof megaphone].HaveItem(); // no longer useful with may 4 saber
 }
 string Filter_Volcano(int round, monster mon, string page)
 {
@@ -1510,9 +1519,9 @@ void UnlockHippyStore()
 	UseStillIfNeeded($item[cocktail onion]);
 	UseStillIfNeeded($item[kiwi]);
 	UseStillIfNeeded($item[tangerine]);
-	CraftPotionIfNeeded($item[philter of phorce], $item[lemon], false);
-	CraftPotionIfNeeded($item[serum of sarcasm], $item[olive], false);
-	CraftPotionIfNeeded($item[ointment of the occult], $item[grapefruit], false);
+	CraftPotionIfNeeded($item[philter of phorce], $item[lemon], false, true);
+	CraftPotionIfNeeded($item[serum of sarcasm], $item[olive], false, true);
+	CraftPotionIfNeeded($item[ointment of the occult], $item[grapefruit], false, true);
 }
 
 void RunLOVTunnel(int day)
@@ -1692,11 +1701,11 @@ boolean RunSnojo()
 		visit_url("place.php?whichplace=snojo&action=snojo_controller");
 		run_choice(2); // myst, for +booze and resist hat
 	}
-	if (freeFights == 0 && dayNumber == 1)
-	{
-		$familiar[Space Jellyfish].use_familiar();
-	}
-	else
+	//if (freeFights == 0 && dayNumber == 1) // no longer relevant, now that we can summon rum
+	//{
+	//	$familiar[Space Jellyfish].use_familiar();
+	//}
+	//else
 	{
 		ChooseFamiliar();
 	}
@@ -2291,6 +2300,7 @@ void FightWanderers(boolean withBuffs)
 					hasWanderer = true;
 			}
 		}
+print ("here 2");
 		if (!hasWanderer)
 		{
 			FightGhost();
@@ -2304,7 +2314,7 @@ void FightWanderers(boolean withBuffs)
 			UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
 			GeneralBuffStats();
 		}
-
+print ("here 1");
 		ChooseFamiliar();
 		GearForCombat();
 
@@ -2337,15 +2347,22 @@ void MakeGovernmentCheese()
 		canPortscan = true;
 		return;
 	}
-	MaxCombatItemDrop();
-	if (get_property("_steelyEyedSquintUsed") != "true")
+	if ($item[spooky jelly].item_amount() > 0)
 	{
-		ChateauRest(100);
-		use_skill(1, $skill[Steely-Eyed Squint]);
+		use(1, $item[spooky jelly]);
 	}
-	if (my_turnCount() >= portscanCounter)
+	else
 	{
-		canPortscan = get_property("_sourceTerminalPortscanUses").to_int() < 3;
+		MaxCombatItemDrop();
+		if (get_property("_steelyEyedSquintUsed") != "true")
+		{
+			ChateauRest(100);
+			use_skill(1, $skill[Steely-Eyed Squint]);
+		}
+	}
+	if (my_turnCount() > portscanCounter)
+	{
+		canPortscan = false;
 		visit_url($location[The Haunted Kitchen].to_url());
 		run_combat("Filter_Standard");
 	}
@@ -2379,6 +2396,120 @@ void StealVolcanoGear()
 		if (page.contains_text("You're fighting"))
 		{
 			run_combat("Filter_Volcano");
+		}
+	}
+}
+
+boolean banished;
+boolean turboed;
+boolean usedForce;
+string Filter_Saber(int round, monster mon, string page)
+{
+	if (can_still_steal())
+		return "\"pickpocket\"";
+	string monName = mon.to_string().to_lower_case();
+	if (monName.contains_text("golem"))
+	{
+		print("Trying to banish the golem", "orange");
+		if (my_mp() > 50 && get_property("_snokebombUsed").to_int() < 3)
+		{
+			banished = true;
+			return "skill " + $skill[Snokebomb];
+		}
+		if (get_property("_kgbTranquilizerDartUses").to_int() < 3)
+		{
+			banished = true;
+			return "skill " + $skill[KGB tranquilizer dart];
+		}
+	}
+        boolean validMonster = false;
+	if (monName.contains_text("mine "))
+	{
+		if (NeedsVolcanoMineItem())
+		{
+			validMonster = true;
+		}
+	}
+	else if (monName.contains_text("factory "))
+	{
+		if (NeedsVolcanoFactoryItem())
+		{
+			validMonster = true;
+		}
+	}
+	else if (!monName.contains_text("golem"))
+	{
+		validMonster = true;
+	}
+	if (!validMonster && get_property("_macrometeoriteUses").to_int() < 10)
+	{
+		return "skill " + $skill[Macrometeorite];
+	}
+
+	if (!turboed && $effect[Turbocharged].have_effect() == 0)
+	{
+		turboed = true;
+		return "skill Turbo";
+	}
+
+	if ($effect[Meteor Showered].have_effect() == 0 && get_property("_meteorShowerUses").to_int() < 5)
+		return "skill Meteor Shower";
+	if (!usedForce)
+	{
+		usedForce = visit_url("fight.php?action=skill&whichskill=7311").contains_text("You will drop your things and walk away.");
+		//return "skill Use the Force, " + my_name() + "!";
+	}
+	if (usedForce)
+	{
+		visit_url("choice.php?whichchoice=1387&option=3"); // "You will drop your things and walk away."
+		visit_url("fight.php"); // make KoLMafia recognize that we're no longer in a fight
+		return "";
+	}
+	print("Use the force failed, please debug");
+	return "abort";
+}
+
+void SaberBuff()
+{
+	if ($effect[Meteor Showered].have_effect() > 0)
+		return;
+	print("SaberBuff");
+	banished = true; // fake it so we can get into the loop
+	while (get_property("_meteorShowerUses").to_int() < 5 && banished)
+	{
+		banished = false;
+		string url;
+		if (NeedsVolcanoFactoryItem())
+		{
+			url = $location[LavaCo&trade; Lamp Factory].to_url();
+		}
+		else if (NeedsVolcanoMineItem())
+		{
+			url = "adventure.php?snarfblat=449"; // $location[The Velvet/Gold Mine];
+		}
+		else
+			url = $location[The Haunted Kitchen].to_url();
+		
+		cli_execute("terminal educate turbo.edu");
+		$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
+		string page = visit_url(url);
+		if (page.contains_text("You're fighting"))
+		{
+			try
+			{
+				usedForce = false;
+				turboed = false;
+				run_combat("Filter_Saber");
+			}
+			finally
+			{
+				visit_url("fight.php");
+			}
+		}
+		else
+		{
+			banished = true;
+			print("Found intro non-combat, try again");
 		}
 	}
 }
@@ -2532,13 +2663,13 @@ void DoQuest2()
 		if ($item[Mer-kin strongjuice].item_amount() > 0 && $effect[Juiced Out].have_effect() <= 0)
 			use(1, $item[Mer-kin strongjuice]);
 
-		CraftPotionForEffect($item[Ferrigno's Elixir of Power], $item[kiwi], true, $effect[Incredibly Hulking]);
-		CraftPotionForEffect($item[philter of phorce], $item[lemon], false, $effect[Phorcefullness]);
+		CraftPotionForEffect($item[Ferrigno's Elixir of Power], $item[kiwi], true, $effect[Incredibly Hulking], true);
+		CraftPotionForEffect($item[philter of phorce], $item[lemon], false, $effect[Phorcefullness], true);
 
 		CastGiantGrowth(true);
 		CurePoison();
 
-		CraftPotionForEffect($item[oil of slipperiness], $item[jumbo olive], false, $effect[Slippery Oiliness]);
+		CraftPotionForEffect($item[oil of slipperiness], $item[jumbo olive], false, $effect[Slippery Oiliness], true);
 
 		if ($effect[Slippery Oiliness].have_effect() <= 0)
 		{
@@ -2562,9 +2693,9 @@ void DoQuest3()
 
 		SweetSynthesisEffect(3); // myst
 
-		CraftPotionForEffect($item[Hawking's Elixir of Brilliance], $item[tangerine], true, $effect[On the Shoulders of Giants]);
-		CraftPotionForEffect($item[ointment of the occult], $item[grapefruit], false, $effect[Mystically Oiled]);
-		CraftPotionForEffect($item[tomato juice of powerful power], $item[tomato], false, $effect[Tomato Power]);
+		CraftPotionForEffect($item[Hawking's Elixir of Brilliance], $item[tangerine], true, $effect[On the Shoulders of Giants], true);
+		CraftPotionForEffect($item[ointment of the occult], $item[grapefruit], false, $effect[Mystically Oiled], true);
+		CraftPotionForEffect($item[tomato juice of powerful power], $item[tomato], false, $effect[Tomato Power], true);
 
 		if (get_property("_daycareSpa") == "false")
 			cli_execute("daycare mysticality");
@@ -2613,8 +2744,8 @@ void DoQuest4()
 
 		SweetSynthesisEffect(4); // moxie
 
-		CraftPotionForEffect($item[Connery's Elixir of Audacity], $item[cocktail onion], true, $effect[Cock of the Walk]);
-		CraftPotionForEffect($item[serum of sarcasm], $item[olive], false, $effect[Superhuman Sarcasm]);
+		CraftPotionForEffect($item[Connery's Elixir of Audacity], $item[cocktail onion], true, $effect[Cock of the Walk], true);
+		CraftPotionForEffect($item[serum of sarcasm], $item[olive], false, $effect[Superhuman Sarcasm], true);
 
 		CastGiantGrowth(true);
 		CurePoison();
@@ -2644,22 +2775,27 @@ void DoQuest5()
 			{
 				visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=03&clip2=03&clip3=03&pwd");
 				//$familiar[Cornbeefadon].use_familiar(); // for amulet coin
-				$familiar[Mu].use_familiar(); // for shell
+				$familiar[Mu].use_familiar(); // for luck incense
 				use(1, $item[box of Familiar Jacks]);
 			}
-		}
-		if (!HaveItem($item[rope]))
-		{
-			cli_execute("cheat rope");
 		}
 		if ($effect[Meteor Showered].have_effect() <= 0)
 		{
 			// to get ghostly reins, but don't want to waste meteor showered, which always disappears at end of combat
 			FightGhost();
 		}
-		$slot[weapon].equip($item[rope]);
+		$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
+		string page = visit_url("main.php?action=may4");
+                if (page.contains_text("Empathy Chip"))
+			visit_url("choice.php?whichchoice=1386&option=4"); // +10 familiar weight
 		if (HaveItem($item[ghostly reins]))
 			$slot[off-hand].equip($item[ghostly reins]);
+		else
+		{
+			if (!HaveItem($item[rope]))
+				cli_execute("cheat rope");
+			$slot[off-hand].equip($item[rope]);
+		}
 		$slot[acc3].equip($item[Brutal brogues]);
 
 		UseSkillForEffect($skill[Empathy of the Newt], $effect[Empathy]);
@@ -2678,6 +2814,7 @@ void DoQuest5()
 		while ($item[Ghost Dog Chow].item_amount() > 0)
 			use(1, $item[Ghost Dog Chow]);
 		$slot[familiar].equip(HaveSize10FamEqp()); // add 10 pounds
+		SaberBuff();
 		DoQuest(5, 41); // familiar weight
 		ChooseFamiliar();
 	}
@@ -2702,16 +2839,17 @@ void DoQuest6()
 		UseSkillForEffect($skill[Blood Frenzy], $effect[Frenzied, Bloody]);
 		UseItemForEffect($item[LOV Elixir #3], $effect[The Power of LOV]);
 		UseItemForEffect($item[Gene Tonic: Beast], $effect[Human-Beast Hybrid]);
-		if ($item[intimidating chainsaw].HaveItem())
-			$slot[weapon].equip($item[intimidating chainsaw]);
-		else
-			FoldGarbage($item[broken champagne bottle], $slot[weapon]);
 
+		SaberBuff();
 		if ($effect[Bow-Legged Swagger].have_effect() == 0)
 		{
 			ChateauRest(100);
 			UseSkillForEffect($skill[Bow-Legged Swagger], $effect[Bow-Legged Swagger]);
 		}
+		if ($item[intimidating chainsaw].HaveItem())
+			$slot[weapon].equip($item[intimidating chainsaw]);
+		else
+			FoldGarbage($item[broken champagne bottle], $slot[weapon]);
 
 		DoQuest(6, 47); // weapon damage, not many options to improve
 	}
@@ -2731,6 +2869,7 @@ void DoQuest7()
 		UseSkillForEffect($skill[Carol of the Hells], $effect[Carol of the Hells]);
 		ChateauRest(100);
 		UseSkillForEffect($skill[Bend Hell], $effect[Bendin' Hell]);
+		SaberBuff();
 		DoQuest(7, 56); // (+spell damage)
 	}
 }
@@ -2755,6 +2894,7 @@ void DoQuest8()
 }
 void DoQuest9()
 {
+	// todo: maybe kgb buff hunting
 	if (!completedQuests[9])
 	{
 		if ($item[Dinsey whinskey].item_amount() == 0
@@ -2785,8 +2925,8 @@ void DoQuest9()
 			FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
 			$slot[back].equip($item[vampyric cloake]);
 			$slot[off-hand].equip($item[latte lovers member's mug]);
-			string page = visit_url($location[The Haunted Kitchen].to_url());
 			$familiar[Ms. Puck Man].use_familiar();
+			string page = visit_url($location[The Haunted Kitchen].to_url());
 			run_combat("Filter_CloakeBatForm");
 		}
 		FoldGarbage($item[wad of used tape], $slot[hat]);
@@ -2795,11 +2935,22 @@ void DoQuest9()
 			$familiar[trick-or-treating tot].use_familiar();
 			$slot[familiar].equip($item[li'l ninja costume]);
 		}
+		else if ($item[luck incense].HaveItem())
+		{
+			$slot[familiar].equip($item[luck incense]);
+		}
 		$slot[off-hand].equip($item[A Light that Never Goes Out]);
 		if ($item[fancy party pants].HaveItem())
 			$slot[pants].equip($item[fancy party pants]);
 		else
 			$slot[pants].equip($item[Vicar's Tutu]);
+		if ($item[Source essence].item_amount() > 100 && !$item[Source shades].HaveItem()
+			&& get_property("_sourceTerminalExtrudes").to_int() < 3)
+		{
+			cli_execute("terminal extrude goggles");
+		}
+		if ($item[Source shades].item_amount() > 0)
+			$slot[acc1].equip($item[Source shades]);
 		$slot[acc2].equip($item[gold detective badge]);
 		$slot[acc3].equip($item[your cowboy boots]);
 		SweetSynthesisEffect(9); // item drop
@@ -2812,6 +2963,7 @@ void DoQuest9()
 			EnsureMP(100);
 			use_skill(1, $skill[Steely-Eyed Squint]);
 		}
+		ChewForEffect($item[stench jelly], $effect[Stench Jellied]);
 		DoQuest(9, 1); // (item/booze drops)
 	}
 }
@@ -2819,11 +2971,7 @@ void DoQuest10()
 {
 	if (!completedQuests[10])
 	{
-		$familiar[Trick-or-Treating Tot].use_familiar();
-		if (!HaveItem($item[li'l candy corn costume]) && my_meat() >= 1000)
-			buy(1, $item[li'l candy corn costume]);
-		if ($item[li'l candy corn costume].item_amount() > 0)
-			$slot[familiar].equip($item[li'l candy corn costume]);
+		string page;
 		if (get_property("spacegateVaccine") != "true")
 			cli_execute("spacegate vaccine 1"); // +resist
 		if ($effect[Misty Form].have_effect() == 0)
@@ -2831,8 +2979,8 @@ void DoQuest10()
 			FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
 			$slot[back].equip($item[vampyric cloake]);
 			$slot[off-hand].equip($item[latte lovers member's mug]);
-			string page = visit_url($location[The Haunted Kitchen].to_url());
 			$familiar[Ms. Puck Man].use_familiar();
+			page = visit_url($location[The Haunted Kitchen].to_url());
 			run_combat("Filter_CloakeMistForm");
 		}
 		$slot[off-hand].equip($item[latte lovers member's mug]);
@@ -2886,17 +3034,28 @@ void DoQuest10()
 			cli_execute("latte refill chili pumpkin cinnamon");
 		}
 		$slot[back].equip($item[burning cape]);
+		$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
+		page = visit_url("main.php?action=may4");
+                if (page.contains_text("Force Resistance Multiplier"))
+			visit_url("choice.php?whichchoice=1386&option=3"); // +3 resist
+		$familiar[Trick-or-Treating Tot].use_familiar();
+		if (!HaveItem($item[li'l candy corn costume]) && my_meat() >= 1000)
+			buy(1, $item[li'l candy corn costume]);
+		if ($item[li'l candy corn costume].item_amount() > 0)
+			$slot[familiar].equip($item[li'l candy corn costume]);
 
 		if (get_property("_mayoTankSoaked") != "true" && get_campground() contains $item[portable Mayo Clinic])
 			visit_url("shop.php?action=bacta&whichshop=mayoclinic");
 		UseSkillForEffect($skill[Elemental Saucesphere], $effect[Elemental Saucesphere]);
 		UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
 		UseItemForEffect($item[hot powder], $effect[Flame-Retardant Trousers]);
+		CraftPotionForEffect($item[lotion of stench], $item[stench powder], false, $effect[Stinky Hands], false);
+		CraftPotionForEffect($item[lotion of sleaziness], $item[sleaze powder], false, $effect[Sleazy Hands], false);
 		UseItemForEffect($item[Gene Tonic: Elemental], $effect[Human-Elemental Hybrid]);
 		cli_execute("Briefcase enchantment hot");
 		// pale horse?  500 meat to switch
 		SweetSynthesisEffect(10); // hot resist
-		DoQuest(10, 7); // (+hot resist)
+		DoQuest(10, 5); // (+hot resist)
 	}
 }
 void DoQuest11()
@@ -3202,7 +3361,7 @@ void Day1()
 	FightTentacle();
 	GetBarfGarbage();
 	FightWanderers(true);
-	StealVolcanoGear();
+	//StealVolcanoGear(); // replaced by "Use the force"
 	// any other fights to handle before burning buffs to quest 7?
 	Day1DrinkAndSpleen(false);
 	DoQuest7(); // spell damage

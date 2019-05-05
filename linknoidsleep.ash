@@ -14,53 +14,42 @@ item thanks9 = $item[warm gravy];
 item cashew = $item[cashew];
 item cornucopia = $item[cornucopia];
 item pokeGarden = $item[packet of tall grass seeds];
-item fertilizer = $item[Poké-Gro fertilizer];
+item fertilizer = $item[Pok&eacute;-Gro fertilizer];
 item thanksGarden = $item[packet of thanksgarden seeds];
 item Xtattoo = $item[temporary X tattoos];
 effect straightEdge = $effect[Straight-Edgy];
 item skeletonX = $item[X];
 
-    int LastIndexOf(string page, string match, int beforeIndex) // this doesn't appear to be part of the ASH standard API, not sure why
-    {
-        int ix = page.index_of(match);
-        int result = -1;
-        while (ix < beforeIndex && ix >= 0)
-        {
-            result = ix;
-            ix = page.index_of(match, ix + 1);
-        }
-        return result;
-    }
-    int FindVariableChoice(string page, string match, boolean matchTextIsButtonText)
-    {
-        int ix = page.index_of(match);
-        if (ix <= 0)
-            return -1;
+int FindVariableChoice(string page, string match, boolean matchTextIsButtonText)
+{
+	int ix = page.index_of(match);
+	if (ix <= 0)
+		return -1;
 
-        string optionSearch = "<input type=hidden name=option value=";
-        if (matchTextIsButtonText) // the name=option value=1 comes before the button text
-            ix = LastIndexOf(page, optionSearch, ix);
-        else // otherwise we found a prefix with that text
-            ix = page.index_of(optionSearch, ix);
-        if (ix <= 0)
-            return -1;
-        ix += optionSearch.length();
+	string optionSearch = "<input type=hidden name=option value=";
+	if (matchTextIsButtonText) // the name=option value=1 comes before the button text
+		ix = last_index_of(page, optionSearch, ix);
+	else // otherwise we found a prefix with that text
+		ix = page.index_of(optionSearch, ix);
+	if (ix <= 0)
+		return -1;
+	ix += optionSearch.length();
 
-        string choice = page.substring(ix, ix + 2); // allow up to 99 options
-        choice = choice.replace_string(">", "").replace_string("/", "").replace_string(" ", ""); // strip off extra invalid character
-        return choice.to_int();
-    }
-    string PushChoiceAdventureButton(string buttonText, string page)
-    {
-        int ix = FindVariableChoice(page, buttonText, true);
-        if (ix < 0)
+	string choice = page.substring(ix, ix + 2); // allow up to 99 options
+	choice = choice.replace_string(">", "").replace_string("/", "").replace_string(" ", ""); // strip off extra invalid character
+	return choice.to_int();
+}
+string PushChoiceAdventureButton(string buttonText, string page)
+{
+	int ix = FindVariableChoice(page, buttonText, true);
+	if (ix < 0)
 	{
 print("Could not find " + buttonText + " in " + page);
 abort();
-            return "";
+		return "";
 	}
-        return run_choice(ix);
-    }
+	return run_choice(ix);
+}
 
 
 
@@ -145,12 +134,31 @@ void UseReplicator()
 	}
 }
 
+void MakeMagicalSausages()
+{
+	if (my_meat() < 200)
+		return;
+		
+	int maxMakeAmount = $item[magical sausage casing].item_amount();
+	if (maxMakeAmount > 23) // most you can eat in a day
+		maxMakeAmount = 23;
+	if (my_meat() < 100000 && maxMakeAmount > 5) // in case we're really poor at the moment
+		maxMakeAmount = 5;
+	if (my_meat() < 5000 && maxMakeAmount > 1) // in case we're in run with no meat
+		maxMakeAmount = 1;
+	int makeAmount = maxMakeAmount - get_property("_sausagesMade").to_int();
+	if (makeAmount <= 0)
+		return;
+	cli_execute("create " + makeAmount + " magical sausage");
+}
+
 // todo:
 // check free kills first
 // lynyrd snares
 
 void main()
 {
+	MakeMagicalSausages();
 	if (!user_confirm("Ready for overdrinking?"))
 		return;
 	if (stooper.have_familiar() && my_familiar() != stooper)
@@ -185,15 +193,16 @@ void main()
 		{
 			cli_execute("barrelprayer buff");
 		}
-		OdeUp(remainingDrunk + 10);
 		while (inebriety_limit() > my_inebriety())
 		{
+			OdeUp(1);
 			drink(1, elemCaip);
 		}
 		if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
 		{
 			pinkyRing.to_slot().equip(pinkyRing);
 		}
+		OdeUp(10);
 		drink(1, wineBucket);
 	}
 	outfit("sleep");
