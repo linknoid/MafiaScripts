@@ -30,6 +30,7 @@ boolean canSteal;
 boolean canDNA;
 boolean canDisintegrate;
 boolean canPortscan;
+boolean usedForce;
 int portscanCounter;
 int ghostShot;
 
@@ -150,7 +151,8 @@ void DoDrink(item i, int count)
 
 void OpenToys()
 {
-	foreach i in $items[ Gathered Meat-Clip, normal barrel, moist barrel, weathered barrel, rotting barrel, little firkin,
+	foreach i in $items[ Gathered Meat-Clip,
+		normal barrel, moist barrel, weathered barrel, rotting barrel, little firkin, dusty barrel,
 		unremarkable duffel bag, van key ]
 	{
 		while (i.item_amount() > 0)
@@ -217,15 +219,20 @@ boolean FuelAsdonMartin(int amount)
 	//print (page);
 	foreach i in $items[ elven hardtack, elven squeeze, Mad Train wine, Middle of the Road&trade; brand whiskey,
 		PB&J with the crusts cut off, shot of orange schnapps, shot of grapefruit schnapps, black forest cake,
-		bean burrito, jumping bean burrito, spicy bean burrito, bat wing kabob, bilge wine, strawberry daiquiri,
+		bean burrito, jumping bean burrito, enchanted bean burrito,
+		spicy bean burrito, spicy jumping bean burrito, spicy enchanted bean burrito,
+		insanely spicy bean burrito, insanely spicy jumping bean burrito, insanely spicy enchanted bean burrito,
+		bat wing kabob, bilge wine, strawberry daiquiri,
 		tequila sunrise, vodka martini, fine wine, ice-cold Sir Schlitz, margarita, martini, skewered cat appendix,
 		mineapple, extra-flat panini, barrel cracker, goat cheese taco, P.B.L.T., giant heirloom grape tomato,
-		carob chunks, premium malt liquor, roll in the hay, pink pony, overcookie, enchanted bean burrito,
+		carob chunks, premium malt liquor, roll in the hay, pink pony, overcookie, 
 		slap and tickle, extra-spicy bloody mary, open sauce, vodka and cranberry, snifter of thoroughly aged brandy,
 		smelted roe, philosopher's scone, tofu casserole, monkey wrench, moonberry wine cooler, salty dog, screwdriver,
 		tomato daiquiri, a little sump'm sump'm, Mon Tiki, dusty bottle of Port, plain old beer, whiskey and soda,
 		antique packet of ketchup, dusty bottle of Muscat, shot of tomato schnapps, slip 'n' slide, electric snakebite,
-		dusty bottle of Zinfandel, mini-martini, bear claw, fruitcake, calle de miel ]
+		dusty bottle of Zinfandel, mini-martini, bear claw, fruitcake, calle de miel, pr0n cocktail, bag of GORP,
+		Trollhouse cookies, stuffed spooky mushroom, Gold Velvet&trade; whiskey, water purification pills,
+		bottle of Amontillado, pigeon egg, rockin' wagon, white lightning, CSA scoutmaster's &quot;water&quot;, asbestos thermos ]
 	{
 		if (get_fuel() >= amount)
 			return true;
@@ -855,6 +862,33 @@ string Filter_LOVTunnel(int round, monster mon, string page)
 	return "";
 }
 
+string Filter_Ninja(int round, monster mon, string page)
+{
+	if (can_still_steal())
+		return "\"pickpocket\"";
+	if (mon == $monster[ancient insane monk])
+	{
+		return "skill " + $skill[Reflex Hammer]; // doctor bag banish
+	}
+	else if (mon == $monster[Ferocious bugbear])
+	{
+		return "item " + $item[Louder Than Bomb]; // smithness banish
+	}
+	else if (mon == $monster[gelatinous cube])
+	{
+		return "skill " + $skill[Snokebomb];
+	}
+	else if (mon == $monster[Knob Goblin poseur])
+	{
+		return "skill " + $skill[Macrometeorite];
+	}
+	else if (mon == $monster[amateur ninja])
+	{
+		return "skill " + $skill[Chest X-Ray]; // doctor bag free kill
+	}
+	print("Unexpected combat in haiku dungeon: " + mon, "red");
+	return "abort";
+}
 string Filter_Ghost(int round, monster mon, string page)
 {
 	if (canExtract)
@@ -1136,6 +1170,17 @@ string Filter_Volcano(int round, monster mon, string page)
 
 string Filter_Hippy(int round, monster mon, string page)
 {
+	if (!usedForce && $item[Fourth of May Cosplay Saber].have_equipped())
+	{
+		usedForce = visit_url("fight.php?action=skill&whichskill=7311").contains_text("You will drop your things and walk away.");
+		//return "skill Use the Force, " + my_name() + "!";
+	}
+	if (usedForce)
+	{
+		visit_url("choice.php?whichchoice=1387&option=3"); // "You will drop your things and walk away."
+		visit_url("fight.php"); // make KoLMafia recognize that we're no longer in a fight
+		return "";
+	}
 	if (get_property("_missileLauncherUsed") == "false"
 		&& get_fuel() >= 100) 
 	{
@@ -1339,6 +1384,7 @@ void GearForCombat()
 	UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
 	UseSkillForEffect($skill[Inscrutable Gaze], $effect[Inscrutable Gaze]);
 	UseSkillForEffect($skill[Aloysius' Antiphon of Aptitude], $effect[Aloysius' Antiphon of Aptitude]);
+	UseSkillForEffect($skill[Ruthless Efficiency], $effect[Ruthlessly Efficient]);
 }
 
 void BuffStatGain()
@@ -1350,6 +1396,28 @@ void BuffStatGain()
 	UseItemForEffect($item[resolution: be stronger], $effect[Strong Resolve]);
 	UseItemForEffect($item[pressurized potion of proficiency], $effect[Proficient Pressure]);
 	UseSkillForEffect($skill[Carol of the Thrills], $effect[Carol of the Thrills]);
+}
+void GetCowrruption()
+{
+	string page = visit_url("place.php?whichplace=town_right&action=townright_ltt");
+	if ($item[cow poker].item_amount() == 0)
+	{
+		if (page.contains_text("Missing: Fancy Man"))
+		{
+		}
+		else if (page.contains_text("Help! Desperados!"))
+		{
+		}
+		else if (page.contains_text("Big Gambling Tournament Announced"))
+		{
+		}
+		else if (page.contains_text("Sheriff Wanted"))
+		{
+		}
+		else if (page.contains_text("Madness at the Mine"))
+		{
+		}
+	}
 }
 
 void UnlockGuildAndForest()
@@ -1488,6 +1556,7 @@ void UnlockHippyStore()
 		FoldGarbage($item[wad of used tape], $slot[hat]);
 		$slot[acc2].equip($item[gold detective badge]);
 		$slot[acc3].equip($item[your cowboy boots]);
+		$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
 		ChooseFamiliar();
 		ResetCombatState();
 		canDisintegrate = $effect[Everything Looks Yellow].have_effect() <= 0;
@@ -1498,6 +1567,7 @@ void UnlockHippyStore()
 			string page = visit_url($location[Hippy Camp].to_url());
 			if (page.contains_text("You're fighting"))
 			{
+				usedForce = false;
 				run_combat("Filter_Hippy");
 				if (my_turnCount() >= portscanCounter)
 					break;
@@ -1626,6 +1696,7 @@ void RunNeverendingParty(int freeTurnCount)
 		if (usedTurns == 0 && prop != "0")
 			abort("Missing KoLMafia property _neverendingPartyFreeTurns");
 
+		ChooseFamiliar();
 		UseSkillForEffect($skill[The Polka of Plenty], $effect[Polka of Plenty]);
 		GearForCombat();
 		RecoverHPorMP(false);
@@ -1773,6 +1844,40 @@ void FaxNinja()
 	ResetCombatState();
 	visit_url("inv_use.php?whichitem=" + $item[photocopied monster].to_int());
 	run_combat("Filter_Standard");
+}
+void FreeKillNinja()
+{
+	if ($item[li'l ninja costume].HaveItem())
+		return;
+	if ($item[Louder Than Bomb].item_amount() == 0 && $item[handful of Smithereens].item_amount() > 1)
+	{
+		buy(1, $item[Ben-Gal&trade; Balm]);
+		craft("combine", 1, $item[Ben-Gal&trade; Balm], $item[handful of Smithereens]);
+	}
+	$slot[acc2].equip($item[Lil' Doctor&trade; bag]);
+	RecoverHPorMP(false);
+	ChateauRest(50);
+	
+	for (int i = 0; i < 10; i++) // if we haven't found it in 10, we have a problem
+	{
+		ChooseFamiliar();
+		if ($item[li'l ninja costume].HaveItem())
+			return;
+		string page = visit_url($location[The Haiku Dungeon].to_url());
+		if (page.contains_text("Gravy Fairy Ring"))
+		{
+			run_choice(3); // Leave the ring alone
+		}
+		else if (page.contains_text("fight.php"))
+		{
+			run_combat("Filter_Ninja");
+		}
+		else
+		{
+			print(page);
+			abort("Unexpected haiku adventure");
+		}
+	}
 }
 
 void PrepForDuplicateYellowRay()
@@ -2029,6 +2134,7 @@ void CastGiantGrowth(boolean WithMightyShout) // can only be cast in combat, wit
 	location loc = $location[The Haunted Kitchen];
 	if (WithMightyShout)
 		loc = $location[The Jungles of Ancient Loathing];
+	ChooseFamiliar();
 
 	while (true)
 	{
@@ -2402,7 +2508,6 @@ void StealVolcanoGear()
 
 boolean banished;
 boolean turboed;
-boolean usedForce;
 string Filter_Saber(int round, monster mon, string page)
 {
 	if (can_still_steal())
@@ -2594,20 +2699,20 @@ void DoSleep()
 	if (!$item[li'l unicorn costume].HaveItem())
 		buy(1, $item[li'l unicorn costume]);
 	$slot[familiar].equip($item[li'l unicorn costume]);
-	if (!user_confirm("Are you ready for final combat of the day? (this will log out off in the middle of combat)"))
-		return;
-	if (get_property("_clanFortuneConsultUses").to_int() < 3)
-		if (!user_confirm("Do you want to sleep without consulting the fortune teller?"))
-			return;
+	//if (!user_confirm("Are you ready for final combat of the day? (this will log out off in the middle of combat)"))
+	//	return;
+	//if (get_property("_clanFortuneConsultUses").to_int() < 3)
+	//	if (!user_confirm("Do you want to sleep without consulting the fortune teller?"))
+	//		return;
 	FoldGarbage($item[deceased crimbo tree], $slot[none]); // put away garbage shirt so it starts fresh tomorrow
 
 	// end day with time spinner fight after drunk and cast meteor shower, and then logout
-	string pageText = visit_url("inv_use.php?whichitem=9104");
-	pageText = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1195&option=3");
-	if (pageText.contains_text("You're fighting"))
-	{
-		run_combat("Filter_MeteorAndExit");
-	}
+	//string pageText = visit_url("inv_use.php?whichitem=9104");
+	//pageText = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=1195&option=3");
+	//if (pageText.contains_text("You're fighting"))
+	//{
+	//	run_combat("Filter_MeteorAndExit");
+	//}
 
 }
 
@@ -2635,6 +2740,8 @@ void DoQuest1()
 		$slot[off-hand].equip($item[A Light that Never Goes Out]);
 		$slot[pants].equip($item[pantogram pants]);
 		$slot[acc3].equip($item[Brutal Brogues]);
+		$familiar[Disembodied Hand].use_familiar();
+		$slot[familiar].equip($item[Fourth of May Cosplay Saber]);
 		CurePoison();
 		DoQuest(1, 1); // Bonus HP
 
@@ -2677,6 +2784,8 @@ void DoQuest2()
 			//  from myst quest.  A 37 turn saving is worth 1 wish.
 			cli_execute("genie wish to be Slippery Oiliness");
 		}
+		$familiar[Disembodied Hand].use_familiar();
+		$slot[familiar].equip($item[Fourth of May Cosplay Saber]);
 		DoQuest(2, 1); // Bonus Muscle
 	}
 }
@@ -2714,6 +2823,8 @@ void DoQuest3()
 			$slot[acc3].equip($item[training legwarmers]);
 
 		UseSkillForEffect($skill[Quiet Judgement], $effect[Quiet Judgement]);
+		$familiar[Disembodied Hand].use_familiar();
+		$slot[familiar].equip($item[Fourth of May Cosplay Saber]);
 		DoQuest(3, 1); // Bonus Myst
 	}
 }
@@ -2761,6 +2872,8 @@ void DoQuest4()
 		if ($item[noticeable pumps].HaveItem())
 			$slot[acc2].equip($item[noticeable pumps]);
 		$slot[acc3].equip($item[your cowboy boots]);
+		$familiar[Disembodied Hand].use_familiar();
+		$slot[familiar].equip($item[Fourth of May Cosplay Saber]);
 		DoQuest(4, 1); // Bonus Moxie
 	}
 }
@@ -2779,7 +2892,7 @@ void DoQuest5()
 				use(1, $item[box of Familiar Jacks]);
 			}
 		}
-		if ($effect[Meteor Showered].have_effect() <= 0)
+		//if ($effect[Meteor Showered].have_effect() <= 0) // we can re-get Meteor Showered now, no need to preserve from rollover
 		{
 			// to get ghostly reins, but don't want to waste meteor showered, which always disappears at end of combat
 			FightGhost();
@@ -2886,10 +2999,15 @@ void DoQuest8()
 		$slot[back].equip($item[protonic accelerator pack]);
 		$slot[pants].equip($item[pantogram pants]);
 
-		AsdonMartin($effect[Driving Stealthily]);
+		int expectedTurns = 39;
+		if (get_campground() contains $item[Asdon Martin keyfob])
+		{
+			AsdonMartin($effect[Driving Stealthily]);
+			expectedTurns -= 6;
+		}
 
 		// try to intergnat "Rational Thought"
-		DoQuest(8, 33); // (-combat)
+		DoQuest(8, expectedTurns); // (-combat)
 	}
 }
 void DoQuest9()
@@ -3184,6 +3302,10 @@ void InitCharacter()
 		use(1, $item[letter from King Ralph XI]);
 		use(1, $item[pork elf goodies sack]);
 	}
+	if ($item[telegram from Lady Spookyraven].item_amount() > 0)
+	{
+		use(1, $item[telegram from Lady Spookyraven]); // normally done by mafia automatically on ascensions, but it's possible for that to fail
+	}
 	if ($item[astral six-pack].item_amount() > 0)
 		use(1, $item[astral six-pack]);
 
@@ -3226,10 +3348,18 @@ void InitCharacter()
 		use(1, $item[Dramatic&trade; range]);
 	}
 
+	if (!$item[continuum transfunctioner].HaveItem())
+	{
+		visit_url("place.php?whichplace=forestvillage&action=fv_mystic");
+		run_choice(1); // Sure, old man.  Tell me all about it.
+		run_choice(1); // Against my better judgement, yes.
+		run_choice(1); // Er, sure, I guess so...
+	}
+
 	if (!HaveItem($item[Shakespeare's Sister's Accordion]))
 	{
 		use_skill(2, $skill[Summon Smithsness]);
-		visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=04&clip2=04&clip3=04&pwd");
+		visit_url("campground.php?action=bookshelf&preaction=combinecliparts&clip1=04&clip2=04&clip3=04&pwd"); // bucket of wine
 		create(1, $item[Shakespeare's Sister's Accordion]);
 		if ($item[maiden wig].item_amount() == 0)
 			buy(1, $item[maiden wig]);
@@ -3343,12 +3473,12 @@ void Day1()
 	ChallengeGodLobster(2, 2);
 
 	GetNeverendingPartyBuff();
-	RunNeverendingParty(10);
-
 	while ( RunSnojo() )
 	{
 		MakeGovernmentCheese();
 	}
+	RunNeverendingParty(10);
+
 	FightChateauPainting();
 
 	FightWitchessBishop(1, true);
@@ -3367,7 +3497,6 @@ void Day1()
 	DoQuest7(); // spell damage
 	FightWanderers(true);
 	DoQuest6(); // weapon damage
-	
 
 
 	FightWanderers(true);
@@ -3469,6 +3598,7 @@ void Day2()
 	while ( RunSnojo() ) { }
 	RunGingerbread();
 	GrabPirateDNA();
+	FreeKillNinja();
 	//FaxNinja();
 	//FightWitchessBishop(2, false);
 	//FightWitchessBishop(3, false);
