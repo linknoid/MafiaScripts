@@ -297,7 +297,7 @@ int[item] bunkerItems =
 	$item[New Age healing crystal] : 5 , // from mining
 	$item[SMOOCH bottlecap] : 1 ,        // from SMOOCH HQ
 	$item[gooey lava globs] : 5 ,        // from golem in factory
-	$item[SMOOCH bracers] : 5 ,          // craft from superheated metal
+	$item[SMOOCH bracers] : 3 ,          // craft from superheated metal
 	$item[fused fuse] : 1 ,              // easy to get from non-combat
 	$item[smooth velvet bra] : 3 ,       // craft from velvet
 	$item[Lavalos core] : 1 ,

@@ -157,32 +157,11 @@ void ReadSettings()
 }
 
 
-    slot ToSlot(string s)
-    {
-        slot result = s.to_slot();
-        if (result.to_string() != s)
-            abort("Illegal slot " + s);
-        return result;
-    }
     item ToItem(string s)
     {
         item result = s.to_item();
         if (result.to_int() < 0)
             abort("Illegal item " + s);
-        return result;
-    }
-    skill ToSkill(string s)
-    {
-        skill result = s.to_skill();
-        if (result.to_int() < 0)
-            abort("Illegal skill " + s);
-        return result;
-    }
-    location ToLocation(string s)
-    {
-        location result = s.to_location();
-        if (result.to_string() != s)
-            abort("Illegal location " + s);
         return result;
     }
     effect ToEffect(string s)
@@ -192,13 +171,6 @@ void ReadSettings()
             abort("Illegal effect " + s);
         return result;
     }
-    familiar ToFamiliar(string s)
-    {
-        familiar result = s.to_familiar();
-        if (result.to_int() < 0)
-            abort("Illegal familiar " + s);
-        return result;
-    }
     thrall ToThrall(string s)
     {
         thrall result = s.to_thrall();
@@ -206,144 +178,131 @@ void ReadSettings()
             abort("Illegal thrall " + s);
         return result;
     }
-    monster ToMonster(string s)
-    {
-        monster result = s.to_monster();
-        if (result.to_string() != s)
-            abort("Illegal monster " + s);
-        return result;
-    }
-    stat ToStat(string s)
-    {
-        stat result = s.to_stat();
-        if (result.to_string() != s)
-            abort("Illegal stat " + s);
-        return result;
-    }
 
-    stat muscle = ToStat("Muscle");
-    stat mysticality = ToStat("Mysticality");
-    stat moxie = ToStat("Moxie");
+    stat muscle = $stat[Muscle];
+    stat mysticality = $stat[Mysticality];
+    stat moxie = $stat[Moxie];
 
-    slot head = ToSlot("hat");
-    slot back = ToSlot("back");
-    slot shirt = ToSlot("shirt");
-    slot weapon = ToSlot("weapon");
-    slot offhand = ToSlot("off-hand");
-    slot pants = ToSlot("pants");
-    slot acc1 = ToSlot("acc1");
-    slot acc2 = ToSlot("acc2");
-    slot acc3 = ToSlot("acc3");
+    slot head = $slot[hat];
+    slot back = $slot[back];
+    slot shirt = $slot[shirt];
+    slot weapon = $slot[weapon];
+    slot offhand = $slot[off-hand];
+    slot pants = $slot[pants];
+    slot acc1 = $slot[acc1];
+    slot acc2 = $slot[acc2];
+    slot acc3 = $slot[acc3];
     int[slot] outfitSlots = { head:1, back:2, shirt:3, weapon:4, offhand:5, pants:6, acc1:7, acc2:8, acc3:9 };
-    slot famEqp = ToSlot("familiar");
-    slot sticker1 = ToSlot("sticker1");
-    slot sticker2 = ToSlot("sticker2");
-    slot sticker3 = ToSlot("sticker3");
+    slot famEqp = $slot[familiar];
+    slot sticker1 = $slot[sticker1];
+    slot sticker2 = $slot[sticker2];
+    slot sticker3 = $slot[sticker3];
 
-    item noItem = "none".to_item();
-    location noLocation = "none".to_location();
-    familiar noFamiliar = "none".to_familiar();
+    item noItem = $item[none];
+    location noLocation = $location[none];
+    familiar noFamiliar = $familiar[none];
 
 // getting access to dinsey
-    item dayPass = ToItem("one-day ticket to Dinseylandfill");
+    item dayPass = $item[one-day ticket to Dinseylandfill];
 
 // campground items
-    item witchess = ToItem("Witchess Set");
-    monster witchessKnight = ToMonster("Witchess Knight");
-    item terminal = ToItem("Source terminal");
-    item mayoClinic = ToItem("portable Mayo Clinic");
-    item asdonMartin = ToItem("Asdon Martin keyfob");
-    item oven = ToItem("warbear induction oven");
-    effect observantly = ToEffect("Driving Observantly");
-    item pieFuel = ToItem("pie man was not meant to eat");
-    item water = to_item("soda water"); // food for adsonMartin
-    item dough = to_item("wad of dough"); // food for adsonMartin
-    item breadFuel = ToItem("loaf of soda bread");
-    item sphygmayo = ToItem("sphygmayomanometer");
+    item witchess = $item[Witchess Set];
+    monster witchessKnight = $monster[Witchess Knight];
+    item terminal = $item[Source terminal];
+    item mayoClinic = $item[portable Mayo Clinic];
+    item asdonMartin = $item[Asdon Martin keyfob];
+    item oven = $item[warbear induction oven];
+    effect observantly = $effect[Driving Observantly];
+    item pieFuel = $item[pie man was not meant to eat];
+    item water = $item[soda water]; // food for adsonMartin
+    item dough = $item[wad of dough]; // food for adsonMartin
+    item breadFuel = $item[loaf of soda bread];
+    item sphygmayo = $item[sphygmayomanometer];
 
 // garden
-    item pokeGarden = ToItem("packet of tall grass seeds");
-    //item fertilizer = ToItem("Pok�-Gro fertilizer");
-    item fertilizer = ToItem("Poké-Gro fertilizer");
-    item thanksGarden = ToItem("packet of thanksgarden seeds");
+    item pokeGarden = $item[packet of tall grass seeds];
+    //item fertilizer = $item[Pok�-Gro fertilizer];
+    //item fertilizer = $item[Poké-Gro fertilizer];
+    item fertilizer = $item[Pok&eacute;-Gro fertilizer];
+    item thanksGarden = $item[packet of thanksgarden seeds];
 
 // LT&T
-    item telegram = ToItem("plaintive telegram");
-    location telegramLoc = ToLocation("Investigating a Plaintive Telegram");
+    item telegram = $item[plaintive telegram];
+    location telegramLoc = $location[Investigating a Plaintive Telegram];
 
 // items for eating
-    item milk = ToItem("milk of magnesium");
-    effect gotmilk = ToEffect("Got Milk");
-    item mayoFullToDrunk = ToItem("Mayodiol"); // 1 full to drunk
-    item mayoIncreaseBuffs = ToItem("Mayozapine"); // double stats
-    item cashew = ToItem("cashew");
-    item cornucopia = ToItem("cornucopia");
-    item horseradish = ToItem("jumping horseradish");
-    item foodCone = ToItem("Dinsey food-cone");
-    item seaTruffle = ToItem("sea truffle");
-    item thanks1 = ToItem("green bean casserole");
-    item thanks2 = ToItem("cranberry cylinder");
-    item thanks3 = ToItem("mashed potatoes");
-    item thanks4 = ToItem("candied sweet potatoes");
-    item thanks5 = ToItem("mince pie");
-    item thanks6 = ToItem("bread roll");
-    item thanks7 = ToItem("baked stuffing");
-    item thanks8 = ToItem("thanksgiving turkey");
-    item thanks9 = ToItem("warm gravy");
-    item distention = ToItem("distention pill");
-    item voraciTea = ToItem("cuppa Voraci tea");
-    item timeSpinner = ToItem("Time Spinner");
+    item milk = $item[milk of magnesium];
+    effect gotmilk = $effect[Got Milk];
+    item mayoFullToDrunk = $item[Mayodiol]; // 1 full to drunk
+    item mayoIncreaseBuffs = $item[Mayozapine]; // double stats
+    item cashew = $item[cashew];
+    item cornucopia = $item[cornucopia];
+    item horseradish = $item[jumping horseradish];
+    item foodCone = $item[Dinsey food-cone];
+    item seaTruffle = $item[sea truffle];
+    item thanks1 = $item[green bean casserole];
+    item thanks2 = $item[cranberry cylinder];
+    item thanks3 = $item[mashed potatoes];
+    item thanks4 = $item[candied sweet potatoes];
+    item thanks5 = $item[mince pie];
+    item thanks6 = $item[bread roll];
+    item thanks7 = $item[baked stuffing];
+    item thanks8 = $item[thanksgiving turkey];
+    item thanks9 = $item[warm gravy];
+    item distention = $item[distention pill];
+    item voraciTea = $item[cuppa Voraci tea];
+    item timeSpinner = $item[Time-Spinner];
 
 // booze to drink
-    item elementalCaip = ToItem("elemental caipiroska"); // cheap and good, from robortender
-    item dirt = ToItem("dirt julep"); // booze from plants with robortender
-    item gingerWine = ToItem("high-end ginger wine"); // from gingertown
-    item turkey = ToItem("Ambitious Turkey"); // from hand turkey
-    item sacramento = ToItem("Sacramento wine"); // from witchess
-    effect sacramentoEffect = ToEffect("Sacré Mental");
-    item hauntedScrewdriver = ToItem("twice-haunted screwdriver"); // from voting ghost
-    item hauntedOrange = ToItem("haunted orange"); // to make screwdriver
-    item hauntedVodka = ToItem("haunted bottle of vodka"); // to make haunted screwdriver
-    item vodka = ToItem("bottle of vodka"); // to make haunted screwdriver
-    item ectoplasm = ToItem("ghostly ectoplasm"); // to make haunted screwdriver
-    effect hauntedLiver = ToEffect("Haunted Liver"); // from any of the haunted items
-    item pinkyRing = ToItem("mafia pinky ring"); // increases adventure yield from wine
-    effect beerPolka = ToEffect("Beer Barrel Polka"); // increases adventure yield for up to 10 drunk, but only once a day
+    item elementalCaip = $item[elemental caipiroska]; // cheap and good, from robortender
+    item dirt = $item[dirt julep]; // booze from plants with robortender
+    item gingerWine = $item[high-end ginger wine]; // from gingertown
+    item turkey = $item[Ambitious Turkey]; // from hand turkey
+    item sacramento = $item[Sacramento wine]; // from witchess
+    effect sacramentoEffect = $effect[Sacr&eacute; Mental];
+    item hauntedScrewdriver = $item[twice-haunted screwdriver]; // from voting ghost
+    item hauntedOrange = $item[haunted orange]; // to make screwdriver
+    item hauntedVodka = $item[haunted bottle of vodka]; // to make haunted screwdriver
+    item vodka = $item[bottle of vodka]; // to make haunted screwdriver
+    item ectoplasm = $item[ghostly ectoplasm]; // to make haunted screwdriver
+    effect hauntedLiver = $effect[Haunted Liver]; // from any of the haunted items
+    item pinkyRing = $item[mafia pinky ring]; // increases adventure yield from wine
+    effect beerPolka = $effect[Beer Barrel Polka]; // increases adventure yield for up to 10 drunk, but only once a day
 
 // spleen items
-    item egg1 = ToItem("black paisley oyster egg");
-    item egg2 = ToItem("black polka-dot oyster egg");
-    item egg3 = ToItem("black striped oyster egg");
-    item mojoFilter = ToItem("mojo filter");
+    item egg1 = $item[black paisley oyster egg];
+    item egg2 = $item[black polka-dot oyster egg];
+    item egg3 = $item[black striped oyster egg];
+    item mojoFilter = $item[mojo filter];
 // Sweet Synthesis
-    item milkStud = ToItem("Milk Studs");
-    item seniorMint = ToItem("Senior Mints");
-    item daffyTaffy = ToItem("Daffy Taffy");
-    item swizzler = ToItem("Swizzler");
+    item milkStud = $item[Milk Studs];
+    item seniorMint = $item[Senior Mints];
+    item daffyTaffy = $item[Daffy Taffy];
+    item swizzler = $item[Swizzler];
 
 // orphan tot
-    familiar orphan = ToFamiliar("Trick-or-Treating Tot");
-    item pirateCostume = ToItem("li'l Pirate Costume");
+    familiar orphan = $familiar[Trick-or-Treating Tot];
+    item pirateCostume = $item[li'l Pirate Costume];
 
 // robortender
-    familiar robort = ToFamiliar("Robortender");
-    item roboItems = ToItem("single entendre");
-    item roboCandy = ToItem("Feliz Navidad");
-    item roboMana = ToItem("hell in a bucket");
-    item roboMeat = ToItem("drive-by shooting");
-    item roboHobo = ToItem("Newark");
-    item peppermintSprig = ToItem("peppermint sprig");
-    item boxedWine = ToItem("boxed wine");
-    item mentholatedWine = ToItem("mentholated wine");
-    item orange = ToItem("orange");
-    monster crayonElf = ToMonster("Black Crayon Crimbo Elf");
-    item cigar = ToItem("exploding cigar");
+    familiar robort = $familiar[Robortender];
+    item roboItems = $item[single entendre];
+    item roboCandy = $item[Feliz Navidad];
+    item roboMana = $item[hell in a bucket];
+    item roboMeat = $item[drive-by shooting];
+    item roboHobo = $item[Newark];
+    item peppermintSprig = $item[peppermint sprig];
+    item boxedWine = $item[boxed wine];
+    item mentholatedWine = $item[mentholated wine];
+    item orange = $item[orange];
+    monster crayonElf = $monster[Black Crayon Crimbo Elf];
+    item cigar = $item[exploding cigar];
 
 // random action familiars that give meat
-    familiar unspeakachu = ToFamiliar("Unspeakachu"); // extends buffs
-    familiar boa = ToFamiliar("Feather Boa Constrictor");
-    familiar npzr = ToFamiliar("Ninja Pirate Zombie Robot");
-    familiar stocking = ToFamiliar("Stocking Mimic");
+    familiar unspeakachu = $familiar[Unspeakachu]; // extends buffs
+    familiar boa = $familiar[Feather Boa Constrictor];
+    familiar npzr = $familiar[Ninja Pirate Zombie Robot];
+    familiar stocking = $familiar[Stocking Mimic];
     familiar[int] freeCombatFamiliars =
     {
 //        0 : unspeakachu, // small chance to increase 1/2 your buffs by 5 turn duration, not sure if this is better or not
@@ -351,216 +310,217 @@ void ReadSettings()
         2 : npzr,
         3 : stocking
     };
-    item loathingLegionEqp = ToItem("Loathing Legion helicopter");
-    skill jingleBells = ToSkill("Jingle Bells");
-    effect jingleBellsEffect = ToEffect("Jingle Jangle Jingle");
-    item dictionary = ToItem("dictionary"); // for burning rounds for familiar to take actions
-    item faxdictionary = ToItem("facsimile dictionary"); // in case you already converted your dictionary
+    item loathingLegionEqp = $item[Loathing Legion helicopter];
+    skill jingleBells = $skill[Jingle Bells];
+    effect jingleBellsEffect = $effect[Jingle Jangle Jingle];
+    item dictionary = $item[dictionary]; // for burning rounds for familiar to take actions
+    item faxdictionary = $item[facsimile dictionary]; // in case you already converted your dictionary
 
 // other familiars of interest
-    familiar sandworm = ToFamiliar("Baby Sandworm");
-    familiar xenomorph = ToFamiliar("Li'l Xenomorph");
-    familiar fistTurkey = ToFamiliar("Fist Turkey");
-    familiar intergnat = ToFamiliar("Intergnat");
-    familiar jellyfish = ToFamiliar("Space Jellyfish");
-    familiar robin = ToFamiliar("Rockin' Robin");
-    familiar stompingBoots = ToFamiliar("Pair of Stomping Boots");
-    familiar bandersnatch = ToFamiliar("Frumious Bandersnatch");
-    familiar obtuseAngel = ToFamiliar("Obtuse Angel");
-    familiar reanimator = ToFamiliar("Reanimated Reanimator");
-    familiar cornbeefadon = ToFamiliar("Cornbeefadon");
+    familiar sandworm = $familiar[Baby Sandworm];
+    familiar xenomorph = $familiar[Li'l Xenomorph];
+    familiar fistTurkey = $familiar[Fist Turkey];
+    familiar intergnat = $familiar[Intergnat];
+    familiar jellyfish = $familiar[Space Jellyfish];
+    familiar robin = $familiar[Rockin' Robin];
+    familiar stompingBoots = $familiar[Pair of Stomping Boots];
+    familiar bandersnatch = $familiar[Frumious Bandersnatch];
+    familiar obtuseAngel = $familiar[Obtuse Angel];
+    familiar reanimator = $familiar[Reanimated Reanimator];
+    familiar cornbeefadon = $familiar[Cornbeefadon];
 
 // Bjorn/crown familiars:
-    item bjorn = ToItem("Buddy Bjorn");
-    item crown = ToItem("Crown of Thrones");
-    familiar leprechaun = ToFamiliar("Leprechaun"); // 20% meat
-    familiar hoboMonkey = ToFamiliar("Hobo Monkey"); // 25% meat
-    familiar goldenMonkey = ToFamiliar("Golden Monkey"); // 25% meat
-    familiar happyMedium = ToFamiliar("Happy Medium"); // 25% meat
-    familiar organGrinder = ToFamiliar("Knob Goblin Organ Grinder"); // 25% meat
-    familiar machineElf = ToFamiliar("Machine Elf"); // drops abstractions
-    familiar garbageFire = ToFamiliar("Garbage Fire"); // drops burning newspaper
-    familiar optimisticCandle = ToFamiliar("Optimistic Candle"); // drops hot wax
-    familiar grimBrother = ToFamiliar("Grim Brother"); // drops grim fairy tales
-    familiar grimstoneGolem = ToFamiliar("Grimstone Golem"); // drops grimstone mask
-    familiar warbearDrone = ToFamiliar("Warbear Drone"); // drops whosits
-    familiar mayoWasp = ToFamiliar("Baby Mayonnaise Wasp"); // +15% myst
-    familiar grue = ToFamiliar("Grue"); // +15% myst
+    item bjorn = $item[Buddy Bjorn];
+    item crown = $item[Crown of Thrones];
+    familiar leprechaun = $familiar[Leprechaun]; // 20% meat
+    familiar hoboMonkey = $familiar[Hobo Monkey]; // 25% meat
+    familiar goldenMonkey = $familiar[Golden Monkey]; // 25% meat
+    familiar happyMedium = $familiar[Happy Medium]; // 25% meat
+    familiar organGrinder = $familiar[Knob Goblin Organ Grinder]; // 25% meat
+    familiar machineElf = $familiar[Machine Elf]; // drops abstractions
+    familiar garbageFire = $familiar[Garbage Fire]; // drops burning newspaper
+    familiar optimisticCandle = $familiar[Optimistic Candle]; // drops hot wax
+    familiar grimBrother = $familiar[Grim Brother]; // drops grim fairy tales
+    familiar grimstoneGolem = $familiar[Grimstone Golem]; // drops grimstone mask
+    familiar warbearDrone = $familiar[Warbear Drone]; // drops whosits
+    familiar mayoWasp = $familiar[Baby Mayonnaise Wasp]; // +15% myst
+    familiar grue = $familiar[Grue]; // +15% myst
 
 
 // familiar equipment
-    item snowSuit = ToItem("Snow Suit"); // 20 pounds, but decreases over the day
-    item petSweater = ToItem("Astral pet sweater"); // 10 pounds, costs 10 karma per ascension
-    item sugarShield = ToItem("sugar shield"); // 10 pounds, breaks after 30 turns
-    item cufflinks = ToItem("recovered cufflinks"); // 6 pounds, requires 400 pound jellyfish
-    item hookah = ToItem("ittah bittah hookah"); // 5 pounds, provides buffs
-    item mayflower = ToItem("Mayflower bouquet"); // 5 pounds, provides drops
-    item moveableFeast = ToItem("moveable feast"); // 5 pounds, provides drops
-    item filthyLeash = ToItem("filthy child leash"); // 5 pounds, deals damage, fallback if nothing else
-    item quakeOfArrows = ToItem("quake of arrows"); // for a cute angel
-    item embalmingFlask = ToItem("flask of embalming fluid"); // for reanimated reanimator
+    item snowSuit = $item[Snow Suit]; // 20 pounds, but decreases over the day
+    item petSweater = $item[Astral pet sweater]; // 10 pounds, costs 10 karma per ascension
+    item sugarShield = $item[sugar shield]; // 10 pounds, breaks after 30 turns
+    item cufflinks = $item[recovered cufflinks]; // 6 pounds, requires 400 pound jellyfish
+    item hookah = $item[ittah bittah hookah]; // 5 pounds, provides buffs
+    item mayflower = $item[Mayflower bouquet]; // 5 pounds, provides drops
+    item moveableFeast = $item[moveable feast]; // 5 pounds, provides drops
+    item filthyLeash = $item[filthy child leash]; // 5 pounds, deals damage, fallback if nothing else
+    item quakeOfArrows = $item[quake of arrows]; // for a cute angel
+    item embalmingFlask = $item[flask of embalming fluid]; // for reanimated reanimator
 // melting familiar gear from pokegarden
-    item pokeEqpBlock = ToItem("razor fang");
-    item pokeEqpMeat = ToItem("amulet coin");
-    item pokeEqpItem = ToItem("luck incense");
-    item pokeEqpDamage = ToItem("muscle band");
-    item pokeEqpHeal = ToItem("shell bell");
-    item pokeEqpRun = ToItem("smoke ball");
-    item familiarJacks = ToItem("box of Familiar Jacks"); // to create familiar equipment
-    skill clipArt = ToSkill("Summon Clip Art"); // to summon familiar jacks
+    item pokeEqpBlock = $item[razor fang];
+    item pokeEqpMeat = $item[amulet coin];
+    item pokeEqpItem = $item[luck incense];
+    item pokeEqpDamage = $item[muscle band];
+    item pokeEqpHeal = $item[shell bell];
+    item pokeEqpRun = $item[smoke ball];
+    item familiarJacks = $item[box of Familiar Jacks]; // to create familiar equipment
+    skill clipArt = $skill[Summon Clip Art]; // to summon familiar jacks
 
 // pasta thralls
     thrall lasagnaThrall = ToThrall("Lasagmbie"); // for meat
     thrall spiceThrall = ToThrall("Spice Ghost"); // for items
     thrall verminThrall = ToThrall("Vermincelli"); // for mana
     thrall vampireThrall = ToThrall("Vampieroghi"); // for healing
-    skill lasagnaThrallSkill = ToSkill("Bind Lasagmbie"); 
-    skill spiceThrallSkill = ToSkill("Bind Spice Ghost");
-    skill verminThrallSkill = ToSkill("Bind Vermincelli");
-    skill vampireThrallSkill = ToSkill("Bind Vampieroghi");
-    effect lasagnaThrallEffect = ToEffect("Pasta Eyeball");
+    skill lasagnaThrallSkill = $skill[Bind Lasagmbie]; 
+    skill spiceThrallSkill = $skill[Bind Spice Ghost];
+    skill verminThrallSkill = $skill[Bind Vermincelli];
+    skill vampireThrallSkill = $skill[Bind Vampieroghi];
+    effect lasagnaThrallEffect = $effect[Pasta Eyeball];
 
 // ghost busting
-    item protonPack = ToItem("protonic accelerator pack");
-    item talisman = ToItem("Talisman o' Namsilat");
-    item coldHead = ToItem("eXtreme scarf");
-    item coldPants = ToItem("snowboarder pants");
-    item coldAcc = ToItem("eXtreme mittens");
-    item aeroAccordion = ToItem("aerogel accordion");
-    item antiqueAccordion = ToItem("Antique Accordion");
-    location palindome = ToLocation("Inside the Palindome");
-    location icyPeak = ToLocation("The Icy Peak");
-    skill weakenGhost = ToSkill("Shoot Ghost");
-    skill trapGhost = ToSkill("Trap Ghost");
+    item protonPack = $item[protonic accelerator pack];
+    item talisman = $item[Talisman o' Namsilat];
+    item coldHead = $item[eXtreme scarf];
+    item coldPants = $item[snowboarder pants];
+    item coldAcc = $item[eXtreme mittens];
+    item aeroAccordion = $item[aerogel accordion];
+    item antiqueAccordion = $item[Antique Accordion];
+    location palindome = $location[Inside the Palindome];
+    location icyPeak = $location[The Icy Peak];
+    skill weakenGhost = $skill[Shoot Ghost];
+    skill trapGhost = $skill[Trap Ghost];
 // survival
-    skill curseOfIslands = ToSkill("Curse of the Thousand Islands");
-    skill soulBubble = ToSkill("Soul Bubble");
-    skill stealthMistletoe = ToSkill("Stealth Mistletoe");
-    skill entanglingNoodles = ToSkill("Entangling Noodles");
-    skill curseOfWeaksauce = ToSkill("Curse of Weaksauce");
-    skill micrometeorite = ToSkill("Micrometeorite");
-    skill loveGnats = ToSkill("Summon Love Gnats");
-    item littleRedBook = ToItem("little red book");
-    item indigoCup = ToItem("Rain-Doh indigo cup");
-    item blueBalls = ToItem("Rain-Doh blue balls");
-    item beehive = ToItem("beehive");
-    skill shellUp = ToSkill("Shell Up");
-    skill silentKnife = ToSkill("silentKnife");
+    skill curseOfIslands = $skill[Curse of the Thousand Islands];
+    skill soulBubble = $skill[Soul Bubble];
+    skill stealthMistletoe = $skill[Stealth Mistletoe];
+    skill entanglingNoodles = $skill[Entangling Noodles];
+    skill curseOfWeaksauce = $skill[Curse of Weaksauce];
+    skill micrometeorite = $skill[Micrometeorite];
+    skill loveGnats = $skill[Summon Love Gnats];
+    item littleRedBook = $item[little red book];
+    item indigoCup = $item[Rain-Doh indigo cup];
+    item blueBalls = $item[Rain-Doh blue balls];
+    item beehive = $item[beehive];
+    skill shellUp = $skill[Shell Up];
+    skill silentKnife = $skill[Silent Knife];
 
 
 // Skills and items for extending buffs
-    item bagOtricks = ToItem("Bag O' Tricks");
-    item jokesterGun = ToItem("Jokester's Gun");
-    item replicaBatoomerang = ToItem("Replica Bat-oomerang");
-    skill shatteringPunch = ToSkill("Shattering Punch");
-    skill gingerbreadMobHit = ToSkill("Gingerbread Mob Hit");
-    skill missileLauncher = ToSkill("Asdon Martin: Missile Launcher");
-    skill fireJokester = ToSkill("Fire the Jokester's Gun");
+    item bagOtricks = $item[Bag O' Tricks];
+    item jokesterGun = $item[The Jokester's gun];
+    item replicaBatoomerang = $item[Replica Bat-oomerang];
+    skill shatteringPunch = $skill[Shattering Punch];
+    skill gingerbreadMobHit = $skill[Gingerbread Mob Hit];
+    skill missileLauncher = $skill[Asdon Martin: Missile Launcher];
+    skill fireJokester = $skill[Fire the Jokester's Gun];
 
 // increase drops in combat
-    skill funkslinging = ToSkill("Ambidextrous Funkslinging");
-    skill meteorShower = ToSkill("Meteor Shower");
-    skill accordionBash = ToSkill("Accordion Bash");
-    item boomBox = ToItem("SongBoom&trade; BoomBox");
-    skill singAlong = ToSkill("Sing Along");
-    item bling = ToItem("Bling of the New Wave");
-    item bakeBackpack = ToItem("bakelite backpack");
-    item carpe = ToItem("carpe");
-    item snowglobe = ToItem("KoL Con 13 snowglobe");
-    item screege = ToItem("Mr. Screege's spectacles");
-    item cheeng = ToItem("Mr. Cheeng's spectacles");
-    item mayfly = ToItem("mayfly bait necklace");
-    skill extractJelly = ToSkill("Extract Jelly");
-    skill extract = ToSkill("Extract");
-    skill duplicate = ToSkill("Duplicate");
-    skill pocketCrumbs = ToSkill("Pocket Crumbs");
-    item bittyMeat = ToItem("BittyCar MeatCar");
-    item vampCloake = ToItem("vampyric cloake");
-    skill wolfForm = ToSkill("Become a Wolf");
+    skill funkslinging = $skill[Ambidextrous Funkslinging];
+    skill meteorShower = $skill[Meteor Shower];
+    skill accordionBash = $skill[Accordion Bash];
+    item boomBox = $item[SongBoom&trade; BoomBox];
+    skill singAlong = $skill[Sing Along];
+    item bling = $item[Bling of the New Wave];
+    item bakeBackpack = $item[bakelite backpack];
+    item carpe = $item[carpe];
+    item snowglobe = $item[KoL Con 13 snowglobe];
+    item screege = $item[Mr. Screege's spectacles];
+    item cheeng = $item[Mr. Cheeng's spectacles];
+    item mayfly = $item[mayfly bait necklace];
+    skill extractJelly = $skill[Extract Jelly];
+    skill extract = $skill[Extract];
+    skill duplicate = $skill[Duplicate];
+    skill pocketCrumbs = $skill[Pocket Crumbs];
+    item bittyMeat = $item[BittyCar MeatCar];
+    item vampCloake = $item[vampyric cloake];
+    skill wolfForm = $skill[Become a Wolf];
 
 // monster level so it can survive longer
-    skill annoyingNoise = ToSkill("Drescher's Annoying Noise");
-    effect annoyingNoiseEffect = ToEffect("Drescher's Annoying Noise");
-    skill annoyance = ToSkill("Ur-Kel's Aria of Annoyance");
-    effect annoyanceEffect = ToEffect("Ur-Kel's Aria of Annoyance");
-    item greekFire = ToItem("Greek fire");
-    effect greekFireEffect = ToEffect("Sweetbreads Flambé");
+    skill annoyingNoise = $skill[Drescher's Annoying Noise];
+    effect annoyingNoiseEffect = $effect[Drescher's Annoying Noise];
+    skill annoyance = $skill[Ur-Kel's Aria of Annoyance];
+    effect annoyanceEffect = $effect[Ur-Kel's Aria of Annoyance];
+    item greekFire = $item[Greek fire];
+    effect greekFireEffect = $effect[Sweetbreads Flamb&eacute;];
 
 // running away
-    skill cleesh = ToSkill("Cleesh");
-    item fishermansack = ToItem("fisherman's sack"); // quest item after completing nemesis quest as AT
-    item smokebomb = ToItem("fish-oil smoke bomb"); // quest item receive 3 from each fisherman's sack, use 'em or lose 'em on ascending
+    skill cleesh = $skill[Cleesh];
+    item fishermansack = $item[fisherman's sack]; // quest item after completing nemesis quest as AT
+    item smokebomb = $item[fish-oil smoke bomb]; // quest item receive 3 from each fisherman's sack, use 'em or lose 'em on ascending
 
 
 // Skills for more turns
-    skill odeToBooze = ToSkill("The Ode to Booze");
-    effect odeToBoozeEffect = ToEffect("Ode to Booze"); //
-    //item songSpaceAcc = ToItem("La Hebilla del Cintur�n de Lopez");
-    item songSpaceAcc = ToItem("La Hebilla del Cinturón de Lopez");
-    skill calcUniverse = ToSkill("Calculate the Universe");
+    skill odeToBooze = $skill[The Ode to Booze];
+    effect odeToBoozeEffect = $effect[Ode to Booze]; //
+    //item songSpaceAcc = $item[La Hebilla del Cintur�n de Lopez];
+    item songSpaceAcc = $item[La Hebilla del Cintur&oacute;n de Lopez];
+    skill calcUniverse = $skill[Calculate the Universe];
 
 // skills for +meat bonus
-    skill leer = ToSkill("Disco Leer");
-    skill polka = ToSkill("The Polka of Plenty");
-    skill thingfinder = ToSkill("The Ballad of Richie Thingfinder");
-    skill companionship = ToSkill("Chorale of Companionship");
-    skill phatLoot = ToSkill("Fat Leon's Phat Loot Lyric");
-    skill sweetSynth = ToSkill("Sweet Synthesis");
-    skill selfEsteem = ToSkill("Incredible Self-Esteem");
+    skill leer = $skill[Disco Leer];
+    skill polka = $skill[The Polka of Plenty];
+    skill thingfinder = $skill[The Ballad of Richie Thingfinder];
+    skill companionship = $skill[Chorale of Companionship];
+    skill phatLoot = $skill[Fat Leon's Phat Loot Lyric];
+    skill sweetSynth = $skill[Sweet Synthesis];
+    skill selfEsteem = $skill[Incredible Self-Esteem];
 // skills for pet bonus
-    skill leash = ToSkill("Leash of Linguini");
-    skill empathy = ToSkill("Empathy of the Newt");
-    //item petBuff = ToItem("Knob Goblin pet-buffing spray");
-    item kinder = ToItem("resolution: be kinder");
-    item joy = ToItem("abstraction: joy");
-    skill bloodBond = ToSkill("Blood Bond");
-    effect bloodBondEffect = ToEffect("Blood Bond");
-    skill antibiotic = ToSkill("Antibiotic Saucesphere"); // to help cancel the HP drain of blood bond, in case you're missing HP regen
+    skill leash = $skill[Leash of Linguini];
+    skill empathy = $skill[Empathy of the Newt];
+    //item petBuff = $item[Knob Goblin pet-buffing spray];
+    item kinder = $item[resolution: be kinder];
+    item joy = $item[abstraction: joy];
+    skill bloodBond = $skill[Blood Bond];
+    effect bloodBondEffect = $effect[Blood Bond];
+    skill antibiotic = $skill[Antibiotic Saucesphere]; // to help cancel the HP drain of blood bond, in case you're missing HP regen
 
 // items for +meat bonus
-    item vipKey = ToItem("Clan VIP Lounge key"); // for clan VIP room access
-    item floundry = ToItem("Clan Floundry"); // for carpe
-    item poolTable = ToItem("Clan Pool Table");
-    item faxMachine = ToItem("deluxe fax machine");
-    item blBackpack = ToItem("Bakelite Backpack"); // with accordion bash
-    item halfPurse = ToItem("Half a Purse"); // requires Smithsness to be effective
-    item sunglasses = ToItem("cheap sunglasses"); // only relevant for barf mountain
-    item deck = ToItem("Deck of Every Card"); // required for knife or rope if part of outfit
-    item knife = ToItem("knife"); // from deck of every card
-    item rope = ToItem("rope"); // from deck of every card
-    item bastille = ToItem("Bastille Battalion control rig");
-    item brogues = ToItem("Brutal brogues"); // from Bastille Battalion
+    item vipKey = $item[Clan VIP Lounge key]; // for clan VIP room access
+    item floundry = $item[Clan Floundry]; // for carpe
+    item poolTable = $item[Clan Pool Table];
+    item faxMachine = $item[deluxe fax machine];
+    item blBackpack = $item[Bakelite Backpack]; // with accordion bash
+    item halfPurse = $item[Half a Purse]; // requires Smithsness to be effective
+    item sunglasses = $item[cheap sunglasses]; // only relevant for barf mountain
+    item deck = $item[Deck of Every Card]; // required for knife or rope if part of outfit
+    item knife = $item[knife]; // from deck of every card
+    item rope = $item[rope]; // from deck of every card
+    item bastille = $item[Bastille Battalion control rig];
+    item brogues = $item[Brutal brogues]; // from Bastille Battalion
 
-    item mafiaPointerRing = ToItem("mafia pointer finger ring"); // gets +200% base meat from crits
-    skill furiousWallop = ToSkill("Furious Wallop"); // seal clubber skill with guaranteed crit
-    item haikuKatana = ToItem("haiku katana"); // IotM weapon with guaranteed crit
-    skill haikuCrit = ToSkill("Summer Siesta"); // guaranteed critical hit skill from haiku katana
-    item patriotShield = ToItem("Operation Patriot Shield"); // IotM offhand with guaranteed crit
-    skill patriotCrit = ToSkill("Throw Shield"); // guaranteed critical hit skill from haiku katana
+    item mafiaPointerRing = $item[mafia pointer finger ring]; // gets +200% base meat from crits
+    skill furiousWallop = $skill[Furious Wallop]; // seal clubber skill with guaranteed crit
+    item haikuKatana = $item[haiku katana]; // IotM weapon with guaranteed crit
+    skill haikuCrit = $skill[Summer Siesta]; // guaranteed critical hit skill from haiku katana
+    item patriotShield = $item[Operation Patriot Shield]; // IotM offhand with guaranteed crit
+    skill patriotCrit = $skill[Throw Shield]; // guaranteed critical hit skill from haiku katana
 
-    item scratchSword = ToItem("scratch 'n' sniff sword"); // only worthwhile for embezzlers
-    item scratchXbow = ToItem("scratch 'n' sniff crossbow"); // only worthwhile for embezzlers
-    item scratchUPC = ToItem("scratch 'n' sniff UPC sticker"); // attaches to crossbow or sword
-    //item nasalSpray = ToItem("Knob Goblin nasal spray"); // bought from knob goblin dispensary
-    item wealthy = ToItem("resolution: be wealthier"); // from libram of resolutions
-    item affirmationCollect = ToItem("Daily Affirmation: Always be Collecting"); // from new you club
-    item avoidScams = ToItem("How to Avoid Scams"); // only relevant for barf mountain
-    item begpwnia = ToItem("begpwnia"); // 30% from mayflower bouquet
-    item flaskfull = ToItem("Flaskfull of Hollow"); // + smithness for Half a Purse
-    item dice = ToItem("Glenn's golden dice"); // once a day random buffs
-    item pantsGiving = ToItem("Pantsgiving"); // wear for combat skills, fullnes reduction
-    item gameToken = ToItem("defective Game Grid token"); // once a day activate for 5 turns of +5 everything
-    item chibiOff = ToItem("ChibiBuddy™ (off)"); // once a day activate for 5 turns of +5 familiar weight
-    item chibiOn = ToItem("ChibiBuddy™ (on)"); // once a day activate for 5 turns of +5 familiar weight
-    item mumming = ToItem("mumming trunk"); // cast +meat or +item on familiar
+    item cosplaySaber = ToItem("Fourth of May Cosplay Saber"); // for the +10 familiar weight
+    item scratchSword = $item[scratch 'n' sniff sword]; // only worthwhile for embezzlers
+    item scratchXbow = $item[scratch 'n' sniff crossbow]; // only worthwhile for embezzlers
+    item scratchUPC = $item[scratch 'n' sniff UPC sticker]; // attaches to crossbow or sword
+    //item nasalSpray = $item[Knob Goblin nasal spray]; // bought from knob goblin dispensary
+    item wealthy = $item[resolution: be wealthier]; // from libram of resolutions
+    item affirmationCollect = $item[Daily Affirmation: Always be Collecting]; // from new you club
+    item avoidScams = $item[How to Avoid Scams]; // only relevant for barf mountain
+    item begpwnia = $item[begpwnia]; // 30% from mayflower bouquet
+    item flaskfull = $item[Flaskfull of Hollow]; // + smithness for Half a Purse
+    item dice = $item[Glenn's golden dice]; // once a day random buffs
+    item pantsGiving = $item[Pantsgiving]; // wear for combat skills, fullnes reduction
+    item gameToken = $item[defective Game Grid token]; // once a day activate for 5 turns of +5 everything
+    item chibiOff = $item[ChibiBuddy&trade; (off)]; // once a day activate for 5 turns of +5 familiar weight
+    item chibiOn = $item[ChibiBuddy&trade; (on)]; // once a day activate for 5 turns of +5 familiar weight
+    item mumming = $item[mumming trunk]; // cast +meat or +item on familiar
 
 // 2 day items for +meat bonus
-    item peppermint = ToItem("peppermint twist"); // candy drop from robort
-    item micks = ToItem("Mick's IcyVapoHotness Inhaler"); // from semi-rare
-    item sugar = ToItem("bag of powdered sugar"); // 
-    item pinkHeart = ToItem("pink candy heart");
-    item polkaPop = ToItem("Polka Pop");
-    item cranberryCordial = ToItem("cranberry cordial");
+    item peppermint = $item[peppermint twist]; // candy drop from robort
+    item micks = $item[Mick's IcyVapoHotness Inhaler]; // from semi-rare
+    item sugar = $item[baggie of powdered sugar]; // 
+    item pinkHeart = $item[pink candy heart];
+    item polkaPop = $item[Polka Pop];
+    item cranberryCordial = $item[cranberry cordial];
 
 // special activations for +meat bonus
     string summonGreed = "summon 2"; // summoning chamber if you've learned the Hoom-Ha name
@@ -570,266 +530,266 @@ void ReadSettings()
     string hatterDreadSack = "hatter filthy knitted dread sack"; // need a Drink-me potion and a filthy knitted dread sack from hippies
 
 // effects for +meat bonus
-    effect winklered = ToEffect("Winklered"); // from concert if you helped orcs
-    effect sinuses = ToEffect("Sinuses For Miles"); // from Mick's
-    //effect nasalSprayEffect = ToEffect("Wasabi Sinuses"); // from Knob Goblin nasal spray
-    effect resolve = ToEffect("Greedy Resolve"); // from resolution: be wealthy
-    effect alwaysCollecting = ToEffect("Always be Collecting"); // DailyAffirmation: always be collecting
-    effect workForHours = ToEffect("Work For Hours a Week"); // DailyAffirmation: Work for hours a week
-    effect begpwniaEffect = ToEffect("Can't Be a Chooser"); // from begpwnia
-    effect avoidScamsEffect = ToEffect("How to Scam Tourists"); // from How to Avoid Scams
-    effect leering = ToEffect("Disco Leer"); // from Disco Leer (disco bandit skill)
-    effect polkad = ToEffect("Polka of Plenty"); // from Polka (accordion thief)
-    effect phatLooted = ToEffect("Fat Leon's Phat Loot Lyric"); // from Fat Leon's (accordion thief)
-    effect thingfinderEffect = ToEffect("The Ballad of Richie Thingfinder"); // accordion thief only
-    effect companionshipEffect = ToEffect("Chorale of Companionship"); // accordion thief only
-    effect meatEnhanced = ToEffect("meat.enh"); // source terminal, 60%, 3x 100 turns a day
-    effect danceTweedle = ToEffect("Dances with Tweedles"); // from DRINK ME potion, once a day, 40%, 30 turns
-    effect merrySmith = ToEffect("Merry Smithsness"); // from Flaskfull of Hollow
-    effect kickedInSinuses = ToEffect("Kicked in the Sinuses"); // from horseradish
-    effect foodConeEffect = ToEffect("The Dinsey Way"); // from Dinsey Food Cone
-    effect seaTruffleEffect = ToEffect("Trufflin'"); // from the sea truffle
-    effect thanksgetting = ToEffect("Thanksgetting"); // from thanksgetting feast items
-    effect synthGreed = ToEffect("Synthesis: Greed"); // from Sweet Synthesis skill
-    effect preternatualGreed = ToEffect("Preternatural Greed");
-    effect eggEffect = ToEffect("Egg-stortionary Tactics");
-    effect gingerWineEffect = ToEffect("High-Falutin'");
-    effect dirtEffect = ToEffect("Here's Some More Mud in Your Eye");
-    effect turkeyEffect = ToEffect("Turkey-Ambitious");
-    effect joyEffect = ToEffect("Joy");
-    effect pinkHeartEffect = ToEffect("Heart of Pink");
-    effect polkaPopEffect = ToEffect("Polka Face");
-    effect peppermintEffect = ToEffect("Peppermint Twisted");
-    effect sugarEffect = ToEffect("So You Can Work More...");
-    effect cranberryCordialEffect = ToEffect("Cranberry Cordiality");
-    effect poolEffect = ToEffect("Billiards Belligerence");
-    effect kgbMeat = ToEffect("A View to Some Meat");
-    effect kgbItems = ToEffect("Items Are Forever");
-    effect bagOTricksEffect1 = ToEffect("Badger Underfoot");
-    effect bagOTricksEffect2 = ToEffect("Weasels Underfoot");
-    effect bagOTricksEffect3 = ToEffect("Chihuahua Underfoot");
+    effect winklered = $effect[Winklered]; // from concert if you helped orcs
+    effect sinuses = $effect[Sinuses For Miles]; // from Mick's
+    //effect nasalSprayEffect = $effect[Wasabi Sinuses]; // from Knob Goblin nasal spray
+    effect resolve = $effect[Greedy Resolve]; // from resolution: be wealthy
+    effect alwaysCollecting = $effect[Always be Collecting]; // DailyAffirmation: always be collecting
+    effect workForHours = $effect[Work For Hours a Week]; // DailyAffirmation: Work for hours a week
+    effect begpwniaEffect = $effect[Can't Be a Chooser]; // from begpwnia
+    effect avoidScamsEffect = $effect[How to Scam Tourists]; // from How to Avoid Scams
+    effect leering = $effect[Disco Leer]; // from Disco Leer (disco bandit skill)
+    effect polkad = $effect[Polka of Plenty]; // from Polka (accordion thief)
+    effect phatLooted = $effect[Fat Leon's Phat Loot Lyric]; // from Fat Leon's (accordion thief)
+    effect thingfinderEffect = $effect[The Ballad of Richie Thingfinder]; // accordion thief only
+    effect companionshipEffect = $effect[Chorale of Companionship]; // accordion thief only
+    effect meatEnhanced = $effect[meat.enh]; // source terminal, 60%, 3x 100 turns a day
+    effect danceTweedle = $effect[Dances with Tweedles]; // from DRINK ME potion, once a day, 40%, 30 turns
+    effect merrySmith = $effect[Merry Smithsness]; // from Flaskfull of Hollow
+    effect kickedInSinuses = $effect[Kicked in the Sinuses]; // from horseradish
+    effect foodConeEffect = $effect[The Dinsey Way]; // from Dinsey Food Cone
+    effect seaTruffleEffect = $effect[Trufflin']; // from the sea truffle
+    effect thanksgetting = $effect[Thanksgetting]; // from thanksgetting feast items
+    effect synthGreed = $effect[Synthesis: Greed]; // from Sweet Synthesis skill
+    effect preternatualGreed = $effect[Preternatural Greed];
+    effect eggEffect = $effect[Egg-stortionary Tactics];
+    effect gingerWineEffect = $effect[High-Falutin'];
+    effect dirtEffect = $effect[Here's Some More Mud in Your Eye];
+    effect turkeyEffect = $effect[Turkey-Ambitious];
+    effect joyEffect = $effect[Joy];
+    effect pinkHeartEffect = $effect[Heart of Pink];
+    effect polkaPopEffect = $effect[Polka Face];
+    effect peppermintEffect = $effect[Peppermint Twisted];
+    effect sugarEffect = $effect[So You Can Work More...];
+    effect cranberryCordialEffect = $effect[Cranberry Cordiality];
+    effect poolEffect = $effect[Billiards Belligerence];
+    effect kgbMeat = $effect[A View to Some Meat];
+    effect kgbItems = $effect[Items Are Forever];
+    effect bagOTricksEffect1 = $effect[Badger Underfoot];
+    effect bagOTricksEffect2 = $effect[Weasels Underfoot];
+    effect bagOTricksEffect3 = $effect[Chihuahua Underfoot];
 
 // effects for pet weight bonus
-    effect leashEffect = ToEffect("Leash of Linguini");
-    effect empathyEffect = ToEffect("Empathy");
-    effect petBuffEffect = ToEffect("Heavy Petting");
-    effect kinderEffect = ToEffect("Kindly Resolve");
-    effect chibiEffect = ToEffect("ChibiChanged™");
+    effect leashEffect = $effect[Leash of Linguini];
+    effect empathyEffect = $effect[Empathy];
+    effect petBuffEffect = $effect[Heavy Petting];
+    effect kinderEffect = $effect[Kindly Resolve];
+    effect chibiEffect = $effect[ChibiChanged&trade;];
 
 // skills to activate Bag O' Tricks
-    skill mortarShell = ToSkill("Stuffed Mortar Shell"); // this one is special because it has a one turn delay
-    skill BoTspell1 = ToSkill("Spaghetti Spear"); // low damage
-    skill BoTspell2 = ToSkill("Salsaball"); // low damage
-    skill sauceStorm = ToSkill("Saucestorm"); // likely to have skill
-    skill thrustSmack = ToSkill("Lunging Thrust-Smack");
-    skill weaponPasta = ToSkill("Weapon of the Pastalord");
+    skill mortarShell = $skill[Stuffed Mortar Shell]; // this one is special because it has a one turn delay
+    skill BoTspell1 = $skill[Spaghetti Spear]; // low damage
+    skill BoTspell2 = $skill[Salsaball]; // low damage
+    skill sauceStorm = $skill[Saucestorm]; // likely to have skill
+    skill thrustSmack = $skill[Lunging Thrust-Smack];
+    skill weaponPasta = $skill[Weapon of the Pastalord];
 
 // between turns skills
-    skill summonRes = ToSkill("Summon Resolutions");
-    skill summonTaffy = ToSkill("Summon Taffy");
-    skill summonCandy = ToSkill("Summon Candy Heart");
-    skill summonParty = ToSkill("Summon Party Favor");
-    skill summonLove = ToSkill("Summon Love Song");
-    skill summonBricko = ToSkill("Summon BRICKOs");
-    skill summonDice = ToSkill("Summon Dice");
-    skill soulFood = ToSkill("Soul Food");
+    skill summonRes = $skill[Summon Resolutions];
+    skill summonTaffy = $skill[Summon Taffy];
+    skill summonCandy = $skill[Summon Candy Heart];
+    skill summonParty = $skill[Summon Party Favor];
+    skill summonLove = $skill[Summon Love Song];
+    skill summonBricko = $skill[Summon BRICKOs];
+    skill summonDice = $skill[Summon Dice];
+    skill soulFood = $skill[Soul Food];
 // mana cost reduction
-    item oscusWeapon = ToItem("Wand of Oscus");
-    item oscusPants = ToItem("Oscus's dumpster waders");
-    item oscusAccessory = ToItem("Oscus's pelt");
-    item brimstoneBracelet = ToItem("Brimstone Bracelet");
-    item kgb = ToItem("Kremlin's Greatest Briefcase");
-    item rubber = ToItem("orcish rubber");
-    effect rubberEffect = ToEffect("Using Protection");
+    item oscusWeapon = $item[Wand of Oscus];
+    item oscusPants = $item[Oscus's dumpster waders];
+    item oscusAccessory = $item[Oscus's pelt];
+    item brimstoneBracelet = $item[Brimstone Bracelet];
+    item kgb = $item[Kremlin's Greatest Briefcase];
+    item rubber = $item[orcish rubber];
+    effect rubberEffect = $effect[Using Protection];
 // max mana increase
-    item hawkings = ToItem("Hawking's Elixir of Brilliance");
-    effect hawkingsEffect = ToEffect("On the Shoulders of Giants");
-    item onePill = ToItem("one pill");
-    effect onePillLarge = ToEffect("Larger");
-    effect onePillSmall = ToEffect("Small");
-    skill notAKnife = ToSkill("That's Not a Knife");
-    item candyKnife = ToItem("candy knife");
-    item occult = ToItem("ointment of the occult");
-    effect occultEffect = ToEffect("Mystically Oiled");
-    item tomatoJuice = ToItem("tomato juice of powerful power");
-    effect tomatoJuiceEffect = ToEffect("Tomato Power");
-    item mascara = ToItem("glittery mascara");
-    effect mascaraEffect = ToEffect("Glittering Eyelashes");
-    item muscleToMyst = ToItem("oil of stability");
-    effect muscleToMystEffect = ToEffect("Stabilizing Oiliness");
-    item moxieToMyst = ToItem("oil of slipperiness");
-    effect moxieToMystEffect = ToEffect("Slippery Oiliness");
-    item circleDrum = ToItem("Circle Drum");
-    effect circleDrumEffect = ToEffect("Feelin' the Rhythm");
-    item sugarShorts = ToItem("sugar shorts");
-    skill quietJudgement = ToSkill("Quiet Judgement");
-    effect quietJudgementEffect = ToEffect("Quiet Judgement");
-    effect cucumberEffect = ToEffect("Uncucumbered");
+    item hawkings = $item[Hawking's Elixir of Brilliance];
+    effect hawkingsEffect = $effect[On the Shoulders of Giants];
+    item onePill = $item[one pill];
+    effect onePillLarge = $effect[Larger];
+    effect onePillSmall = $effect[Small];
+    skill notAKnife = $skill[That's Not a Knife];
+    item candyKnife = $item[candy knife];
+    item occult = $item[ointment of the occult];
+    effect occultEffect = $effect[Mystically Oiled];
+    item tomatoJuice = $item[tomato juice of powerful power];
+    effect tomatoJuiceEffect = $effect[Tomato Power];
+    item mascara = $item[glittery mascara];
+    effect mascaraEffect = $effect[Glittering Eyelashes];
+    item muscleToMyst = $item[oil of stability];
+    effect muscleToMystEffect = $effect[Stabilizing Oiliness];
+    item moxieToMyst = $item[oil of slipperiness];
+    effect moxieToMystEffect = $effect[Slippery Oiliness];
+    item circleDrum = $item[Circle Drum];
+    effect circleDrumEffect = $effect[Feelin' the Rhythm!];
+    item sugarShorts = $item[sugar shorts];
+    skill quietJudgement = $skill[Quiet Judgement];
+    effect quietJudgementEffect = $effect[Quiet Judgement];
+    effect cucumberEffect = $effect[Uncucumbered];
 
 
 // locations for adventuring
-    location garbagePirates = ToLocation("Pirates of the Garbage Barges"); // for orphan costume
-    location uncleGator = ToLocation("Uncle Gator's Country Fun-Time Liquid Waste Sluice");
-    location toxicTeacups = ToLocation("The Toxic Teacups");
-    location covePirates = ToLocation("The Obligatory Pirate's Cove"); // alternate for orphan costume... wait a second, we should always have main pirates location
-    location castleTopFloor = ToLocation("The Castle in the Clouds in the Sky (Top Floor)"); // semi-rare
-    location purpleLight = ToLocation("The Purple Light District"); // semi-rare
-    location treasury = ToLocation("Cobb's Knob Treasury"); // semi-rare
-    location barfMountain = ToLocation("Barf Mountain"); // main adventure location
-    location snojo = ToLocation("The X-32-F Combat Training Snowman");
-    location neverParty = ToLocation("The Neverending Party");
-    item football = ToItem("cosmetic football");
+    location garbagePirates = $location[Pirates of the Garbage Barges]; // for orphan costume
+    location uncleGator = $location[Uncle Gator's Country Fun-Time Liquid Waste Sluice];
+    location toxicTeacups = $location[The Toxic Teacups];
+    location covePirates = $location[The Obligatory Pirate's Cove]; // alternate for orphan costume... wait a second, we should always have main pirates location
+    location castleTopFloor = $location[The Castle in the Clouds in the Sky (Top Floor)]; // semi-rare
+    location purpleLight = $location[The Purple Light District]; // semi-rare
+    location treasury = $location[Cobb's Knob Treasury]; // semi-rare
+    location barfMountain = $location[Barf Mountain]; // main adventure location
+    location snojo = $location[The X-32-F Combat Training Snowman];
+    location neverParty = $location[The Neverending Party];
+    item football = $item[cosmetic football];
 
 // Maximizing mana for summoning
-    location TUNNEL = ToLocation("The Tunnel of L.O.V.E.");
-    monster LOVenforcer = ToMonster("LOV Enforcer");
-    monster LOVengineer =  ToMonster("LOV Engineer");
-    monster LOVequivocator =  ToMonster("LOV Equivocator");
-    effect synthMyst = ToEffect("Synthesis: Smart"); // from Sweet Synthesis skill
-    effect synthMP = ToEffect("Synthesis: Energy"); // from Sweet Synthesis skill
-    effect favorLyle = ToEffect("Favored by Lyle");
-    item licenseChill = ToItem("License to Chill"); // mana restore
-    item yexpressCard = ToItem("Platinum Yendorian Express Card"); // mana restore
-    item oscusSoda = ToItem("Oscus's neverending soda");
-    item aprilShower = ToItem("Clan Shower");
-    item eternalBattery = ToItem("Eternal Car Battery");
-    skill discoNap = ToSkill("Disco Nap");
-    skill leisure = ToSkill("Adventurer of Leisure");
-    skill narcolepsy = ToSkill("Executive Narcolepsy");
-    skill turbo = ToSkill("Turbo");
-    effect overheated = ToEffect("Overheated");
-    item pilgrimHat = ToItem("Giant pilgrim hat");
-    item snowFort = ToItem("Snow Fort");
-    effect snowFortified = ToEffect("Snow Fortified");
-    item clarasBell = ToItem("Clara's bell");
-    item hoboBinder = ToItem("hobo code binder");
-    skill getBig = ToSkill("Get Big");
-    effect big = ToEffect("Big");
+    location TUNNEL = $location[The Tunnel of L.O.V.E.];
+    monster LOVenforcer = $monster[LOV Enforcer];
+    monster LOVengineer =  $monster[LOV Engineer];
+    monster LOVequivocator =  $monster[LOV Equivocator];
+    effect synthMyst = $effect[Synthesis: Smart]; // from Sweet Synthesis skill
+    effect synthMP = $effect[Synthesis: Energy]; // from Sweet Synthesis skill
+    effect favorLyle = $effect[Favored by Lyle];
+    item licenseChill = $item[License to Chill]; // mana restore
+    item yexpressCard = $item[Platinum Yendorian Express Card]; // mana restore
+    item oscusSoda = $item[Oscus's neverending soda];
+    item aprilShower = $item[Clan Shower];
+    item eternalBattery = $item[Eternal Car Battery];
+    skill discoNap = $skill[Disco Nap];
+    skill leisure = $skill[Adventurer of Leisure];
+    skill narcolepsy = $skill[Executive Narcolepsy];
+    skill turbo = $skill[Turbo];
+    effect overheated = $effect[Overheated];
+    item pilgrimHat = $item[Giant pilgrim hat];
+    item snowFort = $item[Snow Fort];
+    effect snowFortified = $effect[Snow Fortified];
+    item clarasBell = $item[Clara's bell];
+    item hoboBinder = $item[hobo code binder];
+    skill getBig = $skill[Get Big];
+    effect big = $effect[Big];
 
 // healing between turns
-    effect beatenUp = ToEffect("Beaten Up");
-    skill walrus = ToSkill("Tongue of the Walrus");
-    skill cocoon = ToSkill("Cannelloni Cocoon");
+    effect beatenUp = $effect[Beaten Up];
+    skill walrus = $skill[Tongue of the Walrus];
+    skill cocoon = $skill[Cannelloni Cocoon];
 
 // makin' copies, at the copy machine
-    item camera = ToItem("4-d camera");
-    item usedcamera = ToItem("Shaking 4-d camera");
-    item beerLens = ToItem("beer lens");
-    item nothingInTheBox = ToItem("nothing-in-the-box");
-    item enamorang = ToItem("LOV Enamorang");
-    item BACON = ToItem("BACON");
-    item usedFax = ToItem("photocopied monster");
-    item printScreen = ToItem("print screen button");
-    item usedPrintScreen = ToItem("screencapped monster");
-    item spookyPutty = ToItem("Spooky Putty sheet");
-    item usedSpookyPutty = ToItem("Spooky Putty monster");
-    item unopenedRainDoh = ToItem("can of Rain-Doh");
-    item rainDoh = ToItem("Rain-Doh black box");
-    item usedRainDoh = ToItem("Rain-Doh box full of monster");
-    skill digitize = ToSkill("Digitize");
-    skill romanticArrow = ToSkill("Fire a badly romantic arrow");
-    skill winkAt = ToSkill("Wink at");
+    item camera = $item[4-d camera];
+    item usedcamera = $item[Shaking 4-d camera];
+    item beerLens = $item[beer lens];
+    item nothingInTheBox = $item[nothing-in-the-box];
+    item enamorang = $item[LOV Enamorang];
+    item BACON = $item[BACON];
+    item usedFax = $item[photocopied monster];
+    item printScreen = $item[print screen button];
+    item usedPrintScreen = $item[screencapped monster];
+    item spookyPutty = $item[Spooky Putty sheet];
+    item usedSpookyPutty = $item[Spooky Putty monster];
+    item unopenedRainDoh = $item[can of Rain-Doh];
+    item rainDoh = $item[Rain-Doh black box];
+    item usedRainDoh = $item[Rain-Doh box full of monster];
+    skill digitize = $skill[Digitize];
+    skill romanticArrow = $skill[Fire a badly romantic arrow];
+    skill winkAt = $skill[Wink at];
 
-    monster embezzler = ToMonster("Knob Goblin Embezzler");
-    monster mimeExecutive = ToMonster("cheerless mime executive"); // this was 1500, now it's 500
+    monster embezzler = $monster[Knob Goblin Embezzler];
+    monster mimeExecutive = $monster[cheerless mime executive]; // this was 1500, now it's 500
     monster meatyMonster = embezzler;
-    monster tourist = ToMonster("garbage tourist");
-    skill olfaction = ToSkill("Transcendent Olfaction");
-    effect olfactionEffect = ToEffect("On the Trail");
+    monster tourist = $monster[garbage tourist];
+    skill olfaction = $skill[Transcendent Olfaction];
+    effect olfactionEffect = $effect[On the Trail];
 
 // semi-rare
-    item nickel = ToItem("hobo nickel");
+    item nickel = $item[hobo nickel];
 // keys
-    item billiardKey = ToItem("Spookyraven billiards room key");
-    item keyCardAlpha = ToItem("keycard α");
-    item keyCardBeta = ToItem("keycard β");
-    item keyCardGamma = ToItem("keycard γ");
-    item keyCardDelta = ToItem("keycard δ");
+    item billiardKey = $item[Spookyraven billiards room key];
+    item keyCardAlpha = $item[keycard &alpha;];
+    item keyCardBeta = $item[keycard &beta;];
+    item keyCardGamma = $item[keycard &gamma;];
+    item keyCardDelta = $item[keycard &delta;];
 
 // barf mountain quest
-    item lubeShoes = ToItem("lube-shoes");
+    item lubeShoes = $item[lube-shoes];
     string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
     string maintenanceUrl = "place.php?whichplace=airport_stench&action=airport3_tunnels";
 
 // Gingerbread
-    location gingerCivic = ToLocation("Gingerbread Civic Center");
-    location gingerTrain = ToLocation("Gingerbread Train Station");
-    location gingerRetail = ToLocation("Gingerbread Upscale Retail District");
-    item gingerHead = ToItem("gingerbread tophat");
-    item gingerShirt = ToItem("gingerbread waistcoat");
-    item gingerPants = ToItem("gingerbread trousers");
-    item gingerAcc1 = ToItem("candy dress shoes");
-    item gingerAcc2 = ToItem("candy necktie");
-    item gingerAcc3 = ToItem("chocolate pocketwatch");
-    item gingerSprinkles = ToItem("sprinkles");
+    location gingerCivic = $location[Gingerbread Civic Center];
+    location gingerTrain = $location[Gingerbread Train Station];
+    location gingerRetail = $location[Gingerbread Upscale Retail District];
+    item gingerHead = $item[gingerbread tophat];
+    item gingerShirt = $item[gingerbread waistcoat];
+    item gingerPants = $item[gingerbread trousers];
+    item gingerAcc1 = $item[candy dress shoes];
+    item gingerAcc2 = $item[candy necktie];
+    item gingerAcc3 = $item[chocolate pocketwatch];
+    item gingerSprinkles = $item[sprinkles];
 
 // Madness bakery
-    item strawberry = ToItem("strawberry");
-    item icing = ToItem("glob of enchanted icing");
-    item popPart = ToItem("popular part");
+    item strawberry = $item[strawberry];
+    item icing = $item[glob of enchanted icing];
+    item popPart = $item[popular part];
 
 // effect which will confuse KoLmafia
-    item greendrops = ToItem("soft green echo eyedrop antidote"); // remove undesirable effects
-    item homophones = ToItem("staph of homophones"); // changes words to their homophones
-    item prepositions = ToItem("sword behind inappropriate prepositions"); // restructures sentences
-    item papier1 = ToItem("Papier mitre"); // inserts random words into sentences
-    item papier2 = ToItem("Papier-mâchuridars"); // inserts random words into sentences
-    item papier3 = ToItem("papier-masque"); // inserts random words into sentences
-    effect disAbled = ToEffect("Dis Abled"); // turns everything into rhymes
-    effect anapests = ToEffect("Just the Best Anapests"); // turns everything into rhymes
-    effect haikuMind = ToEffect("Haiku State of Mind"); // turns everything into haiku
-    effect tempBlind = ToEffect("Temporary Blindness"); // makes messages just say you're blind
+    item greendrops = $item[soft green echo eyedrop antidote]; // remove undesirable effects
+    item homophones = $item[staph of homophones]; // changes words to their homophones
+    item prepositions = $item[sword behind inappropriate prepositions]; // restructures sentences
+    item papier1 = $item[papier-mitre]; // inserts random words into sentences
+    item papier2 = $item[Papier-m&acirc;churidars]; // inserts random words into sentences
+    item papier3 = $item[papier-masque]; // inserts random words into sentences
+    effect disAbled = $effect[Dis Abled]; // turns everything into rhymes
+    effect anapests = $effect[Just the Best Anapests]; // turns everything into rhymes
+    effect haikuMind = $effect[Haiku State of Mind]; // turns everything into haiku
+    effect tempBlind = $effect[Temporary Blindness]; // makes messages just say you're blind
 
 // free combats
-    item genie = ToItem("genie bottle");
-    item wish = ToItem("pocket wish");
-    effect covetous = ToEffect("Covetous Robbery"); // raises base meat drop on stingy monsters
-    effect attunement = ToEffect("Eldritch Attunement"); // take an extra combat after free combat
-    effect frosty = ToEffect("frosty"); // +200% meat, +100% item drop
-    effect braaaaaains = ToEffect("Braaaaaains"); // +200% meat, -50% item drop
-    skill evokeHorror = ToSkill("Evoke Eldritch Horror"); // fight an eldritch horror
-    item uraniumSeal = ToItem("depleted uranium seal figurine"); // 5 extra seal fights
-    item lynyrdSnare = ToItem("lynyrd snare"); // 3 free fights a day
-    item scorpions = ToItem("Bowl of Scorpions"); // 11 free fights a day
-    item brickoOoze = ToItem("BRICKO ooze"); // 10 free fights a day
-    item brickoBrick = ToItem("BRICKO brick"); // to make oozes from
-    item brickoEye = ToItem("BRICKO eye brick"); // also required to make oozes
-    location machineTunnels = ToLocation("The Deep Machine Tunnels"); // needs machine elf
-    monster machineTriangle = ToMonster("Perceiver of Sensations");
-    monster machineCircle = ToMonster("Thinker of Thoughts");
-    monster machineSquare = ToMonster("Performer of Actions");
-    item abstrThought = ToItem("abstraction: thought");
-    item abstrAction = ToItem("abstraction: action");
-    item abstrSensation = ToItem("abstraction: sensation");
-    location bowlingAlley = ToLocation("The Hidden Bowling Alley");
-    item bowlingBall = ToItem("bowling ball");
-    monster bowler = ToMonster("pygmy bowler");
-    monster janitor = ToMonster("pygmy janitor");
-    monster orderlies = ToMonster("pygmy orderlies");
-    item votedSticker = ToItem("\"I Voted!\" sticker");
-    monster mutant = ToMonster("terrible mutant");
-    item mutantArm = ToItem("mutant arm");
-    item mutantLegs = ToItem("mutant legs");
-    item mutantCrown = ToItem("mutant crown");
-    item doctorBag = ToItem("Lil' Doctor&trade; Bag");
+    item genie = $item[genie bottle];
+    item wish = $item[pocket wish];
+    effect covetous = $effect[Covetous Robbery]; // raises base meat drop on stingy monsters
+    effect attunement = $effect[Eldritch Attunement]; // take an extra combat after free combat
+    effect frosty = $effect[frosty]; // +200% meat, +100% item drop
+    effect braaaaaains = $effect[Braaaaaains]; // +200% meat, -50% item drop
+    skill evokeHorror = $skill[Evoke Eldritch Horror]; // fight an eldritch horror
+    item uraniumSeal = $item[depleted uranium seal figurine]; // 5 extra seal fights
+    item lynyrdSnare = $item[lynyrd snare]; // 3 free fights a day
+    item scorpions = $item[Bowl of Scorpions]; // 11 free fights a day
+    item brickoOoze = $item[BRICKO ooze]; // 10 free fights a day
+    item brickoBrick = $item[BRICKO brick]; // to make oozes from
+    item brickoEye = $item[BRICKO eye brick]; // also required to make oozes
+    location machineTunnels = $location[The Deep Machine Tunnels]; // needs machine elf
+    monster machineTriangle = $monster[Perceiver of Sensations];
+    monster machineCircle = $monster[Thinker of Thoughts];
+    monster machineSquare = $monster[Performer of Actions];
+    item abstrThought = $item[abstraction: thought];
+    item abstrAction = $item[abstraction: action];
+    item abstrSensation = $item[abstraction: sensation];
+    location bowlingAlley = $location[The Hidden Bowling Alley];
+    item bowlingBall = $item[bowling ball];
+    monster bowler = $monster[pygmy bowler];
+    monster janitor = $monster[pygmy janitor];
+    monster orderlies = $monster[pygmy orderlies];
+    item votedSticker = $item[&quot;I Voted!&quot; sticker];
+    monster mutant = $monster[terrible mutant];
+    item mutantArm = $item[mutant arm];
+    item mutantLegs = $item[mutant legs];
+    item mutantCrown = $item[mutant crown];
+    item doctorBag = $item[Lil' Doctor&trade; Bag];
 // seal clubber supplies
-    item bludgeon = ToItem("Brimstone Bludgeon");
-    item tenderizer = ToItem("Meat Tenderizer is Murder");
-    item club = ToItem("seal-clubbing club");
-    item sealFigurine = ToItem("figurine of a wretched-looking seal");
-    item sealCandle = ToItem("seal-blubber candle");
+    item bludgeon = $item[Brimstone Bludgeon];
+    item tenderizer = $item[Meat Tenderizer is Murder];
+    item club = $item[seal-clubbing club];
+    item sealFigurine = $item[figurine of a wretched-looking seal];
+    item sealCandle = $item[seal-blubber candle];
 
 // banish skills and items
-    skill snokebomb = ToSkill("Snokebomb");
-    item louderThanBomb = ToItem("Louder Than Bomb");
-    item tennisBall = ToItem("tennis ball");
+    skill snokebomb = $skill[Snokebomb];
+    item louderThanBomb = $item[Louder Than Bomb];
+    item tennisBall = $item[tennis ball];
 
 // cheesy items to increase rollover adventures
-    item cheeseStaff = ToItem("Staff of Queso Escusado");
-    item cheeseSword = ToItem("stinky cheese sword");
-    item cheesePants = ToItem("stinky cheese diaper");
-    item cheeseShield = ToItem("stinky cheese wheel");
-    item cheeseAccessory = ToItem("stinky cheese eye");
+    item cheeseStaff = $item[Staff of Queso Escusado];
+    item cheeseSword = $item[stinky cheese sword];
+    item cheesePants = $item[stinky cheese diaper];
+    item cheeseShield = $item[stinky cheese wheel];
+    item cheeseAccessory = $item[stinky cheese eye];
 
 // script state variables
     familiar runFamiliar;
@@ -1172,6 +1132,14 @@ void ReadSettings()
         {
             TryScratchNSniff(outfitDef);
         }
+        if (OutfitContains(outfitDef, cosplaySaber)
+            && HaveEquipment(cosplaySaber)
+            && get_property("_saberMod") == "0")
+        {
+            string page = visit_url("main.php?action=may4");
+            if (page.contains_text("Empathy Chip"))
+                visit_url("choice.php?whichchoice=1386&option=4"); // +10 familiar weight
+        }
     }
 
     item[slot] GetCurrentGear()
@@ -1437,7 +1405,7 @@ DebugOutfit("Goal outfit", outfitDef);
         //int[item] itemsGained = extract_items(result);
         //if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
         //{
-        //    int wadCount = itemsGained[ToItem("hoarded candy wad")];
+        //    int wadCount = itemsGained[$item[hoarded candy wad]];
         //    //if (wadCount > 0)
         //}
         if (attunement.have_effect() > 0 && pageResult.contains_text("fight.php")) // Eldritch attunement means an extra combat
@@ -2051,6 +2019,7 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[The Arid, Extra-Dry Desert]:
             case $location[The Unquiet Garves]:
             case $location[The Haunted Kitchen]:
+            case $location[The Goatlet]:
                 return true;
         }
         return false;
@@ -3935,7 +3904,7 @@ abort("Todo: what choice #s for basement");
     boolean EnsureOneSongSpace()
     {
         int songSpace = 3;
-        if (ToSkill("Mariachi Memory").have_skill())
+        if ($skill[Mariachi Memory].have_skill())
             songSpace++;
 
         boolean[string] songs = // boolean whether we should shrug the buff.  Stuff that's relevant to meat farming shouldn't be shrugged
@@ -6807,9 +6776,10 @@ print("mob = " + canMobHit);
             case "Experience (familiar): -2":
             case "Weapon Damage Percent: -50":
             case "Spell Damage Percent: -50":
-            case "Critical Hit: -10":
+            case "Critical Hit Percent: -10":
             case "Initiative: -30":
             case "Adventures: -2":
+            case "Experience: -3":
             case "Item Drop: -20":
             case "Meat Drop: -30":
             case "Gear Drop: -50":
