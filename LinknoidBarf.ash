@@ -211,6 +211,7 @@ void ReadSettings()
     item terminal = $item[Source terminal];
     item mayoClinic = $item[portable Mayo Clinic];
     item asdonMartin = $item[Asdon Martin keyfob];
+    item dnaLab = $item[Little Geneticist DNA-Splicing Lab];
     item oven = $item[warbear induction oven];
     effect observantly = $effect[Driving Observantly];
     item pieFuel = $item[pie man was not meant to eat];
@@ -218,6 +219,7 @@ void ReadSettings()
     item dough = $item[wad of dough]; // food for adsonMartin
     item breadFuel = $item[loaf of soda bread];
     item sphygmayo = $item[sphygmayomanometer];
+    item dnaSyringe = $item[DNA extraction syringe];
 
 // garden
     item pokeGarden = $item[packet of tall grass seeds];
@@ -232,7 +234,6 @@ void ReadSettings()
 
 // items for eating
     item milk = $item[milk of magnesium];
-    effect gotmilk = $effect[Got Milk];
     item mayoFullToDrunk = $item[Mayodiol]; // 1 full to drunk
     item mayoIncreaseBuffs = $item[Mayozapine]; // double stats
     item cashew = $item[cashew];
@@ -506,6 +507,8 @@ void ReadSettings()
     item affirmationCollect = $item[Daily Affirmation: Always be Collecting]; // from new you club
     item avoidScams = $item[How to Avoid Scams]; // only relevant for barf mountain
     item begpwnia = $item[begpwnia]; // 30% from mayflower bouquet
+    item geneConstellation = $item[Gene Tonic: Constellation];
+    effect geneConstellationEffect = $effect[Human-Constellation Hybrid];
     item flaskfull = $item[Flaskfull of Hollow]; // + smithness for Half a Purse
     item dice = $item[Glenn's golden dice]; // once a day random buffs
     item pantsGiving = $item[Pantsgiving]; // wear for combat skills, fullnes reduction
@@ -513,6 +516,7 @@ void ReadSettings()
     item chibiOff = $item[ChibiBuddy&trade; (off)]; // once a day activate for 5 turns of +5 familiar weight
     item chibiOn = $item[ChibiBuddy&trade; (on)]; // once a day activate for 5 turns of +5 familiar weight
     item mumming = $item[mumming trunk]; // cast +meat or +item on familiar
+    item comb = $item[Beach Comb]; // cast +5 familiar weight once a day
 
 // 2 day items for +meat bonus
     item peppermint = $item[peppermint twist]; // candy drop from robort
@@ -575,6 +579,7 @@ void ReadSettings()
     effect petBuffEffect = $effect[Heavy Petting];
     effect kinderEffect = $effect[Kindly Resolve];
     effect chibiEffect = $effect[ChibiChanged&trade;];
+    effect beachHeadWeight = $effect[Do I Know You From Somewhere?];
 
 // skills to activate Bag O' Tricks
     skill mortarShell = $skill[Stuffed Mortar Shell]; // this one is special because it has a one turn delay
@@ -699,6 +704,7 @@ void ReadSettings()
 
 // semi-rare
     item nickel = $item[hobo nickel];
+    item pillKeeper = $item[Eight Days a Week Pill Keeper];
 // keys
     item billiardKey = $item[Spookyraven billiards room key];
     item keyCardAlpha = $item[keycard &alpha;];
@@ -874,8 +880,10 @@ void ReadSettings()
     void PrepareMeaty();
     boolean TryEat(item food, effect desiredEffect, int providedFullness, int followupFullness, int turnLimit, boolean eatUnique);
     void UseWarbearOven();
+    void BeforeSwapOutDNALab();
     void BeforeSwapOutAsdon();
     void BeforeSwapOutMayo();
+    void BeforeSwapOutWorkshop(item newItem);
     void TryReduceManaCost(skill sk);
     void MaxManaSummons();
     void ChooseEducate(boolean duplicate, boolean digitize);
@@ -1400,7 +1408,7 @@ DebugOutfit("Goal outfit", outfitDef);
         hasFreeKillRemaining = false;
     }
 
-    void CheckPostCombat(string pageResult, string combatFilter)
+    boolean CheckPostCombat(string pageResult, string combatFilter)
     {
         //int[item] itemsGained = extract_items(result);
         //if (my_bjorned_familiar() == orphan || my_enthroned_familiar() == orphan)
@@ -1414,17 +1422,22 @@ DebugOutfit("Goal outfit", outfitDef);
             ResetCombatState();
             visit_url("fight.php");
             run_combat(combatFilter);
+            return true;
         }
         if (pageResult.contains_text("The phone in your doctor's bag rings"))
         {
             string page = visit_url("choice.php");
             run_choice(1); // Accept the case
+            return true;
         }
+        return false;
     }
-    void RunCombat(string filter)
+    // want to return true if we actually succeeded, and false if something prevented combat from running
+    boolean RunCombat(string filter)
     {
         string result = run_combat(filter);
-        CheckPostCombat(result, filter);
+        boolean hasPostCombat = CheckPostCombat(result, filter);
+        return hasPostCombat || result.contains_text("scripts/fight.js");
     }
     boolean TryHandleNonCombat(string page)
     {
@@ -2018,8 +2031,14 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[The Sleazy Back Alley]:
             case $location[The Arid, Extra-Dry Desert]:
             case $location[The Unquiet Garves]:
-            case $location[The Haunted Kitchen]:
             case $location[The Goatlet]:
+            case $location[Pandamonium Slums]:
+            case $location[The Haunted Wine Cellar]:
+            case $location[The Haunted Laundry Room]:
+            case $location[The Haunted Boiler Room]:
+            case $location[The Haunted Kitchen]:
+            case $location[the Beanbat Chamber]:
+            case $location[The Batrat and Ratbat Burrow]:
                 return true;
         }
         return false;
@@ -2872,6 +2891,19 @@ print("Running filter = " + result, printColor);
         return meat;
     }
 
+    slot ChooseBarfReplacementAccessory(item[slot] forOutfit)
+    {
+        int meat1 = EstimateMeatBonusPercent(forOutfit[acc1]);
+        int meat2 = EstimateMeatBonusPercent(forOutfit[acc2]);
+        int meat3 = EstimateMeatBonusPercent(forOutfit[acc3]);
+        if (meat1 < meat2 && meat1 < meat3)
+            return acc1;
+        else if (meat2 < meat1 && meat2 < meat3)
+            return acc2;
+        else
+            return acc3;
+    }
+
     void PrepareBarf(boolean RequireOutfit)
     {
         boolean mayflyEq = false;
@@ -2889,17 +2921,13 @@ print("Running filter = " + result, printColor);
         {
             if (!mayflyEq)
             {
-                int meat1 = EstimateMeatBonusPercent(barfOutfitPieces[acc1]);
-                int meat2 = EstimateMeatBonusPercent(barfOutfitPieces[acc2]);
-                int meat3 = EstimateMeatBonusPercent(barfOutfitPieces[acc3]);
-                if (meat1 < meat2 && meat1 < meat3)
-                    barfOutfitPieces[acc1] = mayfly;
-                else if (meat2 < meat1 && meat2 < meat3)
-                    barfOutfitPieces[acc2] = mayfly;
-                else
-                    barfOutfitPieces[acc3] = mayfly;
+                barfOutfitPieces[ChooseBarfReplacementAccessory(barfOutfitPieces)] = mayfly;
             }
             needsMayfly = true;
+        }
+        else if (HaveEquipment(doctorBag) && get_property("doctorBagQuestLocation") == "" && !OutfitContains(barfOutfitPieces, doctorBag))
+        {
+            barfOutfitPieces[ChooseBarfReplacementAccessory(barfOutfitPieces)] = doctorBag;
         }
         if (HaveEquipment(protonPack) && back.equipped_item() != protonPack)
         {
@@ -4417,7 +4445,7 @@ abort("Todo: what choice #s for basement");
                     && mayoClinic.item_amount() > 0
                     && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
-                    BeforeSwapOutAsdon();
+                    BeforeSwapOutWorkshop(oven);
                     UseWarbearOven();
                     use(1, mayoClinic);
                 }
@@ -4495,7 +4523,6 @@ abort("Todo: what choice #s for basement");
         if (get_property("_timeSpinnerMinutesUsed") > 7) // no time left
             return false;
         ConsumeMayo(false);
-        UseItem(milk, gotmilk, 2, 20, 2000);
         if (HaveEaten(thanks1) && TimeSpinnerEat(thanks1)) return true;
         if (HaveEaten(thanks2) && TimeSpinnerEat(thanks2)) return true;
         if (HaveEaten(thanks3) && TimeSpinnerEat(thanks3)) return true;
@@ -4535,7 +4562,14 @@ abort("Todo: what choice #s for basement");
 
         if (!RoomToEat(providedFullness))
             return false;
-        UseItem(milk, gotmilk, 2, 20, 2000);
+
+        if (get_property("_milkOfMagnesiumUsed") != "true")
+        {
+            if (milk.item_amount() <= 0)
+                BuyItemIfNeeded(milk, 10, 2000);
+            if (milk.item_amount() > 0)
+                use(1, milk);
+        }
 
         boolean convertToDrunk = RoomToDrink(1) && !RoomToEat(providedFullness + followupFullness);
         ConsumeMayo(convertToDrunk);
@@ -4924,7 +4958,7 @@ abort("Todo: what choice #s for basement");
                 return;
             if (UserConfirmDefault("Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?", true))
             {
-                BeforeSwapOutMayo();
+                BeforeSwapOutWorkshop(asdonMartin);
                 use(1, asdonMartin);
             }
         }
@@ -5268,6 +5302,11 @@ abort("Todo: what choice #s for basement");
         {
             use(1, gameToken);
         }
+        if (dnaLab.item_amount() > 0 || get_campground() contains dnaLab)
+        {
+            BeforeSwapOutDNALab();
+            UseItem(geneConstellation, geneConstellationEffect, 30, 30, 0);
+        }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
         //UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
         if (summonRes.have_skill())
@@ -5306,6 +5345,11 @@ abort("Todo: what choice #s for basement");
                 cli_execute("witchess");
             }
             ActivateChibiBuddy();
+            if (comb.item_amount() > 0)
+            {
+                visit_url("main.php"); // convince game we're not stuck in choice encounter
+                cli_execute("beach head familiar");
+            }
         }
         ActivateFortuneTeller();
 
@@ -6085,10 +6129,10 @@ abort("Todo: what choice #s for basement");
     }
 
     boolean universesLeft = true;
-    void TryCalculateUniverse()
+    boolean TryCalculateUniverse()
     {
         if (!universesLeft || my_mp() < 1)
-            return;
+            return false;
         static int moonSignInt = -1;
         if (moonSignInt < 0)
         {
@@ -6109,7 +6153,7 @@ abort("Todo: what choice #s for basement");
         }
         universesLeft = get_property("_universeCalculated").to_int() < get_property("skillLevel144").to_int();
         if (!universesLeft)
-            return;
+            return false;
         int desiredNumber;
         if (hippy_stone_broken() && preferCalcUniversePvP)
             desiredNumber = 37;
@@ -6127,10 +6171,11 @@ abort("Todo: what choice #s for basement");
             {
                 print("Calculate the universe " + i, printColor);
                 cli_execute("numberology " + desiredNumber);
-                return;
+                return true;
             }
         }
         print("Numberology not available this turn", printColor);
+        return false;
     }
 
     void ActivateChibiBuddy()
@@ -6214,7 +6259,7 @@ abort("Todo: what choice #s for basement");
         run_choice(5); // Total Eclipse of Your Meat
     }
 
-    void RunBarfMountain(boolean requireOutfit)
+    boolean RunBarfMountain(boolean requireOutfit)
     {
         location zone = barfMountain;
         if (MeatyScheduled())
@@ -6247,10 +6292,11 @@ abort("Todo: what choice #s for basement");
             }
             else
                 run_choice(1);  // ride the rollercoaster
+            return true;
         }
         else
         {
-            RunCombat("Filter_Standard");
+            return RunCombat("Filter_Standard");
         }
     }
 
@@ -6511,6 +6557,22 @@ abort("Todo: what choice #s for basement");
         AcquireFeast(best, 3, true);
     }
 
+    void BeforeSwapOutDNALab()
+    {
+        if (get_campground() contains dnaLab)
+        {
+            if (get_property("dnaSyringe") != "Constellation")
+            {
+            }
+            if (get_property("dnaSyringe") == "Constellation")
+            {
+                int potionCount = 3 - get_property("_dnaPotionsMade").to_int();
+                for (int i = 0; i < potionCount; i++)
+                    visit_url("campground.php?action=dnapotion");
+            }
+        }
+    }
+
     void BeforeSwapOutMayo()
     {
         if (get_campground() contains mayoClinic)
@@ -6540,6 +6602,17 @@ abort("Todo: what choice #s for basement");
             PrepareFamiliar(false);
             RunBarfMountain(false);
         }
+    }
+    void BeforeSwapOutWorkshop(item newItem)
+    {
+        if (get_campground() contains newItem)
+            return;
+        if (get_campground() contains asdonMartin)
+            BeforeSwapOutAsdon();
+        else if (get_campground() contains mayoClinic)
+            BeforeSwapOutMayo();
+        else if (get_campground() contains dnaLab)
+            BeforeSwapOutDNALab();
     }
 
     boolean CheckJokesterGunState()
@@ -6897,6 +6970,9 @@ print("mob = " + canMobHit);
         if (turnCount == 0)
             return;
 
+        int startTurnCount = my_turnCount();
+        int endTurnCount = startTurnCount + turnCount;
+
         CheckBoomBoxSong();
         TryCalculateUniverse();
         TryOpenRainDoh();
@@ -6912,12 +6988,21 @@ print("mob = " + canMobHit);
             RunawayDinseyBurnDelay();
             RunawayMadnessBakery();
 
-            for (int i = 0; i < turnCount; i++)
+            int infiniteLoopCounter = 0;
+            while (my_turnCount() < endTurnCount || hasFreeKillRemaining)
             {
-                print("LinknoidBarf Turns remaining = " + (turnCount - i));
-                TryCalculateUniverse();
-                TryAutoExtendThanksGetting(turnCount - i);
-                BuffInRun(turnCount - i, false);
+                int turnsRemaining = endTurnCount - my_turnCount();
+                print("LinknoidBarf Turns remaining = " + turnsRemaining);
+                for (int j = 0; j < 4; j++) // current limit is 4 on a player
+                    if (!TryCalculateUniverse())
+                        break;
+                TryAutoExtendThanksGetting(turnsRemaining);
+                if (my_adventures() <= 0)
+                {
+                    print("Out of adventures, stopping");
+                    break;
+                }
+                BuffInRun(turnsRemaining, false);
                 BurnManaAndRestores(20, false);
                 PrepareFilterState();
 
@@ -6929,7 +7014,7 @@ print("mob = " + canMobHit);
                 if (needBagOTricks)
                     TryActivateBagOTricks(CopyOutfit(dropsOutfitPieces));
 
-                TryAutoExtendThanksgetting(turnCount - i);
+                TryAutoExtendThanksgetting(turnsRemaining);
                 SoulSauceToMana();
                 if (spookyravenCounter == my_turnCount())
                 {
@@ -6944,10 +7029,11 @@ print("mob = " + canMobHit);
                     RunSemiRare();
                     continue;
                 }
-                if ((turnCount - i) % 5 == 1)  // only check every 5 turns
+                if ((turnsRemaining) % 5 == 1)  // only check every 5 turns
                 {
                     if (TryFightGhost())
                     {
+                        infiniteLoopCounter = 0;
                         continue;
                     }
                 }
@@ -6956,11 +7042,26 @@ print("mob = " + canMobHit);
                     print("Running copied embezzler");
                     PrepareFamiliar(true);
                     if (RunCopiedMeaty())
+                    {
+                        infiniteLoopCounter = 0;
                         continue;
+                    }
                 }
                 PrepareFamiliar(false);
                 print("Running barf mountain");
-                RunBarfMountain(true);
+                if (RunBarfMountain(true))
+                    infiniteLoopCounter = 0;
+                else if (++infiniteLoopCounter > 10)
+                {
+                    // just a sanity check, want a little leeway so it doesn't assume infinite loop immediately, but if we've
+                    // gone 10 rounds without doing anything, assume we're stuck
+                    print("Looks like we're in an infinite loop, stopping");
+                    break;
+                }
+                if (fortuneCookieCounter < my_turnCount() && get_property("_freePillKeeperUsed") == "false" && pillKeeper.item_amount() > 0 && turnsRemaining > 2)
+                {
+                    cli_execute("pillkeeper semirare");
+                }
             }
         }
         finally
