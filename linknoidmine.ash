@@ -121,8 +121,8 @@ item burrito3 = $item[insanely spicy enchanted bean burrito];
 item milk = $item[milk of magnesium];
 effect gotmilk = $effect[Got Milk];
 item ruby = $item[Tuesday's Ruby];
-item gar = $item[Potion of Field Gar];
-effect garEffect = $effect[Garish];
+item gar = $item[Potion of the Field Gar];
+effect garEffect = $effect[Gar-ish];
 skill odeToBooze = $skill[The Ode to Booze];
 effect odeToBoozeEffect = $effect[Ode to Booze];
 item shotglass = $item[mime army shotglass];
@@ -180,9 +180,9 @@ void BuyAndWear(item i, slot s)
 // to prevent "can't equip duplicate item" errors
 void ClearAccessorySlots()
 {
-	acc1.equip("none".to_item());
-	acc2.equip("none".to_item());
-	acc3.equip("none".to_item());
+	acc1.equip($item[none]);
+	acc2.equip($item[none]);
+	acc3.equip($item[none]);
 }
 void WearSleepGear()
 {
@@ -223,7 +223,13 @@ void WearMiningGear()
 		BuyAndWear(cloak2, back); // hp regen
 	BuyAndWear(drill, weapon); // heat resist
 	BuyAndWear(lavaPants, pants); // heat resist
-	ClearAccessorySlots();
+	//ClearAccessorySlots();
+	if (acc1.equipped_item() == necktie || acc1.equipped_item() == xibPuter)
+		acc1.equip($item[none]);
+	if (acc2.equipped_item() == xibPuter || acc2.equipped_item() == gloves)
+		acc2.equip($item[none]);
+	if (acc3.equipped_item() == gloves || acc3.equipped_item() == necktie)
+		acc3.equip($item[none]);
 	BuyAndWear(gloves, acc1); // heat resist
 	BuyAndWear(necktie, acc2); // heat resist
 	BuyAndWear(xibPuter, acc3); // mining bonus
@@ -249,6 +255,12 @@ void WearVelvetGear()
 	ClearAccessorySlots();
 	WearVelvetGear(velvetShirt, shirt, 8); // shirt first in case of torso awareness
 	WearVelvetGear(velvetPants, pants, 10); // then most expensive to least
+	if (acc1.equipped_item() == velvetAcc2 || acc1.equipped_item() == velvetAcc3)
+		acc1.equip($item[none]);
+	if (acc1.equipped_item() == velvetAcc1 || acc1.equipped_item() == velvetAcc3)
+		acc2.equip($item[none]);
+	if (acc1.equipped_item() == velvetAcc1 || acc1.equipped_item() == velvetAcc2)
+		acc3.equip($item[none]);
 	WearVelvetGear(velvetAcc1, acc1, 9); // hanky
 	WearVelvetGear(velvetHead, head, 7); // hat
 	WearVelvetGear(velvetAcc2, acc2, 6); // socks
@@ -424,6 +436,11 @@ string Dig(int x, int y)
 	return visit_url("mining.php?mine=6&which=" + idx + "&pwd=" + my_hash());
 }
 
+boolean HasFreeTurns(string page)
+{
+	return !page.contains_text("Mining a chunk of the cavern wall takes one Adventure");
+}
+
 void DoMining(int advToSpend)
 {
 	print("Spending " + advToSpend + " mining.", printColor);
@@ -442,8 +459,12 @@ void DoMining(int advToSpend)
 	string searchPattern = "Promising Chunk of Wall \\((\\d+),([56])\\)"; // only rows 5 and 6
 
 	string page = visit_url("mining.php?mine=6&intro=1");
-	while (my_adventures() > rem_adv)
+	while (my_adventures() >= rem_adv)
 	{
+		if (my_adventures() == rem_adv && !HasFreeTurns(page))
+		{
+			break;
+		}
 		totalMines++;
 		
 		if (!page.contains_text("value='Find New Cavern'") && !page.contains_text("Promising Chunk of Wall"))
@@ -461,7 +482,7 @@ void DoMining(int advToSpend)
 			badMines++;
 		while (spot.find() && !gotgold)
 		{
-			if(my_adventures()<=rem_adv)
+			if (my_adventures() <= rem_adv && !HasFreeTurns(page))
 			{
 				reset = false;
 				break;
@@ -593,13 +614,13 @@ void PrepareEat(int size)
 	{
 		cli_execute("barrelprayer buff");
 	}
-	while (gotMilk.have_effect() < size)
-	{
-		BuyItem(milk);
-		if (milk.item_amount() == 0)
-			return;
-		use(1, milk);
-	}
+        if (get_property("_milkOfMagnesiumUsed") != "true")
+        {
+            if (milk.item_amount() <= 0)
+                BuyItem(milk);
+            if (milk.item_amount() > 0)
+                use(1, milk);
+        }
 }
 
 int FillSpleen(int remainingSpleen)
@@ -856,21 +877,26 @@ void main(int miningTurns)
 	}
 
 	boolean volcoinosChecked = false;
-	if (miningTurns < 0)
+	if (miningTurns == -2)
+		miningTurns = 0;
+	else
 	{
-		HandleEatDrinkSpleen();
-		if (HasAccess())
+		if (miningTurns < 0)
 		{
-			DoVolcoino();
-			volcoinosChecked = true;
+			HandleEatDrinkSpleen();
+			if (HasAccess())
+			{
+				DoVolcoino();
+				volcoinosChecked = true;
+			}
 		}
+
+		if (miningTurns > my_adventures() || miningTurns < 0)
+			miningTurns = my_adventures();
+
+		if (miningTurns <= 0)
+			abort("No turns to spend");
 	}
-
-	if (miningTurns > my_adventures() || miningTurns < 0)
-		miningTurns = my_adventures();
-
-	if (miningTurns <= 0)
-		abort("No turns to spend");
 	EnsureAccess();
 	if (!volcoinosChecked)
 		DoVolcoino();

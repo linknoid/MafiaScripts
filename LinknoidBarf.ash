@@ -39,6 +39,8 @@
 
 // track candle/scroll drops from intergnat
 
+// broken: ChibiChanged, missing tattered scrap/inkwell
+
 
 // For dice gear:
 // Change filter to kill ticking modifier monsters immediately instead of dragging out combat
@@ -467,6 +469,7 @@ void ReadSettings()
     skill phatLoot = $skill[Fat Leon's Phat Loot Lyric];
     skill sweetSynth = $skill[Sweet Synthesis];
     skill selfEsteem = $skill[Incredible Self-Esteem];
+    skill favoriteBird = $skill[Visit your Favorite Bird];
 // skills for pet bonus
     skill leash = $skill[Leash of Linguini];
     skill empathy = $skill[Empathy of the Newt];
@@ -1357,20 +1360,19 @@ DebugOutfit("Goal outfit", outfitDef);
         return IsMeatyMonster(capped)
             && get_property("_chateauMonsterFought") == "false";
     }
-    void BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
+    boolean BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
     {
-        if (maxPrice < 0)
-            return;
         int buyCount = numberRequested - itm.item_amount();
         if (buyCount <= 0)
-            return;
+            return true;
+        if (maxPrice < 0)
+            return false;
         int mallPrice = itm.mall_price();
         if (mallPrice <= maxPrice)
         {
-            if (buyCount < 1)
-                buyCount = 1;
             buy(buyCount, itm, maxPrice);
         }
+        return numberRequested <= itm.item_amount();
     }
     void ResetCombatState()
     {
@@ -1964,7 +1966,7 @@ DebugOutfit("Goal outfit", outfitDef);
         ChooseEducate(false, needsDigitize);
 
         needsEnamorang = enamorang.item_amount() > 0 && get_property("enamorangMonster") == "";
-        if (usedCamera.item_amount() == 0 && camera.item_amount() == 0 && beerLens.item_amount() > 0)
+        if (camera.item_amount() == 0 && beerLens.item_amount() > 0)
         {
             cli_execute("acquire nothing-in-the-box");
             craft("paste", 1, nothingInTheBox, beerLens);
@@ -2025,7 +2027,7 @@ DebugOutfit("Goal outfit", outfitDef);
         switch (loc)
         {
             case $location[The Castle in the Clouds in the Sky (Top Floor)]:
-            //case $location[The Castle in the Clouds in the Sky (Middle Floor)]:
+            case $location[The Castle in the Clouds in the Sky (Ground Floor)]:
             case $location[The Castle in the Clouds in the Sky (Basement)]:
             case $location[The Penultimate Fantasy Airship]:
             case $location[The Sleazy Back Alley]:
@@ -2033,12 +2035,30 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[The Unquiet Garves]:
             case $location[The Goatlet]:
             case $location[Pandamonium Slums]:
+            case $location[The Dire Warren]:
+            case $location[Noob Cave]:
+            case $location[The Spooky Forest]:
+            case $location[The Degrassi Knoll Restroom]:
+            case $location[The Degrassi Knoll Bakery]:
+            case $location[The Degrassi Knoll Gym]:
+            case $location[The Degrassi Knoll Garage]:
+            case $location[The Haunted Gallery]:
             case $location[The Haunted Wine Cellar]:
             case $location[The Haunted Laundry Room]:
             case $location[The Haunted Boiler Room]:
             case $location[The Haunted Kitchen]:
-            case $location[the Beanbat Chamber]:
+            case $location[The Haunted Billiards Room]:
+            case $location[The Outskirts of Cobb's Knob]:
+            case $location[Cobb's Knob Barracks]:
+            case $location[Cobb's Knob Kitchens]:
+            case $location[Cobb's Knob Harem]:
+            case $location[The Bat Hole Entrance]:
+            case $location[The Beanbat Chamber]:
             case $location[The Batrat and Ratbat Burrow]:
+            case $location[The Hidden Apartment Building]:
+            case $location[The Hidden Office Building]:
+            case $location[The Hidden Hospital]:
+            case $location[The Hidden Bowling Alley]:
                 return true;
         }
         return false;
@@ -4445,8 +4465,7 @@ abort("Todo: what choice #s for basement");
                     && mayoClinic.item_amount() > 0
                     && UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
                 {
-                    BeforeSwapOutWorkshop(oven);
-                    UseWarbearOven();
+                    BeforeSwapOutWorkshop(mayoClinic);
                     use(1, mayoClinic);
                 }
                 if (!(get_campground() contains mayoClinic)
@@ -5218,6 +5237,13 @@ abort("Todo: what choice #s for basement");
         if (RoomToEat(2))
             AcquireFullFeast();
 
+        if (get_property("getawayCampsiteUnlocked") == "true")
+        {
+            for (int i = 0; i < 4; i++)
+                if (get_property("_campAwaySmileBuffs").to_int() < 3)
+                    visit_url("place.php?whichplace=campaway&action=campaway_sky");
+        }
+
         if (runFamiliar == orphan)
         {
             needWeightBuffs = false;
@@ -5237,8 +5263,15 @@ abort("Todo: what choice #s for basement");
         if (turns > 100 && runFamiliar != orphan)
             AcquireAmuletCoin();
 
-        if (get_property("demonSummoned") != "true")
-            cli_execute(summonGreed);
+        if (get_property("demonSummoned") != "true" && get_property("demonName2") != "")
+        {
+	    if (BuyItemIfNeeded($item[tattered scrap of paper], 1, 6000)
+                && BuyItemIfNeeded($item[disintegrating quill pen], 1, 1000)
+                && BuyItemIfNeeded($item[inkwell], 1, 1000))
+            {
+                cli_execute(summonGreed);
+            }
+        }
         if (get_property("concertVisited") != "true")
         {
             if (get_property("sidequestArenaCompleted") == "fratboy")
@@ -5290,6 +5323,12 @@ abort("Todo: what choice #s for basement");
                 //    WishForEffect(braaaaaains);
                 //}
             }
+        }
+
+	// to do: Mafia doesn't seem to know about this skill yet
+        if (favoriteBird.have_skill() && get_property("_favoriteBirdVisited") == "false")
+        {
+            use_skill(1, favoriteBird);
         }
 
         // want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
@@ -5520,6 +5559,11 @@ abort("Todo: what choice #s for basement");
         TryReduceManaCost(leer);
         BuffInRun(turns, false);
 
+	MakeMeltingGear(defaultOutfitPieces);
+	MakeMeltingGear(meatyOutfitPieces);
+	MakeMeltingGear(dropsOutfitPieces);
+	MakeMeltingGear(weightOutfitPieces);
+
         //if (needWeightBuffs)
         //{
         //    // this reduces all stats, so use after MaxManaSummons
@@ -5602,6 +5646,18 @@ abort("Todo: what choice #s for basement");
 
         if (TryChoose("Get the heck out of here")) // lights out
             return true;
+        if (TryChoose("Get out of here right now go go go")) // lights out in the wine cellar
+            return true;
+        if (TryChoose("Quit the Gallery")) // lights out in the gallery
+            return true;
+        if (TryChoose("Get the heck out of here")) // Lights out in the Haunted Billiards Room
+            return true;
+        if (TryChoose("Hustle away")) // Welcome to Our ool Table
+            return true;
+        if (page.contains_text("Louvre It or Leave It") && TryChoose("Pass on by")) // Haunted Gallery
+            return true;
+        if (page.contains_text("Out in the Garden") && TryChoose("None of the above")) // Haunted Gallery
+            return true;
         if (TryChoose("Walk Away")) // Aww, Craps
             return true;
         if (TryChoose("Punch the hobo")) // Dumpster Diving
@@ -5612,6 +5668,35 @@ abort("Todo: what choice #s for basement");
             return true;
         if (TryChoose("Umm, no thanks. Seriously.")) // Under the Knife
             return true;
+        if (TryChoose("Exit through the gift shop")) // Action Elevator, Hidden Apartment Building
+            return true;
+        if (TryChoose("Take the day off")) // Working Holiday, Hidden Office Building
+            return true;
+        if (TryChoose("Dammit, door, I'm an Adventurer, not a doctor!")) // You, M.D., Hidden Hospital
+            return true;
+        if (TryChoose("Let's don't")) // Life is Like a Cherry of Bowls, Hidden Bowling Alley
+            return true;
+        if (TryChoose("Leave the scene")) // Welcome to the Footlocker, Cobb's Knob Barracks
+            return true;
+        if (TryChoose("Kick the chef")) // Knob Goblin BBQ, Outskirts of Cobb's Knob
+            return false; // converted to combat
+        if (TryChoose("Plot a cunning escape")) // Malice in Chains, Outskirts of Cobb's Knob
+            return false; // converted to combat
+	if (TryChoose("Explore the stream")) // Arboreal Respite, Spooky Forest
+            if (TryChoose("Go further upstream")) // Consciouness of a Stream
+                if (TryChoose("Inter the vampire"))
+                    return false; // convert to combat
+
+        // Castle Ground Floor choices:
+        if (TryChoose("Go out the Way You Came In")) // There's No Ability Like Possibility
+            return true;
+        if (TryChoose("Get out of this Junk")) // Putting Off is Off-Putting
+            return true;
+        if (TryChoose("Seek the Egress Anon")) // Huzzah!
+            return true;
+        if (TryChoose("Leave through a vent")) // Home on the Free Range
+            return true;
+
 
         // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
         TryChoose("Check Behind the Giant Poster"); // goto punk rock
@@ -5742,7 +5827,7 @@ abort("Todo: what choice #s for basement");
     void RunawayGingerbread()
     {
         visit_url("place.php?whichplace=gingerbreadcity");
-        if (get_property("_gingerbreadCityToday") != "true" // not accessible
+        if (get_property("gingerbreadCityAvailable") != "true" // not accessible
             || GingerbreadTurns() > 20) // already ran turns
         {
             return;
@@ -5817,6 +5902,49 @@ abort("Todo: what choice #s for basement");
         }
     }
 
+    void BjornCrownWeightFamiliar()
+    {
+        boolean bjornEq = bjorn.have_equipped();
+        boolean crownEq = crown.have_equipped();
+        if (!bjornEq && !crownEq)
+            return;
+        familiar curFamiliar;
+        if (bjornEq)
+            curFamiliar = my_bjorned_familiar();
+        else
+            curFamiliar = my_enthroned_familiar();
+
+        familiar[] weightFamiliars =
+            {
+                $familiar[Ghost Pickle on a Stick],
+                $familiar[Pair of Ragged Claws],
+                $familiar[Spooky Pirate Skeleton],
+                $familiar[Autonomous Disco Ball],
+                // familiars which deal damage (which we probably don't want):
+                $familiar[Misshapen Animal Skeleton],
+                $familiar[Animated Macaroni Duck],
+                $familiar[Barrrnacle],
+                $familiar[Gelatinous Cubeling],
+                $familiar[Penguin Goodfella],
+            };
+        foreach ix,f in weightFamiliars
+        {
+            if (curFamiliar == f)
+                return;
+        }
+        foreach ix,f in weightFamiliars
+	{
+	    if (f.have_familiar())
+            {
+                if (bjornEq)
+                    f.bjornify_familiar();
+                else
+                    f.enthrone_familiar();
+                return;
+            }
+	}
+    }
+
     boolean TryPrepareFamiliarRunaways(boolean first, item[slot] weightOF)
     {
         if (stompingBoots.have_familiar())
@@ -5840,6 +5968,7 @@ abort("Todo: what choice #s for basement");
         }
 
         WearOutfit(weightOF);
+        BjornCrownWeightFamiliar();
         if (GetFamiliarRunaways() > 0)
             return true;
 
@@ -6430,8 +6559,7 @@ abort("Todo: what choice #s for basement");
         if (favorLyle.have_effect() == 0)
             visit_url("place.php?whichplace=monorail&action=monorail_lyle");
 
-        visit_url("place.php?whichplace=spacegate"); // have to visit it to see if we have access
-        if (get_property("spacegateVaccine") != "true" && get_property("_spacegateToday") == "true")
+        if (get_property("spacegateVaccine") != "true" && get_property("_spacegateAlways") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
         if (big.have_effect() == 0)
@@ -6561,10 +6689,8 @@ abort("Todo: what choice #s for basement");
     {
         if (get_campground() contains dnaLab)
         {
-            if (get_property("dnaSyringe") != "Constellation")
-            {
-            }
-            if (get_property("dnaSyringe") == "Constellation")
+            string syringeType = get_property("dnaSyringe");
+            if (syringeType == "constellation" || syringeType == "fish")
             {
                 int potionCount = 3 - get_property("_dnaPotionsMade").to_int();
                 for (int i = 0; i < potionCount; i++)
@@ -6613,6 +6739,8 @@ abort("Todo: what choice #s for basement");
             BeforeSwapOutMayo();
         else if (get_campground() contains dnaLab)
             BeforeSwapOutDNALab();
+        else if (get_campground() contains oven)
+            UseWarbearOven();
     }
 
     boolean CheckJokesterGunState()
@@ -6989,7 +7117,7 @@ print("mob = " + canMobHit);
             RunawayMadnessBakery();
 
             int infiniteLoopCounter = 0;
-            while (my_turnCount() < endTurnCount || hasFreeKillRemaining)
+            while (my_turnCount() <= endTurnCount)
             {
                 int turnsRemaining = endTurnCount - my_turnCount();
                 print("LinknoidBarf Turns remaining = " + turnsRemaining);
@@ -7009,8 +7137,6 @@ print("mob = " + canMobHit);
                 if (HandleVoteMonster())
                     continue;
               
-                if (turnCount < 0 && !hasFreeKillRemaining)
-                    return;
                 if (needBagOTricks)
                     TryActivateBagOTricks(CopyOutfit(dropsOutfitPieces));
 
@@ -7022,13 +7148,6 @@ print("mob = " + canMobHit);
                     BypassCounterError();
                 }
 
-                if (fortuneCookieCounter == my_turnCount()
-                    && semiRareAttempted != my_turnCount())
-                {
-                    print("Running semi-rare");
-                    RunSemiRare();
-                    continue;
-                }
                 if ((turnsRemaining) % 5 == 1)  // only check every 5 turns
                 {
                     if (TryFightGhost())
@@ -7036,6 +7155,16 @@ print("mob = " + canMobHit);
                         infiniteLoopCounter = 0;
                         continue;
                     }
+                }
+                if (my_turnCount() >= endTurnCount)
+                    return;
+
+                if (fortuneCookieCounter == my_turnCount()
+                    && semiRareAttempted != my_turnCount())
+                {
+                    print("Running semi-rare");
+                    RunSemiRare();
+                    continue;
                 }
                 if (CopiedMeatyAvailable())
                 {
@@ -7055,7 +7184,7 @@ print("mob = " + canMobHit);
                 {
                     // just a sanity check, want a little leeway so it doesn't assume infinite loop immediately, but if we've
                     // gone 10 rounds without doing anything, assume we're stuck
-                    print("Looks like we're in an infinite loop, stopping");
+                    print("Looks like we're in an infinite loop, stopping", printColor);
                     break;
                 }
                 if (fortuneCookieCounter < my_turnCount() && get_property("_freePillKeeperUsed") == "false" && pillKeeper.item_amount() > 0 && turnsRemaining > 2)
