@@ -418,6 +418,7 @@ void ReadSettings()
     skill gingerbreadMobHit = $skill[Gingerbread Mob Hit];
     skill missileLauncher = $skill[Asdon Martin: Missile Launcher];
     skill fireJokester = $skill[Fire the Jokester's Gun];
+    skill xray = $skill[Chest X-Ray];
 
 // increase drops in combat
     skill funkslinging = $skill[Ambidextrous Funkslinging];
@@ -475,6 +476,7 @@ void ReadSettings()
     skill empathy = $skill[Empathy of the Newt];
     //item petBuff = $item[Knob Goblin pet-buffing spray];
     item kinder = $item[resolution: be kinder];
+    item blueTaffy = $item[pulled blue taffy];
     item joy = $item[abstraction: joy];
     skill bloodBond = $skill[Blood Bond];
     effect bloodBondEffect = $effect[Blood Bond];
@@ -501,7 +503,7 @@ void ReadSettings()
     item patriotShield = $item[Operation Patriot Shield]; // IotM offhand with guaranteed crit
     skill patriotCrit = $skill[Throw Shield]; // guaranteed critical hit skill from haiku katana
 
-    item cosplaySaber = ToItem("Fourth of May Cosplay Saber"); // for the +10 familiar weight
+    item cosplaySaber = $item[Fourth of May Cosplay Saber]; // for the +10 familiar weight
     item scratchSword = $item[scratch 'n' sniff sword]; // only worthwhile for embezzlers
     item scratchXbow = $item[scratch 'n' sniff crossbow]; // only worthwhile for embezzlers
     item scratchUPC = $item[scratch 'n' sniff UPC sticker]; // attaches to crossbow or sword
@@ -512,6 +514,8 @@ void ReadSettings()
     item begpwnia = $item[begpwnia]; // 30% from mayflower bouquet
     item geneConstellation = $item[Gene Tonic: Constellation];
     effect geneConstellationEffect = $effect[Human-Constellation Hybrid];
+    item geneFish = $item[Gene Tonic: Fish];
+    effect geneFishEffect = $effect[Human-Fish Hybrid];
     item flaskfull = $item[Flaskfull of Hollow]; // + smithness for Half a Purse
     item dice = $item[Glenn's golden dice]; // once a day random buffs
     item pantsGiving = $item[Pantsgiving]; // wear for combat skills, fullnes reduction
@@ -581,6 +585,7 @@ void ReadSettings()
     effect empathyEffect = $effect[Empathy];
     effect petBuffEffect = $effect[Heavy Petting];
     effect kinderEffect = $effect[Kindly Resolve];
+    effect blueTaffyEffect = $effect[Blue Swayed];
     effect chibiEffect = $effect[ChibiChanged&trade;];
     effect beachHeadWeight = $effect[Do I Know You From Somewhere?];
 
@@ -673,6 +678,9 @@ void ReadSettings()
     item hoboBinder = $item[hobo code binder];
     skill getBig = $skill[Get Big];
     effect big = $effect[Big];
+    item powerGlove = $item[Powerful Glove];
+    skill tripleSize = $skill[CHEAT CODE: Triple Size];
+    effect tripleSizeEffect = $effect[Triple-Sized];
 
 // healing between turns
     effect beatenUp = $effect[Beaten Up];
@@ -744,6 +752,7 @@ void ReadSettings()
     item papier1 = $item[papier-mitre]; // inserts random words into sentences
     item papier2 = $item[Papier-m&acirc;churidars]; // inserts random words into sentences
     item papier3 = $item[papier-masque]; // inserts random words into sentences
+    item moonSpoon = $item[hewn moon-rune spoon]; // converts random words into rhymes
     effect disAbled = $effect[Dis Abled]; // turns everything into rhymes
     effect anapests = $effect[Just the Best Anapests]; // turns everything into rhymes
     effect haikuMind = $effect[Haiku State of Mind]; // turns everything into haiku
@@ -781,6 +790,8 @@ void ReadSettings()
     item mutantLegs = $item[mutant legs];
     item mutantCrown = $item[mutant crown];
     item doctorBag = $item[Lil' Doctor&trade; Bag];
+    item kramco = $item[Kramco Sausage-o-Matic&trade;];
+    monster kramcoGoblin = $monster[sausage goblin];
 // seal clubber supplies
     item bludgeon = $item[Brimstone Bludgeon];
     item tenderizer = $item[Meat Tenderizer is Murder];
@@ -799,6 +810,20 @@ void ReadSettings()
     item cheesePants = $item[stinky cheese diaper];
     item cheeseShield = $item[stinky cheese wheel];
     item cheeseAccessory = $item[stinky cheese eye];
+
+// mojo filter farming
+    location oasis = $location[The Oasis];
+    effect ultrahydrated = $effect[Ultrahydrated];
+    skill squint = $skill[Steely-Eyed Squint];
+    effect squintEffect = $effect[Steely-Eyed Squint];
+    item garbageTote = $item[January's Garbage Tote];
+    item champagne = $item[broken champagne bottle];
+    item fairCoin = $item[perfectly fair coin];
+    effect fairCoinEffect = $effect[What Are The Odds!?];
+    familiar hipster = $familiar[Mini-Hipster];
+    familiar goth = $familiar[Artistic Goth Kid];
+    familiar hand = $familiar[Disembodied Hand];
+    familiar cat = $familiar[Cat Burglar];
 
 // script state variables
     familiar runFamiliar;
@@ -832,7 +857,9 @@ void ReadSettings()
     boolean digitizeActivationNeeded = false;
     boolean canJokesterGun = false;
     boolean canBatoomerang = false;
+    boolean canXray = false;
     boolean canMissileLauncher = false;
+    boolean canUseForce = false;
     boolean shouldMissileLauncher = false;
     boolean canShatteringPunch = false;
     boolean canMobHit = false;
@@ -867,6 +894,7 @@ void ReadSettings()
     boolean critted = false;
     boolean shielded = false;
     boolean abstractioned = false;
+    boolean usedForce = false;
     int staggerOption = 0;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
@@ -1139,7 +1167,7 @@ void ReadSettings()
                 cli_execute("create carpe");
         }
         if ((!HaveEquipment(scratchXbow) && OutfitContains(outfitDef, scratchXbow))
-		|| (!HaveEquipment(scratchSword) && OutfitContains(outfitDef, scratchSword)))
+                || (!HaveEquipment(scratchSword) && OutfitContains(outfitDef, scratchSword)))
         {
             TryScratchNSniff(outfitDef);
         }
@@ -1393,6 +1421,7 @@ DebugOutfit("Goal outfit", outfitDef);
         canPocketCrumb = pantsGiving.have_equipped();
         staggerOption = 0;
         abstractioned = false;
+        usedForce = false;
         canAccordionBash = accordionBash.have_skill()
             && IsAccordion(weapon.equipped_item())
             && bakeBackpack.have_equipped();
@@ -1404,7 +1433,9 @@ DebugOutfit("Goal outfit", outfitDef);
         // combat will be free anyway, so don't waste them on this combat
         canJokesterGun = false;
         canBatoomerang = false;
+        canXray = false;
         canMissileLauncher = false;
+        canUseForce = false;
         canShatteringPunch = false;
         canMobHit = false;
         hasFreeKillRemaining = false;
@@ -1733,6 +1764,13 @@ DebugOutfit("Goal outfit", outfitDef);
                 use_skill(1, walrus);
             }
         }
+        if (my_hp() > 10000)
+            return;
+        if (my_maxhp() - my_hp() > 10000 && vipKey.item_amount() > 0 && get_property("_hotTubSoaks").to_int() < 5)
+        {
+            cli_execute("hottub");
+            return;
+        }
         if (my_hp() / (my_maxhp() + 0.5) < .75 && my_maxhp() > 200)
         {
             if (cocoon.have_skill() && my_mp() > 20)
@@ -1850,9 +1888,10 @@ DebugOutfit("Goal outfit", outfitDef);
         RemoveConfusionEffects(papier1, firstCheck);
         RemoveConfusionEffects(papier2, firstCheck);
         RemoveConfusionEffects(papier3, firstCheck);
+        RemoveConfusionEffects(moonSpoon, firstCheck);
         RemoveConfusionEffects(disAbled);
         RemoveConfusionEffects(anapests);
-        RemoveConfusionEffects(haikuMind );
+        RemoveConfusionEffects(haikuMind);
     }
 
     boolean PrepareAsdonLauncher()
@@ -1869,7 +1908,7 @@ DebugOutfit("Goal outfit", outfitDef);
 
 
 
-    void PrepareFilterState()
+    void PrepareFilterState(boolean forCurrentEquipped)
     {
         needsCleesh = false; // always reset this, don't want to cleesh on accident
         ResetCombatState();
@@ -1963,10 +2002,11 @@ DebugOutfit("Goal outfit", outfitDef);
             }
                 
         }
-        ChooseEducate(false, needsDigitize);
+        if (forCurrentEquipped)
+            ChooseEducate(false, needsDigitize);
 
         needsEnamorang = enamorang.item_amount() > 0 && get_property("enamorangMonster") == "";
-        if (camera.item_amount() == 0 && beerLens.item_amount() > 0)
+        if (camera.item_amount() == 0 && beerLens.item_amount() > 0 && forCurrentEquipped)
         {
             cli_execute("acquire nothing-in-the-box");
             craft("paste", 1, nothingInTheBox, beerLens);
@@ -1976,11 +2016,30 @@ DebugOutfit("Goal outfit", outfitDef);
         needsRainDoh = rainDoh.item_amount() > 0 && usedRainDoh.item_amount() == 0;
         needsSpookyPutty = spookyPutty.item_amount() > 0 && usedSpookyPutty.item_amount() == 0;
 
-        canJokesterGun = get_property("_firedJokestersGun") == "false"
-            && jokesterGun.have_equipped();
+        canJokesterGun = false;
+        if (get_property("_firedJokestersGun") == "false")
+        {
+            if (jokesterGun.have_equipped())
+                canJokesterGun = true;
+            else if (my_familiar() == hand && hand.familiar_equipped_equipment() == jokesterGun)
+                canJokesterGun = true;
+            else if (!forCurrentEquipped && jokesterGun.HaveEquipment())
+                canJokesterGun = true;
+        }
+        
 
         canMissileLauncher = PrepareAsdonLauncher();
 
+        canUseForce = get_property("_saberForceUses").to_int() < 5
+            && (cosplaySaber.have_equipped()
+                || (!forCurrentEquipped && cosplaySaber.HaveEquipment()));
+
+        if (get_property("_chestXRayUsed").to_int() < 3
+            && (doctorBag.have_equipped()
+                || (!forCurrentEquipped && doctorBag.HaveEquipment())))
+        {
+            canXray = true;
+        }
         if (replicaBatoomerang.item_amount() > 0
             && get_property("_usedReplicaBatoomerang").to_int() < 3)
         {
@@ -1999,13 +2058,21 @@ DebugOutfit("Goal outfit", outfitDef);
         needWolfForm = false;
         hasFreeKillRemaining =
             canJokesterGun
+            || canXray
             || canBatoomerang
             || canMissileLauncher
             || canShatteringPunch
             || canMobHit;
 
-        RemoveConfusionEffects(false);
-        HealUp();
+        if (forCurrentEquipped)
+        {
+            RemoveConfusionEffects(false);
+            HealUp();
+        }
+    }
+    void PrepareFilterState()
+    {
+        PrepareFilterState(true);
     }
 
     location GetDoctorBagQuestLocation()
@@ -2020,6 +2087,30 @@ DebugOutfit("Goal outfit", outfitDef);
                 return zone;
         }
         return noLocation;
+    }
+
+    boolean IsNoWanderZone(location loc)
+    {
+        switch (loc)
+        {   // list from here: https://kol.coldfront.net/thekolwiki/index.php/Wandering_monsters
+            case $location[A Massive Ziggurat]:
+            case $location[An Overgrown Shrine (Northeast)]:
+            case $location[An Overgrown Shrine (Southeast)]:
+            case $location[An Overgrown Shrine (Northwest)]:
+            case $location[An Overgrown Shrine (Southwest)]:
+            case $location[The Daily Dungeon]:
+            case $location[The Dire Warren]:
+            case $location[The Shore, Inc. Travel Agency]:
+            case $location[Gingerbread Civic Center]:
+            case $location[Gingerbread Industrial Zone]:
+            case $location[Gingerbread Sewers]:
+            case $location[Gingerbread Train Station]:
+            case $location[Gingerbread Upscale Retail District]:
+            case $location[The X-32-F Combat Training Snowman]:
+            case $location[Through the Spacegate]:
+                return true;
+        }
+        return false;
     }
 
     boolean AllNoncombatsSkippable(location loc)
@@ -2080,11 +2171,11 @@ DebugOutfit("Goal outfit", outfitDef);
     location ChooseWandererZone()
     {
         location zone = GetDoctorBagQuestLocation();
-        if (zone == noLocation)
+        if (zone == noLocation || IsNoWanderZone(zone))
             zone = ChooseRunawayZone();
-        if (zone != noLocation)
-            return zone;
-        return barfMountain; // last resort
+        if (zone == noLocation || IsNoWanderZone(zone))
+            zone = barfMountain; // last resort
+        return zone;
     }
 
     string ChooseFreeKillMethodForFilter()
@@ -2102,17 +2193,22 @@ DebugOutfit("Goal outfit", outfitDef);
         if (canShatteringPunch)
         {
             canShatteringPunch = false;
-            return "skill " + shatteringPunch.to_string();
+            return "skill " + shatteringPunch;
         }
         if (canMobHit)
         {
             canMobHit = false;
-            return "skill " + gingerbreadMobHit.to_string();
+            return "skill " + gingerbreadMobHit;
         }
         if (canBatoomerang)
         {
             canBatoomerang = false;
-            return "item " + replicaBatoomerang.to_string();
+            return "item " + replicaBatoomerang;
+        }
+        if (canXray)
+        {
+            canXray = false;
+            return "skill " + xray;
         }
         return "";
     }
@@ -2821,7 +2917,7 @@ print("Running filter = " + result, printColor);
         if ((sticker1.equipped_item() == noItem
             && sticker2.equipped_item() == noItem
             && sticker3.equipped_item() == noItem)
-	    || (!HaveEquipment(scratchXbow) && !HaveEquipment(scratchSword)))
+            || (!HaveEquipment(scratchXbow) && !HaveEquipment(scratchSword)))
         {
             if (scratchUPC.item_amount() < 3)
             {
@@ -3429,6 +3525,11 @@ abort("Todo: what choice #s for basement");
     {
         if (round <= 10)
         {
+            if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+            {
+                cursed = true;
+                return "skill " + curseOfWeaksauce.to_string();
+            }
             if (!timeSpinnered && timeSpinner.item_amount() > 0)
             {
                 timeSpinnered = true;
@@ -3438,11 +3539,6 @@ abort("Todo: what choice #s for basement");
             {
                 micrometeorited = true;
                 return "skill " + micrometeorite.to_string();
-            }
-            if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
-            {
-                cursed = true;
-                return "skill " + curseOfWeaksauce.to_string();
             }
             if (canSingAlong)
             {
@@ -3460,40 +3556,55 @@ abort("Todo: what choice #s for basement");
     int snokebombTurn = 0;
     int politicsTurn = 0;
     int kgbDartTurn = 0;
+    int reflexHammerTurn = 0;
     int louderThanBombTurn = 0;
     int tennisballTurn = 0;
     boolean batterUpUsed = false;
     boolean nanorhinoUsed = false;
+    string ChooseBanish()
+    {
+        if (snokebombTurn < my_turnCount())
+        {
+            snokebombTurn = my_turnCount() + 30;
+            return "skill Snokebomb";
+        }
+        if (reflexHammerTurn < my_turnCount() && doctorBag.have_equipped())
+        {
+            reflexHammerTurn = my_turnCount() + 30;
+            return "skill Reflex Hammer";
+        }
+        if (kgbDartTurn < my_turnCount() && kgb.have_equipped())
+        {
+            kgbDartTurn = my_turnCount() + 20;
+            return "skill KGB tranquilizer dart";
+        }
+        if (tennisballTurn < my_turnCount() && tennisBall.item_amount() > 0)
+        {
+            tennisballTurn = my_turnCount() + 30;
+            return "item " + tennisBall + ", none";
+        }
+        if (louderThanBombTurn < my_turnCount() && louderThanBomb.item_amount() > 0)
+        {
+            louderThanBombTurn = my_turnCount() + 20;
+            return "item " + louderThanBomb + ", none";
+        }
+        if (politicsTurn < my_turnCount() && pantsGiving.have_equipped())
+        {
+            politicsTurn = my_turnCount() + 30;
+            return "skill Talk About Politics";
+        }
+        return "";
+    }
 // todo: check if we actually have these skills/items
     string Filter_BowlingAlley(int round, monster mon, string page)
     {
+        if (mon == kramcoGoblin)
+            return Filter_FreeCombat(round, mon, page);
         if (mon == bowler || mon == orderlies || mon == janitor)
         {
-            if (snokebombTurn < my_turnCount())
-            {
-                snokebombTurn = my_turnCount() + 30;
-                return "skill Snokebomb";
-            }
-            if (kgbDartTurn < my_turnCount())
-            {
-                kgbDartTurn = my_turnCount() + 20;
-                return "skill KGB tranquilizer dart";
-            }
-            if (tennisballTurn < my_turnCount())
-            {
-                tennisballTurn = my_turnCount() + 30;
-                return "item " + tennisBall + ", none";
-            }
-            if (louderThanBombTurn < my_turnCount())
-            {
-                louderThanBombTurn = my_turnCount() + 20;
-                return "item " + louderThanBomb + ", none";
-            }
-            if (politicsTurn < my_turnCount())
-            {
-                politicsTurn = my_turnCount() + 30;
-                return "skill Talk About Politics";
-            }
+            string banish = ChooseBanish();
+            if (banish != "")
+                return banish;
         }
         return Filter_Standard(round, mon, page);
     }
@@ -3913,6 +4024,11 @@ abort("Todo: what choice #s for basement");
     }
     void ChooseDropsFamiliar(boolean isElemental)
     {
+        if (cat.have_familiar() && get_property("_catBurglarCharge").to_int() < 10 && get_property("_catBurglarHeistsComplete").to_int() == 0)
+        {
+            SwitchToFamiliar(cat); // heist 1 item at 10 charges
+            return;
+        }
         if (sandworm.have_familiar() && get_property("_aguaDrops").to_int() < 5)
         {
             SwitchToFamiliar(sandworm); // drops agua de vida
@@ -5265,7 +5381,7 @@ abort("Todo: what choice #s for basement");
 
         if (get_property("demonSummoned") != "true" && get_property("demonName2") != "")
         {
-	    if (BuyItemIfNeeded($item[tattered scrap of paper], 1, 6000)
+            if (BuyItemIfNeeded($item[tattered scrap of paper], 1, 6000)
                 && BuyItemIfNeeded($item[disintegrating quill pen], 1, 1000)
                 && BuyItemIfNeeded($item[inkwell], 1, 1000))
             {
@@ -5325,7 +5441,7 @@ abort("Todo: what choice #s for basement");
             }
         }
 
-	// to do: Mafia doesn't seem to know about this skill yet
+        // to do: Mafia doesn't seem to know about this skill yet
         if (favoriteBird.have_skill() && get_property("_favoriteBirdVisited") == "false")
         {
             use_skill(1, favoriteBird);
@@ -5344,7 +5460,13 @@ abort("Todo: what choice #s for basement");
         if (dnaLab.item_amount() > 0 || get_campground() contains dnaLab)
         {
             BeforeSwapOutDNALab();
-            UseItem(geneConstellation, geneConstellationEffect, 30, 30, 0);
+            UseItem(geneConstellation, geneConstellationEffect, 20, 30, 0);
+            if (needWeightBuffs)
+                UseItem(geneFish, geneFishEffect, 10, 30, 0);
+        }
+        if (summonTaffy.have_skill() && needWeightBuffs)
+        {
+            UseItem(blueTaffy, blueTaffyEffect, 50, 10, 0);
         }
         DriveObservantly(turns, false); // false = only buff if the Asdon Martin is installed
         //UseItem(nasalSpray, nasalSprayEffect, turns, 10, 150);
@@ -5540,7 +5662,7 @@ abort("Todo: what choice #s for basement");
                 && (my_adventures() < turns || beerPolka.have_effect() >= 5)
                 && elementalCaip.item_amount() > 0)
             {
-                TryDrink(elementalCaip, "none".to_effect(), 1, 1000000);
+                TryDrink(elementalCaip, $effect[none], 1, 1000000);
             }
         }
 
@@ -5559,10 +5681,10 @@ abort("Todo: what choice #s for basement");
         TryReduceManaCost(leer);
         BuffInRun(turns, false);
 
-	MakeMeltingGear(defaultOutfitPieces);
-	MakeMeltingGear(meatyOutfitPieces);
-	MakeMeltingGear(dropsOutfitPieces);
-	MakeMeltingGear(weightOutfitPieces);
+        MakeMeltingGear(defaultOutfitPieces);
+        MakeMeltingGear(meatyOutfitPieces);
+        MakeMeltingGear(dropsOutfitPieces);
+        MakeMeltingGear(weightOutfitPieces);
 
         //if (needWeightBuffs)
         //{
@@ -5574,6 +5696,8 @@ abort("Todo: what choice #s for basement");
 
     string Filter_Runaway(int round, monster mon, string page)
     {
+        if (mon == kramcoGoblin)
+            return Filter_FreeCombat(round, mon, page);
         if (needsCleesh)
         {
             needsCleesh = false;
@@ -5682,9 +5806,9 @@ abort("Todo: what choice #s for basement");
             return false; // converted to combat
         if (TryChoose("Plot a cunning escape")) // Malice in Chains, Outskirts of Cobb's Knob
             return false; // converted to combat
-	if (TryChoose("Explore the stream")) // Arboreal Respite, Spooky Forest
+        if (TryChoose("Explore the stream")) // Arboreal Respite, Spooky Forest
             if (TryChoose("Go further upstream")) // Consciouness of a Stream
-                if (TryChoose("Inter the vampire"))
+                if (TryChoose("Inter the vampire")) // An Interesting Choice
                     return false; // convert to combat
 
         // Castle Ground Floor choices:
@@ -5788,7 +5912,8 @@ abort("Todo: what choice #s for basement");
             CheesyRunaway(cheeseSword, weapon, needRunaways);
         if (!CheesyRunaway(pantsgiving, pants, needRunaways))
             CheesyRunaway(cheesePants, pants, needRunaways);
-        CheesyRunaway(cheeseShield, offhand, needRunaways);
+        if (!CheesyRunaway(cheeseShield, offhand, needRunaways))
+            CheesyRunaway(kramco, offhand, needRunaways);
         if (!CheesyRunaway(cheeseAccessory, acc1, needRunaways)
             && CheesyRunaway(cheeseAccessory, acc2, needRunaways)
             && CheesyRunaway(cheeseAccessory, acc3, needRunaways))
@@ -5933,8 +6058,8 @@ abort("Todo: what choice #s for basement");
                 return;
         }
         foreach ix,f in weightFamiliars
-	{
-	    if (f.have_familiar())
+        {
+            if (f.have_familiar())
             {
                 if (bjornEq)
                     f.bjornify_familiar();
@@ -5942,7 +6067,7 @@ abort("Todo: what choice #s for basement");
                     f.enthrone_familiar();
                 return;
             }
-	}
+        }
     }
 
     boolean TryPrepareFamiliarRunaways(boolean first, item[slot] weightOF)
@@ -6045,6 +6170,151 @@ abort("Todo: what choice #s for basement");
             }
             else
                 run_combat(filter);
+        }
+    }
+    string Filter_MojoFarm(int round, monster mon, string page)
+    {
+        if (mon == kramcoGoblin
+            || mon == $monster[angry bassist]
+            || mon == $monster[blue-haired girl]
+            || mon == $monster[evil ex-girlfriend]
+            || mon == $monster[peeved roommate]
+            || mon == $monster[random scenester]
+            || mon.to_string().starts_with("Black Crayon")
+            )
+        {
+            return Filter_FreeCombat(round, mon, page);
+        }
+        if (mon == $monster[swarm of scarab beatles])
+        {
+            if (canMissileLauncher)
+            {
+                canMissileLauncher = false;
+                return "skill " + missileLauncher.to_string();
+            }
+            if (!usedForce && canUseForce)
+            {
+                usedForce = visit_url("fight.php?action=skill&whichskill=7311").contains_text("You will drop your things and walk away.");
+                //return "skill Use the Force, " + my_name() + "!";
+            }
+            if (usedForce)
+            {
+                visit_url("choice.php?whichchoice=1387&option=3"); // "You will drop your things and walk away."
+                // this code is really old, does it actually need this part anymore:
+                visit_url("fight.php"); // make KoLMafia recognize that we're no longer in a fight
+                return "";
+            }
+            return ChooseFreeKillMethodForFilter();
+        }
+        return ChooseBanish();
+    }
+
+    void FarmMojoFilters()
+    {
+        if (ultrahydrated.have_effect() == 0)
+            return;
+
+        PrepareFilterState(false);
+print("Jokester = " + canJokesterGun);
+print("Xray = " + canXray);
+print("batoom = " + canBatoomerang);
+print("missile = " + canMissileLauncher);
+print("punch = " + canShatteringPunch);
+print("mob = " + canMobHit);
+//abort("Stop here");
+        boolean freeKills = hasFreeKillRemaining;
+        boolean needSquint = (squint.have_skill() && get_property("_steelyEyedSquintUsed") == "false");
+        boolean doubleDrops = needSquint || squintEffect.have_effect() > 0
+            || (garbageTote.item_amount() > 0 && get_property("garbageChampagneCharges").to_int() == 0);
+print("Can use force = " + canUseForce, printColor);
+waitq(5);
+        if (!canUseForce && !(freeKills && doubleDrops))
+            return;
+
+        if (!UserConfirmDefault("Use free kills and saber charges to farm mojo filters?", true))
+            return;
+
+        if (canUseForce)
+        {
+            if (hipster.have_familiar())
+                SwitchToFamiliar(hipster);
+            else if (goth.have_familiar())
+                SwitchToFamiliar(goth);
+            item[slot] forceOutfit = GetModifiableOutfit(true);
+            forceOutfit[weapon] = cosplaySaber;
+            WearOutfit(forceOutfit);
+            PrepareFilterState(true);
+        }
+        while (canUseForce || canMissileLauncher)
+        {
+            print("Using the force or missile launcher for mojo filter", printColor);
+waitq(5);
+            string page = visit_url(oasis.to_url());
+            RunCombat("Filter_MojoFarm");
+
+            PrepareFilterState(true);
+        }
+        if (freeKills)
+        {
+            if (needSquint && squintEffect.have_effect() == 0)
+            {
+                CastSkill(squint, 1, true);
+            }
+            PrepareFilterState(false);
+        }
+        while (freeKills)
+        {
+waitq(5);
+            item[slot] fkOutfit = GetModifiableOutfit(true);
+            boolean chamCharges = false;
+            if (garbageTote.item_amount() > 0)
+            {
+                if (get_property("garbageChampagneCharge").to_int() < 11 || get_property("_garbageItemChanged") == "false")
+                    chamCharges = true;
+                if (chamCharges && champagne.item_amount() == 0 && !champagne.have_equipped())
+                {
+                    cli_execute("fold broken champagne bottle");
+                    chamCharges = get_property("garbageChampagneCharge").to_int() < 11;
+                }
+                fkOutfit[weapon] = champagne;
+            }
+            if (!chamCharges && squintEffect.have_effect() == 0)
+            {
+                print("Out of champagne bottle/squint turns", printColor);
+                break;
+            }
+            if (doctorBag.HaveEquipment())
+                fkOutfit[acc3] = doctorBag;
+            if (kgb.HaveEquipment())
+                fkOutfit[acc2] = kgb; // for dart banish
+            if (canJokesterGun && hand.have_familiar())
+            {
+                fkOutfit[famEqp] = jokesterGun;
+                PrepareFreeCombat(fkOutfit, hand);
+            }
+            else
+            {
+                ChooseDropsFamiliar(false);
+                PrepareFreeCombat(fkOutfit, my_familiar());
+            }
+
+            float dropRate = (1.0 + item_drop_modifier() / 100.0) * 0.05;
+        
+            print("Using free kill for mojo filter, item modifier = " + item_drop_modifier()
+                + ", expected drop rate = " + dropRate, printColor);
+            if (dropRate > 0.6 && dropRate < 1 && fairCoin.item_amount() > 0 && fairCoinEffect.have_effect() == 0)
+            {
+                print("Drop rate needs perfectly fair coin to guarantee mojo filter drop", printColor);
+waitq(5);
+                use(1, fairCoin);
+            }
+waitq(5);
+            PrepareFilterState(true);
+            string page = visit_url(oasis.to_url());
+            RunCombat("Filter_MojoFarm");
+
+            PrepareFilterState(false);
+            freeKills = hasFreeKillRemaining;
         }
     }
 
@@ -6559,11 +6829,19 @@ abort("Todo: what choice #s for basement");
         if (favorLyle.have_effect() == 0)
             visit_url("place.php?whichplace=monorail&action=monorail_lyle");
 
-        if (get_property("spacegateVaccine") != "true" && get_property("_spacegateAlways") == "true")
+        if (get_property("spacegateVaccine") != "true" && get_property("spacegateAlways") == "true")
             cli_execute("spacegate vaccine 2"); // +stats
 
         if (big.have_effect() == 0)
             use_skill(1, getBig);
+
+        if (powerGlove.HaveEquipment() && tripleSizeEffect.have_effect() == 0)
+        {
+            if (powerGlove.item_amount() > 0)
+                acc1.equip(powerGlove);
+            //use_skill(1, tripleSize); // this is currently broken, use url directly:
+            visit_url("runskillz.php?action=Skillz&whichskill=7325&targetplayer=2813705&quantity=1");
+        }
 
         if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
         {
@@ -6767,6 +7045,7 @@ abort("Todo: what choice #s for basement");
         if (!hasFreeKillRemaining) // without free kills, no point
             return;
 print("Jokester = " + canJokesterGun);
+print("Xray = " + canXray);
 print("batoom = " + canBatoomerang);
 print("missile = " + canMissileLauncher);
 print("punch = " + canShatteringPunch);
@@ -7110,6 +7389,7 @@ print("mob = " + canMobHit);
 
             // things to do while familiar weight is maxxed
             TryRunLTTFreeKills(turnCount);
+            FarmMojoFilters();
             FreeCombatsForProfit();
 
             RunawayGingerbread();
