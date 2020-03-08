@@ -980,18 +980,18 @@ void DoBounty(BountyDetails b)
 				run_choice(3); // Walk away in disgust
 				return;
 			}
-			else if (page.contains_text("Random Lack of an Encounter"))
+                	else if (page.contains_text("Random Lack of an Encounter"))
 			{
 				run_choice(1);
 				return;
 			}
-			else if (page.contains_text("Ouch!  You bump into a door!"))
+                	else if (page.contains_text("Ouch!  You bump into a door!"))
 			{
 				run_choice(2); // fight a mimic
 				run_combat("Filter_Combat");
 				return;
 			}
-			else if (page.contains_text("Stupid Pipes."))
+                	else if (page.contains_text("Stupid Pipes."))
 			{
 				run_choice(3);
 				return;
@@ -1235,8 +1235,8 @@ void DoBounty(BountyDetails b)
 		}
 		else if (page.contains_text("This zone might be too tough for you."))
 		{
-			item pot = $item[potion of temporary gr8tness];
-			if ($effect[Gr8tness].have_effect() == 0)
+			item pot = $item[potion of temporary gr8ness];
+			if ($effect[Gr8ness].have_effect() == 0)
 			{
 				if (pot.item_amount() == 0)
 					buy(10, pot);

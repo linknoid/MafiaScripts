@@ -57,6 +57,7 @@
 // LINKNOIDBARF.ASH
 
 
+    boolean isDebug = false;
     boolean autoConfirmBarf = false;
     boolean autoConfirm = false;
     string defaultOutfit = "barf";
@@ -86,7 +87,8 @@
     string hobopolisWhitelist = ""; // Guilds in which this character has permission to enter hobopolis
     string executeBeforeEat = ""; // If you want another script or command to do your eating, put it here
     string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
-    item elfDuplicateItem; // if you specify this, the machine elf adventure will automatically duplicate this instead of aborting
+    item elfDuplicateItem; // If you specify this, the machine elf adventure will automatically duplicate this instead of aborting
+    monster pocketProfessorCloneMonster; // If you specify this, the pocket professor will automatically fight this
 
 void WriteSettings()
 {
@@ -118,6 +120,7 @@ void WriteSettings()
     map["executeBeforeEat"] = executeBeforeEat;
     map["executeAfterEat"] = executeAfterEat;
     map["elfDuplicateItem"] = elfDuplicateItem.to_int().to_string();
+    map["pocketProfessorCloneMonster"] = pocketProfessorCloneMonster.to_string();
     map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -154,6 +157,7 @@ void ReadSettings()
             case "executeBeforeEat": executeBeforeEat = value; break;
             case "executeAfterEat": executeAfterEat = value; break;
             case "elfDuplicateItem": elfDuplicateItem = value.to_int().to_item(); break;
+            case "pocketProfessorCloneMonster": pocketProfessorCloneMonster = value.to_monster(); break;
         }
     }
 }
@@ -225,8 +229,6 @@ void ReadSettings()
 
 // garden
     item pokeGarden = $item[packet of tall grass seeds];
-    //item fertilizer = $item[Poké-Gro fertilizer];
-    //item fertilizer = $item[PokÃ©-Gro fertilizer];
     item fertilizer = $item[Pok&eacute;-Gro fertilizer];
     item thanksGarden = $item[packet of thanksgarden seeds];
 
@@ -320,17 +322,23 @@ void ReadSettings()
     item faxdictionary = $item[facsimile dictionary]; // in case you already converted your dictionary
 
 // other familiars of interest
-    familiar sandworm = $familiar[Baby Sandworm];
-    familiar xenomorph = $familiar[Li'l Xenomorph];
-    familiar fistTurkey = $familiar[Fist Turkey];
-    familiar intergnat = $familiar[Intergnat];
-    familiar jellyfish = $familiar[Space Jellyfish];
-    familiar robin = $familiar[Rockin' Robin];
-    familiar stompingBoots = $familiar[Pair of Stomping Boots];
-    familiar bandersnatch = $familiar[Frumious Bandersnatch];
-    familiar obtuseAngel = $familiar[Obtuse Angel];
-    familiar reanimator = $familiar[Reanimated Reanimator];
-    familiar cornbeefadon = $familiar[Cornbeefadon];
+    familiar pocketProf = $familiar[Pocket Professor]; // many copies
+    familiar sandworm = $familiar[Baby Sandworm]; // 5 drops a day
+    familiar xenomorph = $familiar[Li'l Xenomorph]; // 5 drops a day
+    familiar llama = $familiar[Llama Lama]; // 5 drops a day
+    familiar rogue = $familiar[Rogue Program]; // 5 drops a day
+    familiar badger = $familiar[Astral Badger]; // 5 drops a day
+    familiar greenPixie = $familiar[Green Pixie]; // 5 drops a day
+    familiar fistTurkey = $familiar[Fist Turkey]; // 5 drops a day
+    familiar intergnat = $familiar[Intergnat]; // drops 1 scroll, 3 candles a day
+    familiar jellyfish = $familiar[Space Jellyfish]; // extract with diminishing returns
+    familiar robin = $familiar[Rockin' Robin]; // drop every 30 turns
+    familiar xoskeleton = $familiar[XO Skeleton]; // drop every 11 turns
+    familiar stompingBoots = $familiar[Pair of Stomping Boots]; // free runaways
+    familiar bandersnatch = $familiar[Frumious Bandersnatch]; // free runaways
+    familiar obtuseAngel = $familiar[Obtuse Angel]; // 3 copies
+    familiar reanimator = $familiar[Reanimated Reanimator]; // 3 copies
+    familiar cornbeefadon = $familiar[Cornbeefadon]; // familiar equipment
 
 // Bjorn/crown familiars:
     item bjorn = $item[Buddy Bjorn];
@@ -348,6 +356,7 @@ void ReadSettings()
     familiar warbearDrone = $familiar[Warbear Drone]; // drops whosits
     familiar mayoWasp = $familiar[Baby Mayonnaise Wasp]; // +15% myst
     familiar grue = $familiar[Grue]; // +15% myst
+    familiar godLobster = $familiar[God Lobster]; // free fights
 
 
 // familiar equipment
@@ -820,6 +829,8 @@ void ReadSettings()
     item champagne = $item[broken champagne bottle];
     item fairCoin = $item[perfectly fair coin];
     effect fairCoinEffect = $effect[What Are The Odds!?];
+    item legendaryBeat = $item[The Legendary Beat];
+    effect legendaryBeatEffect = $effect[Clyde's Blessing];
     familiar hipster = $familiar[Mini-Hipster];
     familiar goth = $familiar[Artistic Goth Kid];
     familiar hand = $familiar[Disembodied Hand];
@@ -895,6 +906,7 @@ void ReadSettings()
     boolean shielded = false;
     boolean abstractioned = false;
     boolean usedForce = false;
+    boolean lecturedRelativity = false;
     int staggerOption = 0;
 
     item[slot] defaultOutfitPieces; // const outfit initialized on first use
@@ -1226,12 +1238,17 @@ void ReadSettings()
 
     void WearOutfit(item[slot] outfitDef)
     {
-DebugOutfit("Goal outfit", outfitDef);
+        if (isDebug)
+        {
+            DebugOutfit("Current gear", GetCurrentGear());
+            DebugOutfit("Goal outfit", outfitDef);
+        }
+//abort("Debugging");
         MakeMeltingGear(outfitDef);
         boolean matches = true;
         foreach sl,it in outfitDef
         {
-            if (sl.equipped_item() != it)
+            if (it != $item[none] && sl.equipped_item() != it)
                 matches = false;
         }
         if (matches)
@@ -1402,6 +1419,11 @@ DebugOutfit("Goal outfit", outfitDef);
         }
         return numberRequested <= itm.item_amount();
     }
+
+    boolean InCombat(string page)
+    {
+        return page.contains_text("You're fighting");
+    }
     void ResetCombatState()
     {
         ravedNirvana = false;
@@ -1422,6 +1444,7 @@ DebugOutfit("Goal outfit", outfitDef);
         staggerOption = 0;
         abstractioned = false;
         usedForce = false;
+        lecturedRelativity = false;
         canAccordionBash = accordionBash.have_skill()
             && IsAccordion(weapon.equipped_item())
             && bakeBackpack.have_equipped();
@@ -1471,6 +1494,20 @@ DebugOutfit("Goal outfit", outfitDef);
         string result = run_combat(filter);
         boolean hasPostCombat = CheckPostCombat(result, filter);
         return hasPostCombat || result.contains_text("scripts/fight.js");
+    }
+    boolean TryChoose(string text)
+    {
+        string withQuotes = "&quot;" + text + "&quot;";
+        foreach key, value in available_choice_options()
+        {
+            if (value == text || value == withQuotes)
+            {
+                print("Running choice " + key + " => " + value + " for adventure " + last_choice(), printColor);
+                visit_url("choice.php?option=" + key + "&pwd=" + my_hash() + "&whichchoice=" + last_choice());
+                return true;
+            }
+        }
+        return false;
     }
     boolean TryHandleNonCombat(string page)
     {
@@ -1525,9 +1562,109 @@ DebugOutfit("Goal outfit", outfitDef);
         if (page.contains_text("A Pound of Cure"))
         {
             run_choice(1); // Cure patient
+            set_property("doctorBagQuestLocation", "");
             return true;
         }
 
+        return false;
+    }
+    boolean ChooseSkipNoncombat(string page)
+    {
+        if (!page.contains_text("choice.php"))
+            return false;
+        if (TryHandleNonCombat(page))
+            return true;
+        if (page.contains_text("A Pound of Cure"))
+        {
+            run_choice(1); // Cure patient
+            return true;
+        }
+
+        if (TryChoose("Get the heck out of here")) // lights out
+            return true;
+        if (TryChoose("Get out of here right now go go go")) // lights out in the wine cellar
+            return true;
+        if (TryChoose("Quit the Gallery")) // lights out in the gallery
+            return true;
+        if (TryChoose("Get the heck out of here")) // Lights out in the Haunted Billiards Room
+            return true;
+        if (TryChoose("Get out of the Ballroom")) // Lights out in the Ballroom
+            return true;
+        if (TryChoose("Hustle away")) // Welcome to Our ool Table
+            return true;
+        if (page.contains_text("Louvre It or Leave It") && TryChoose("Pass on by")) // Haunted Gallery
+            return true;
+        if (page.contains_text("Out in the Garden") && TryChoose("None of the above")) // Haunted Gallery
+            return true;
+        if (TryChoose("Walk away")) // Aww, Craps
+            return true;
+        if (TryChoose("Punch the hobo")) // Dumpster Diving
+            return false;
+        if (TryChoose("Introduce them to avant-garde")) // The Entertainer
+            return true;
+        if (TryChoose("Sorry, no time.")) // Please, Hammer
+            return true;
+        if (TryChoose("Umm, no thanks. Seriously.")) // Under the Knife
+            return true;
+        if (TryChoose("Exit through the gift shop")) // Action Elevator, Hidden Apartment Building
+            return true;
+        if (TryChoose("Take the day off")) // Working Holiday, Hidden Office Building
+            return true;
+        if (TryChoose("Dammit, door, I'm an Adventurer, not a doctor!")) // You, M.D., Hidden Hospital
+            return true;
+        if (TryChoose("Let's don't")) // Life is Like a Cherry of Bowls, Hidden Bowling Alley
+            return true;
+        if (TryChoose("Leave the scene")) // Welcome to the Footlocker, Cobb's Knob Barracks
+            return true;
+        if (TryChoose("Kick the chef")) // Knob Goblin BBQ, Outskirts of Cobb's Knob
+            return false; // converted to combat
+        if (TryChoose("Plot a cunning escape")) // Malice in Chains, Outskirts of Cobb's Knob
+            return false; // converted to combat
+        if (TryChoose("Explore the stream")) // Arboreal Respite, Spooky Forest
+            if (TryChoose("Go further upstream")) // Consciouness of a Stream
+                if (TryChoose("Inter the vampire")) // An Interesting Choice
+                    return false; // convert to combat
+
+        // Castle Ground Floor choices:
+        if (TryChoose("Go out the Way You Came In")) // There's No Ability Like Possibility
+            return true;
+        if (TryChoose("Get out of this Junk")) // Putting Off is Off-Putting
+            return true;
+        if (TryChoose("Seek the Egress Anon")) // Huzzah!
+            return true;
+        if (TryChoose("Leave through a vent")) // Home on the Free Range
+            return true;
+
+
+        // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
+        TryChoose("Check Behind the Giant Poster"); // goto punk rock
+        
+        if (!TryChoose("Check behind the trash can")) // goto punk rock
+            if (TryChoose("Get the Punk's Attention")) // goto punk rock
+                return false; // converted to combat
+        
+        if (!TryChoose("Gimme Steam")) // goto steampunk
+            if (TryChoose("End His Suffering")) // fight goth
+                return false; // converted to combat
+
+        if (TryChoose("Investigate the Whirligigs and Gimcrackery"))
+            return true;
+
+        TryChoose("Crawl Through the Heating Duct"); // neckbeard choice
+        TryChoose("Crawl through the Heating Vent"); // fitness choice
+        if (TryChoose("Check out the Mirror")) // skip the adventure
+            return true;
+
+        if (TryChoose("Investigate the crew quarters")) // Random Lack of an Encounter
+            return false; // converted to combat
+        if (TryChoose("Pay no attention to the stuff in front of the curtain")) // Curtains
+            return true;
+        if (TryChoose("Play 'Le Mie Cose Favorite'")) // Strung-Up Quartet
+            return true;
+
+        foreach key, value in available_choice_options()
+            print(key + " = " + value, "red");
+        abort("Unhandled non-combat encountered, please fix this script");
         return false;
     }
 
@@ -1791,22 +1928,167 @@ DebugOutfit("Goal outfit", outfitDef);
     {
         HealUp(false);
     }
+
+
+
+int SumWeightModifiers(item[slot] o)
+{
+	int result = 0;
+	int weight = 0;
+	foreach s,i in o
+	{
+		weight = numeric_modifier(i, "Familiar Weight");
+		if (weight == 0 && (i == $item[Buddy Bjorn] || i == $item[Crown of Thrones]))
+		{
+			weight = 5;
+		}
+//		if (isDebug)
+//			print("Item " + i + " in slot " + s + " gives weight = " + weight + ", total = " + result);
+		result += weight;
+	}
+	foreach s in $skills[]
+	{
+		if (s.have_skill())
+		{
+			weight = numeric_modifier(s, "Familiar Weight");
+			if (weight > 0)
+			{
+//				if (isDebug)
+//					print("Skill " + s + " gives weight = " + weight + ", total = " + result);
+				result += weight;
+			}
+		}
+	}
+	foreach e in $effects[]
+	{
+		if (e.have_effect() > 0)
+		{
+			weight = numeric_modifier(e, "Familiar Weight");
+			if (weight > 0)
+			{
+//				if (isDebug)
+//					print("Effect " + e + " gives weight = " + weight + ", total = " + result);
+				result += weight;
+			}
+		}
+	}
+	return result;
+}
+
+int CalculateFamiliarWeight(familiar f, item[slot] o)
+{
+	int result = 0;
+	int weight = 0;
+
+	item[slot] newOutfit = GetCurrentGear();
+	if (is_familiar_equipment_locked())
+		newOutfit[famEqp] = my_familiar().familiar_equipped_equipment();
+	else
+		newOutfit[famEqp] = f.familiar_equipped_equipment();
+	foreach s,i in o
+	{
+		if (i.can_equip())
+			newOutfit[s] = i;
+	}
+	result += SumWeightModifiers(newOutfit);
+	weight = f.familiar_weight();
+	if (isDebug)
+		print("familiar " + f + " base weight = " + weight + ", total = " + result);
+	result += weight;
+	return result;
+}
+
+boolean FamiliarOnFeastedList(familiar f)
+{
+	string wasFeasted = get_property("_feastedFamiliars");
+	string expiredFeasted = get_property("_feastedFamiliarsExpired");
+	return wasFeasted.contains_text(f.to_string())
+		&& !expiredFeasted.contains_text(f.to_string());
+}
+boolean FeastingAvailable(familiar f)
+{
+	return f.have_familiar()
+		&& $item[Moveable Feast].item_amount() > 0
+		&& get_property("_feastUsed").to_int() < 5
+		&& !get_property("_feastedFamiliars").contains_text(f.to_string());
+}
+
+boolean FamiliarCurrentlyFeasted()
+{
+	if (FamiliarOnFeastedList(my_familiar()))
+	{
+		item[slot] curOutfit = GetCurrentGear();
+		curOutfit[famEqp] = my_familiar().familiar_equipped_equipment();
+		int curWeightModifiers = SumWeightModifiers(curOutfit);
+		if (modifier_eval("W") >= 10 + curWeightModifiers + my_familiar().familiar_weight())
+			return true;
+		string expired = get_property("_feastedFamiliarsExpired");
+		if (expired.length() > 0)
+			expired += ";";
+		set_property("_feastedFamiliarsExpired", expired + my_familiar().to_string());
+	}
+	return false;
+}
+int[familiar] feastChecked; // track which familiars we checked based on experience, I think it should generally only wear off if familiar earns experience (might not be 100% accurate)
+boolean CalculateFeasted(familiar f)
+{
+	if (!FamiliarOnFeastedList(f))
+		return false;
+	if (feastChecked[f] == f.experience) // verified on the feasted list with current experience, must be feasted
+		return true;
+	if (f != my_familiar())
+	{
+		if (!f.have_familiar())
+			return false;
+		if (my_familiar() != f)
+			f.use_familiar();
+	}
+	if (f == my_familiar())
+	{
+		feastChecked[f] = f.experience;
+		return FamiliarCurrentlyFeasted();
+	}
+	return false;
+}
+// this is an estimated value based on equipping a familiar and items in slots, but (probably) less trustworthy than calling the below version with everything already equipped
+int GetFamiliarRunaways(familiar f, item[slot] o)
+{
+	if (!f.have_familiar())
+		return 0;
+	int weight = CalculateFamiliarWeight(f, o);
+	int runaways = weight / 5;
+	runaways -= get_property("_banderRunaways").to_int();
+	if (runaways == -1 || runaways == 0) // only time feasted matters is when we get down to 0, and this could trigger changing familiars, which we want to minimize
+	{
+		// weight_adjustment doesn't account for movable feast, but modifier_eval("W") does
+		// http://kolmafia.us/showthread.php?20249-Getting-Familiar-Weight
+		if (CalculateFeasted(f))
+			runaways += 2;
+	}
+	return runaways;
+}
+    // This should get the number of runaways available based on current familiar and equipment, and it should be accurate
     int GetFamiliarRunaways()
     {
         if (my_familiar() != stompingBoots && my_familiar() != bandersnatch)
             return 0;
-        //int familiarWeight = (my_familiar().familiar_weight() + weight_adjustment());
-        // weight_adjustment doesn't account for movable feast, but modifier_eval("W") does
-        // http://kolmafia.us/showthread.php?20249-Getting-Familiar-Weight
         int familiarWeight = modifier_eval("W");
 
         int result = familiarWeight / 5;
         result -= get_property("_banderRunaways").to_int();
         return result;
     }
+    int GetNonFamiliarRunaways()
+    {
+        return smokebomb.item_amount() + fishermansack.item_amount() * 3;
+    }
+    int GetFreeRunaways(familiar f, item[slot] o)
+    {
+        return GetFamiliarRunaways(f, o) + GetNonFamiliarRunaways();
+    }
     int GetFreeRunaways()
     {
-        return GetFamiliarRunaways() + smokebomb.item_amount() + fishermansack.item_amount() * 3;
+        return GetFamiliarRunaways() + GetNonFamiliarRunaways();
     }
     int BakeBread(int fuelRequired) // returns number of breads to reach that much fuel
     {
@@ -1829,10 +2111,12 @@ DebugOutfit("Goal outfit", outfitDef);
         int hadFuel = get_fuel();
         while (hadFuel < requestedFuel)
         {
+            // 150 fuel on average per pie means it's cheaper than bread up to 2837.5 meat per pie
             if (pieFuel.item_amount() > 0)
                 cli_execute("asdonmartin fuel 1 " + pieFuel.to_string());
             else
             {
+		// 4540 meat for average 240 fuel = 18.916666 meat per fuel (or less with a discount)
                 int breadCount = BakeBread(requestedFuel - hadFuel);
                 cli_execute("asdonmartin fuel " + breadCount + " " + breadFuel.to_string());
             }
@@ -2121,10 +2405,11 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[The Castle in the Clouds in the Sky (Ground Floor)]:
             case $location[The Castle in the Clouds in the Sky (Basement)]:
             case $location[The Penultimate Fantasy Airship]:
+            case $location[The Hole in the Sky]:
             case $location[The Sleazy Back Alley]:
             case $location[The Arid, Extra-Dry Desert]:
             case $location[The Unquiet Garves]:
-            case $location[The Goatlet]:
+            case $location[The VERY Unquiet Garves]:
             case $location[Pandamonium Slums]:
             case $location[The Dire Warren]:
             case $location[Noob Cave]:
@@ -2143,13 +2428,22 @@ DebugOutfit("Goal outfit", outfitDef);
             case $location[Cobb's Knob Barracks]:
             case $location[Cobb's Knob Kitchens]:
             case $location[Cobb's Knob Harem]:
+            case $location[Cobb's Knob Laboratory]:
+            case $location[Cobb's Knob Menagerie, Level 1]:
+            case $location[Cobb's Knob Menagerie, Level 2]:
+            case $location[Cobb's Knob Menagerie, Level 3]:
             case $location[The Bat Hole Entrance]:
             case $location[The Beanbat Chamber]:
+            case $location[Guano Junction]:
             case $location[The Batrat and Ratbat Burrow]:
+            case $location[The Goatlet]:
+            case $location[Lair of the Ninja Snowmen]:
             case $location[The Hidden Apartment Building]:
             case $location[The Hidden Office Building]:
             case $location[The Hidden Hospital]:
             case $location[The Hidden Bowling Alley]:
+            case $location[The Upper Chamber]:
+            case $location[The Middle Chamber]:
                 return true;
         }
         return false;
@@ -2581,16 +2875,32 @@ print("Running filter = " + result, printColor);
             return true;
         return false;
     }
+    string WandererScheduled()
+    {
+        if (my_turncount() == digitizeCounter)
+        {
+            return get_property("_sourceTerminalDigitizeMonster");
+        }
+        if (my_turncount() == enamorangCounter)
+        {
+            return get_property("enamorangMonster");
+        }
+        return "";
+    }
+    boolean MeatyScheduled()
+    {
+        string wanderer = WandererScheduled();
+        return IsMeatyMonster(wanderer);
+    }
 
-    boolean isDebug = false;
     void DebugOutfit(string name, item[slot] o)
     {
         if (!isDebug)
             return;
-        print("outfit " + name, printColor);
+        print("outfit = " + name + ":", printColor);
         foreach sl,it in o
         {
-            print("slot " + sl + " = " + it, printColor);
+            print("*   slot " + sl + " = " + it, printColor);
         }
     }
 
@@ -2792,12 +3102,47 @@ print("Running filter = " + result, printColor);
     {
         if (my_familiar() == machineElf)
             return;
-        if (moveableFeast.item_amount() > 0
-            && get_property("_feastUsed").to_int() < 5
-            && !get_property("_feastedFamiliars").contains_text(my_familiar().to_string()))
+        if (FeastingAvailable(my_familiar()))
         {
             use(1, moveableFeast);
         }
+    }
+
+    item ChooseFamiliarEquipmentForWeight(familiar f)
+    {
+        item fEq = f.familiar_equipment();
+        if (!HaveEquipment(fEq))
+            fEq = $item[none];
+        float fEqWeight = fEq.numeric_modifier("Familiar Weight");
+        if (HaveEquipment(snowSuit))
+            snowSuitWeight = snowSuit.numeric_modifier("Familiar Weight");
+        if (fEqWeight >= 10 && fEqWeight >= snowSuitWeight)
+            return fEq;
+        if (snowSuitWeight > 10)
+            return snowSuit;
+        if (pokeEqpMeat.HaveEquipment())
+            return pokeEqpMeat;
+        if (pokeEqpItem.HaveEquipment())
+            return pokeEqpItem;
+        if (pokeEqpHeal.HaveEquipment())
+            return pokeEqpHeal;
+        if (pokeEqpBlock.HaveEquipment())
+            return pokeEqpBlock;
+        if (pokeEqpRun.HaveEquipment())
+            return pokeEqpRun;
+        if (petSweater.HaveEquipment())
+            return petSweater;
+        if (pokeEqpDamage.HaveEquipment())
+            return pokeEqpDamage;
+        if (sugarShield.HaveEquipment())
+            return sugarShield;
+        if (fEqWeight >= 6 && fEqWeight >= snowSuitWeight)
+            return fEq;
+        if (snowSuitWeight > 6)
+            return snowSuit;
+        if (cufflinks.HaveEquipment())
+            return cufflinks;
+        return fEq;
     }
 
     void PrepareFamiliar(boolean forMeaty)
@@ -3059,27 +3404,64 @@ print("Running filter = " + result, printColor);
         RemoveConfusionEffects(false);
 
     }
+    boolean CanWitchess()
+    {
+        return (get_campground() contains witchess
+            && get_property("_witchessFights").to_int() < 5);
+    }
+    string ActivateWitchess(monster m)
+    {
+        int piece;
+        switch (m)
+        {
+            case $monster[Witchess Bishop]: piece = 1942; break;
+            case $monster[Witchess King]: piece = 1940; break;
+            case $monster[Witchess Knight]: piece = 1936; break;
+            case $monster[Witchess Ox]: piece = 1937; break;
+            case $monster[Witchess Pawn]: piece = 1935; break;
+            case $monster[Witchess Queen]: piece = 1939; break;
+            case $monster[Witchess Rook]: piece = 1938; break;
+            case $monster[Witchess Witch]: piece = 1941; break;
+            default: return "";
+        }
+        if (piece == 0)
+            return "";
+        visit_url("campground.php?action=witchess", false);
+        run_choice(1);
+        return visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=" + piece, false);
+    }
     boolean TryRunWitchess(string filter)
     {
-        if (get_campground() contains witchess
-            && get_property("_witchessFights").to_int() < 5)
+        if (CanWitchess())
         {
             if (filter == "Filter_Standard" && cigar.item_amount() > 0)
             {
                 ChooseEducate(true, false);
             }
-            visit_url("campground.php?action=witchess", false);
-            run_choice(1);
-            // fight the knight, because we eat a lot of horseradish
-            visit_url("choice.php?option=1&pwd=" + my_hash() + "&whichchoice=1182&piece=1936", false);
-            RunCombat(filter);
-            return true;
+            string page = ActivateWitchess($monster[Witchess Knight]);
+            if (page != "")
+            {
+                RunCombat(filter);
+                return true;
+            }
         }
         return false;
     }
+    string ActivateEldritchTentacle()
+    {
+        if (get_property("_eldritchTentacleFought") != "false")
+            return "";
+        string page = visit_url("place.php?whichplace=forestvillage&action=fv_scientist");
+        int choiceId = FindVariableChoice(page, "Can I fight that tentacle you saved for science?", true);
+        if (choiceId >= 0)
+        {
+            return run_choice(choiceId, false);
+        }
+        return "";
+    }
     boolean ValidateSnojoFreeFights()
     {
-        if (get_property("snojoAvailable") != true)
+        if (get_property("snojoAvailable") != "true")
             return false;
         if (get_property("_snojoFreeFights").to_int() >= 10)
             return false;
@@ -3246,6 +3628,87 @@ abort("Todo: what choice #s for basement");
         return false;
     }
 
+    boolean IsFreeFightMonster(monster m)
+    {
+        switch (m)
+        {
+            case $monster[%monster%]: return true;
+            case $monster[Angry bassist]: return true;
+            case $monster[Black Crayon Beast]: return true;
+            case $monster[Black Crayon Beetle]: return true;
+            case $monster[Black Crayon Constellation]: return true;
+            case $monster[Black Crayon Crimbo Elf]: return true;
+            case $monster[Black Crayon Demon]: return true;
+            case $monster[Black Crayon Elemental]: return true;
+            case $monster[Black Crayon Fish]: return true;
+            case $monster[Black Crayon Flower]: return true;
+            case $monster[Black Crayon Frat Orc]: return true;
+            case $monster[Black Crayon Goblin]: return true;
+            case $monster[Black Crayon Golem]: return true;
+            case $monster[Black Crayon Hippy]: return true;
+            case $monster[Black Crayon Hobo]: return true;
+            case $monster[Black Crayon Man]: return true;
+            case $monster[Black Crayon Manloid]: return true;
+            case $monster[Black Crayon Mer-kin]: return true;
+            case $monster[Black Crayon Penguin]: return true;
+            case $monster[Black Crayon Pirate]: return true;
+            case $monster[Black Crayon Shambling Monstrosity]: return true;
+            case $monster[Black Crayon Slime]: return true;
+            case $monster[Black Crayon Spiraling Shape]: return true;
+            case $monster[Black Crayon Undead Thing]: return true;
+            case $monster[Blue-haired girl]: return true;
+            case $monster[Boneless blobghost]: return true;
+            case $monster[BRICKO airship]: return true;
+            case $monster[BRICKO bat]: return true;
+            case $monster[BRICKO cathedral]: return true;
+            case $monster[BRICKO elephant]: return true;
+            case $monster[BRICKO gargantuchicken]: return true;
+            case $monster[BRICKO octopus]: return true;
+            case $monster[BRICKO ooze]: return true;
+            case $monster[BRICKO oyster]: return true;
+            case $monster[BRICKO python]: return true;
+            case $monster[BRICKO turtle]: return true;
+            case $monster[BRICKO vacuum cleaner]: return true;
+            case $monster[Broodling seal]: return true;
+            case $monster[Eldritch Tentacle]: return true;
+            case $monster[Emily Koops, a spooky lime]: return true;
+            case $monster[Evil ex-girlfriend]: return true;
+            case $monster[Heat seal]: return true;
+            case $monster[Hermetic seal]: return true;
+            case $monster[Lynyrd]: return true;
+            case $monster[Navy seal]: return true;
+            case $monster[Peeved roommate]: return true;
+            case $monster[Random scenester]: return true;
+            case $monster[Sausage goblin]: return true;
+            case $monster[Servant of Grodstank]: return true;
+            case $monster[Shadow of Black Bubbles]: return true;
+            case $monster[Spawn of Wally]: return true;
+            case $monster[The ghost of Ebenoozer Screege]: return true;
+            case $monster[The ghost of Jim Unfortunato]: return true;
+            case $monster[The ghost of Lord Montague Spookyraven]: return true;
+            case $monster[The ghost of Monsieur Baguelle]: return true;
+            case $monster[The ghost of Oily McBindle]: return true;
+            case $monster[The ghost of Richard Cockingham]: return true;
+            case $monster[The ghost of Sam McGee]: return true;
+            case $monster[The ghost of Vanillica "Trashblossom" Gorton]: return true;
+            case $monster[The ghost of Waldo the Carpathian]: return true;
+            case $monster[The Headless Horseman]: return true;
+            case $monster[The Icewoman]: return true;
+            case $monster[Time-spinner prank]: return true;
+            case $monster[Watertight seal]: return true;
+            case $monster[Wet seal]: return true;
+            case $monster[Witchess Bishop]: return true;
+            case $monster[Witchess King]: return true;
+            case $monster[Witchess Knight]: return true;
+            case $monster[Witchess Ox]: return true;
+            case $monster[Witchess Pawn]: return true;
+            case $monster[Witchess Queen]: return true;
+            case $monster[Witchess Rook]: return true;
+            case $monster[Witchess Witch]: return true;
+        }
+        return false;
+    }
+
     void WishFor(string wishFor)
     {
         if (get_property("_genieWishesUsed").to_int() >= 3
@@ -3366,11 +3829,23 @@ abort("Todo: what choice #s for basement");
         count += CountEldritchFights(nextDay);
         return count;
     }
+    boolean IsCombatMeatFamiliar(familiar f)
+    {
+        switch (f)
+        {
+            case boa:
+            case npzr:
+            case stocking:
+            case fistTurkey:
+                return true;
+        }
+        return false;
+    }
     void PrepareFreeCombat(item[slot] selectedOutfit, familiar chosenFamiliar)
     {
         if (my_familiar() != chosenFamiliar)
             SwitchToFamiliar(chosenFamiliar);
-        if (my_familiar() != runFamiliar)
+        if (IsCombatMeatFamiliar(my_familiar()))
             TryUseMovableFeast();
         if (jingleBells.have_skill())
             CastSkill(jingleBells, 1, true); // only need 1 turn of it
@@ -3647,6 +4122,14 @@ abort("Todo: what choice #s for basement");
         }
         return Filter_Standard(round, mon, page);
     }
+
+    boolean TryEquip(item[slot] outfitItems, item eqp)
+    {
+        if (!eqp.HaveEquipment())
+            return false;
+        outfitItems[famEqp] = eqp;
+        return true;
+    }
     
     boolean RunFreeCombat(item[slot] selectedOutfit, string filter, boolean forMeat)
     {
@@ -3654,6 +4137,36 @@ abort("Todo: what choice #s for basement");
         {
             PrepareFreeCombat(selectedOutfit, machineElf);
             RunAdventure(machineTunnels, "Filter_MachineTunnels");
+            return true;
+        }
+        if (godLobster.have_familiar() && get_property("_godLobsterFights").to_int() < 3)
+        {
+            item[slot] withEqp = CopyOutfit(selectedOutfit);
+            if (!TryEquip(withEqp, $item[God Lobster's Crown]))
+                if (!TryEquip(withEqp, $item[God Lobster's Robe]))
+                    if (!TryEquip(withEqp, $item[God Lobster's Rod]))
+                        if (!TryEquip(withEqp, $item[God Lobster's Ring]))
+                            TryEquip(withEqp, $item[God Lobster's Scepter]);
+            PrepareFreeCombat(withEqp, godLobster);
+            string page = visit_url("main.php?fightgodlobster=1");
+            if (InCombat(page))
+            {
+                page = run_combat(filter);
+                if (InCombat(page))
+                {
+                    page = visit_url("choice.php");
+                    if ($item[God Lobster's Crown].have_equipped())
+                        PushChoiceAdventureButton(page, "I'd like some experience.");
+                    else
+                        PushChoiceAdventureButton(page, "I'd like part of your regalia.");
+                }
+                else
+                {
+                    print("God lobster fight failed.", printColor);
+                    print(page);
+                    abort();
+                }
+            }
             return true;
         }
         if (!forMeat || covetous.have_effect() > 0)
@@ -3690,14 +4203,12 @@ abort("Todo: what choice #s for basement");
                 }
             }
         }
-        if (get_property("_eldritchTentacleFought") == "false")
+        if (get_property("_eldritchTentacleFought") == "false" && pocketProfessorCloneMonster != $monster[Eldritch Tentacle])
         {
             PrepareFreeCombat(selectedOutfit);
-            string page = visit_url("place.php?whichplace=forestvillage&action=fv_scientist");
-            int choiceId = FindVariableChoice(page, "Can I fight that tentacle you saved for science?", true);
-            if (choiceId >= 0)
+            string page = ActivateEldritchTentacle();
+            if (page != "")
             {
-                run_choice(choiceId, false);
                 RunCombat(filter);
                 return true;
             }
@@ -4024,39 +4535,155 @@ abort("Todo: what choice #s for basement");
     }
     void ChooseDropsFamiliar(boolean isElemental)
     {
-        if (cat.have_familiar() && get_property("_catBurglarCharge").to_int() < 10 && get_property("_catBurglarHeistsComplete").to_int() == 0)
+        float[familiar] dropRates;
+        int[familiar] itemDrops;
+        if (cat.have_familiar())
         {
-            SwitchToFamiliar(cat); // heist 1 item at 10 charges
-            return;
+            int charges = get_property("_catBurglarCharge").to_int();
+            int nextHeist = 10;
+            while (charges >= nextHeist)
+            {
+                charges -= nextHeist; // charges doesn't get reset to 0, it just keeps incrementing
+                nextHeist *= 2;
+            }
+            dropRates[cat] = 1.0 / (nextHeist - charges);
+            itemDrops[cat] = 25000; // can be converted into an extra horseradish eaten, 100 turns of 250 meat
         }
-        if (sandworm.have_familiar() && get_property("_aguaDrops").to_int() < 5)
+        if (sandworm.have_familiar())
         {
-            SwitchToFamiliar(sandworm); // drops agua de vida
-            return;
+            switch (get_property("_aguaDrops").to_int())
+            {
+                case 0: dropRates[sandworm] = 0.20; break;
+                case 1: dropRates[sandworm] = 0.15; break;
+                case 2: dropRates[sandworm] = 0.10; break;
+                case 3: dropRates[sandworm] = 0.05; break;
+                case 4: dropRates[sandworm] = 0.05; break;
+                default: dropRates[sandworm] = 0; break;
+            }
+            itemDrops[sandworm] = $item[agua de vida].historical_price();
         }
         if (fistTurkey.have_familiar() && get_property("_turkeyBooze").to_int() < 5)
         {
-            SwitchToFamiliar(fistTurkey); // drops booze
-            return;
+            switch (get_property("_turkeyBooze").to_int())
+            {
+                case 0: dropRates[fistTurkey] = 0.15; break;
+                case 1: dropRates[fistTurkey] = 0.10; break;
+                case 2: dropRates[fistTurkey] = 0.10; break;
+                case 3: dropRates[fistTurkey] = 0.05; break;
+                case 4: dropRates[fistTurkey] = 0.05; break;
+                default: dropRates[fistTurkey] = 0; break;
+            }
+            itemDrops[fistTurkey] = turkey.historical_price();
         }
-        if (xenomorph.have_familiar() && get_property("_transponderDrops").to_int() < 5)
+        if (xenomorph.have_familiar())
         {
-            SwitchToFamiliar(xenomorph); // drops transporter transponder
-            return;
+            switch (get_property("_transponderDrops").to_int())
+            {
+                case 0: dropRates[xenomorph] = 0.25; break;
+                case 1: dropRates[xenomorph] = 0.20; break;
+                case 2: dropRates[xenomorph] = 0.15; break;
+                case 3: dropRates[xenomorph] = 0.10; break;
+                case 4: dropRates[xenomorph] = 0.05; break;
+                default: dropRates[xenomorph] = 0; break;
+            }
+            itemDrops[xenomorph] = $item[transporter transponder].historical_price();
         }
-        if (isElemental && jellyfish.have_familiar() && get_property("_spaceJellyfishDrops").to_int() < 3)
+        if (llama.have_familiar())
         {
-            SwitchToFamiliar(jellyfish); // drops jelly
-            return;
+            switch (get_property("_gongDrops").to_int())
+            {
+                case 0: dropRates[llama] = 0.20; break;
+                case 1: dropRates[llama] = 0.15; break;
+                case 2: dropRates[llama] = 0.10; break;
+                case 3: dropRates[llama] = 0.05; break;
+                case 4: dropRates[llama] = 0.05; break;
+                default: dropRates[llama] = 0; break;
+            }
+            itemDrops[llama] = $item[llama lama gong].historical_price();
+        }
+        if (rogue.have_familiar())
+        {
+            switch (get_property("_astralDrops").to_int())
+            {
+                case 0: dropRates[rogue] = 0.25; break;
+                case 1: dropRates[rogue] = 0.20; break;
+                case 2: dropRates[rogue] = 0.15; break;
+                case 3: dropRates[rogue] = 0.10; break;
+                case 4: dropRates[rogue] = 0.05; break;
+                default: dropRates[rogue] = 0; break;
+            }
+            itemDrops[rogue] = $item[Game Grid token].historical_price();
+        }
+        if (badger.have_familiar())
+        {
+            switch (get_property("_astralDrops").to_int())
+            {
+                case 0: dropRates[badger] = 0.25; break;
+                case 1: dropRates[badger] = 0.20; break;
+                case 2: dropRates[badger] = 0.15; break;
+                case 3: dropRates[badger] = 0.10; break;
+                case 4: dropRates[badger] = 0.05; break;
+                default: dropRates[badger] = 0; break;
+            }
+            itemDrops[badger] = $item[Astral Mushroom].historical_price();
+        }
+        if (greenPixie.have_familiar())
+        {
+            switch (get_property("_absintheDrops").to_int())
+            {
+                case 0: dropRates[greenPixie] = 0.20; break;
+                case 1: dropRates[greenPixie] = 0.15; break;
+                case 2: dropRates[greenPixie] = 0.10; break;
+                case 3: dropRates[greenPixie] = 0.05; break;
+                case 4: dropRates[greenPixie] = 0.05; break;
+                default: dropRates[greenPixie] = 0; break;
+            }
+            itemDrops[greenPixie] = $item[tiny bottle of absinthe].historical_price();
+        }
+        if (isElemental && jellyfish.have_familiar())
+        {
+            switch (get_property("_spaceJellyfishDrops").to_int())
+            {
+                case 0: dropRates[jellyfish] = 1.00; break;
+                case 1: dropRates[jellyfish] = 0.50; break;
+                case 2: dropRates[jellyfish] = 0.33; break;
+                case 3: dropRates[jellyfish] = 0.25; break;
+                case 4: dropRates[jellyfish] = 0.20; break;
+                default: dropRates[jellyfish] = 0.05; break;
+            }
+            itemDrops[jellyfish] = $item[hot jelly].historical_price();
         }
         if (intergnat.have_familiar())
         {
-            SwitchToFamiliar(intergnat); // drops bacon
-            return;
+            dropRates[intergnat] = 1;
+            itemDrops[intergnat] = $item[BACON].historical_price();
+        }
+        if (xoskeleton.have_familiar())
+        {
+            dropRates[xoskeleton] = 1.0 / 11.0;
+            itemDrops[xoskeleton] = ($item[X].historical_price() + $item[O].historical_price()) / 2;
         }
         if (robin.have_familiar())
         {
-            SwitchToFamiliar(intergnat); // drops eggs
+            dropRates[robin] = 1.0 / 30.0;
+            itemDrops[robin] = $item[robin's egg].historical_price();
+        }
+        familiar best = $familiar[none];
+        float bestValue = 0;
+        foreach fam,rate in dropRates
+        {
+            float value = rate * itemDrops[fam];
+            if (isDebug)
+                print("Familiar " + fam + " has drop rate " + rate + " of value " + itemDrops[fam] + " for total value of " + value, printColor);
+            if (value > bestValue)
+            {
+                best = fam;
+                bestValue = value;
+            }
+        }
+        if (best != $familiar[none])
+        {
+            SwitchToFamiliar(best);
             return;
         }
         if (robort.have_familiar())
@@ -5743,116 +6370,7 @@ abort("Todo: what choice #s for basement");
             return "Filter_Standard";
     }
 
-    boolean TryChoose(string text)
-    {
-        string withQuotes = "&quot;" + text + "&quot;";
-        foreach key, value in available_choice_options()
-        {
-            if (value == text || value == withQuotes)
-            {
-                print("Running choice " + key + " => " + value + " for adventure " + last_choice(), printColor);
-                visit_url("choice.php?option=" + key + "&pwd=" + my_hash() + "&whichchoice=" + last_choice());
-                return true;
-            }
-        }
-        return false;
-    }
 
-    boolean ChooseSkipNoncombat(string page)
-    {
-        if (!page.contains_text("choice.php"))
-            return false;
-        if (page.contains_text("A Pound of Cure"))
-        {
-            run_choice(1); // Cure patient
-            return true;
-        }
-
-        if (TryChoose("Get the heck out of here")) // lights out
-            return true;
-        if (TryChoose("Get out of here right now go go go")) // lights out in the wine cellar
-            return true;
-        if (TryChoose("Quit the Gallery")) // lights out in the gallery
-            return true;
-        if (TryChoose("Get the heck out of here")) // Lights out in the Haunted Billiards Room
-            return true;
-        if (TryChoose("Hustle away")) // Welcome to Our ool Table
-            return true;
-        if (page.contains_text("Louvre It or Leave It") && TryChoose("Pass on by")) // Haunted Gallery
-            return true;
-        if (page.contains_text("Out in the Garden") && TryChoose("None of the above")) // Haunted Gallery
-            return true;
-        if (TryChoose("Walk Away")) // Aww, Craps
-            return true;
-        if (TryChoose("Punch the hobo")) // Dumpster Diving
-            return false;
-        if (TryChoose("Introduce them to avant-garde")) // The Entertainer
-            return true;
-        if (TryChoose("Sorry, no time.")) // Please, Hammer
-            return true;
-        if (TryChoose("Umm, no thanks. Seriously.")) // Under the Knife
-            return true;
-        if (TryChoose("Exit through the gift shop")) // Action Elevator, Hidden Apartment Building
-            return true;
-        if (TryChoose("Take the day off")) // Working Holiday, Hidden Office Building
-            return true;
-        if (TryChoose("Dammit, door, I'm an Adventurer, not a doctor!")) // You, M.D., Hidden Hospital
-            return true;
-        if (TryChoose("Let's don't")) // Life is Like a Cherry of Bowls, Hidden Bowling Alley
-            return true;
-        if (TryChoose("Leave the scene")) // Welcome to the Footlocker, Cobb's Knob Barracks
-            return true;
-        if (TryChoose("Kick the chef")) // Knob Goblin BBQ, Outskirts of Cobb's Knob
-            return false; // converted to combat
-        if (TryChoose("Plot a cunning escape")) // Malice in Chains, Outskirts of Cobb's Knob
-            return false; // converted to combat
-        if (TryChoose("Explore the stream")) // Arboreal Respite, Spooky Forest
-            if (TryChoose("Go further upstream")) // Consciouness of a Stream
-                if (TryChoose("Inter the vampire")) // An Interesting Choice
-                    return false; // convert to combat
-
-        // Castle Ground Floor choices:
-        if (TryChoose("Go out the Way You Came In")) // There's No Ability Like Possibility
-            return true;
-        if (TryChoose("Get out of this Junk")) // Putting Off is Off-Putting
-            return true;
-        if (TryChoose("Seek the Egress Anon")) // Huzzah!
-            return true;
-        if (TryChoose("Leave through a vent")) // Home on the Free Range
-            return true;
-
-
-        // if non-combat choice adventure, try to skip turn by Copper Feel => Investigate the Whirligigs and Gimcrackery
-        TryChoose("Check Behind the Giant Poster"); // goto punk rock
-        
-        if (!TryChoose("Check behind the trash can")) // goto punk rock
-            if (TryChoose("Get the Punk's Attention")) // goto punk rock
-                return false; // converted to combat
-        
-        if (!TryChoose("Gimme Steam")) // goto steampunk
-            if (TryChoose("End His Suffering")) // fight goth
-                return false; // converted to combat
-
-        if (TryChoose("Investigate the Whirligigs and Gimcrackery"))
-            return true;
-
-        TryChoose("Crawl Through the Heating Duct"); // neckbeard choice
-        TryChoose("Crawl through the Heating Vent"); // fitness choice
-        if (TryChoose("Check out the Mirror")) // skip the adventure
-            return true;
-
-        if (TryChoose("Investigate the crew quarters")) // Random Lack of an Encounter
-            return false; // converted to combat
-        if (TryChoose("Pay no attention to the stuff in front of the curtain")) // Curtains
-            return true;
-        if (TryChoose("Play 'Le Mie Cose Favorite'")) // Strung-Up Quartet
-            return true;
-
-        foreach key, value in available_choice_options()
-            print(key + " = " + value, "red");
-        abort("Unhandled non-combat encountered, please fix this script");
-        return false;
-    }
       
     boolean IsPurpleLightAvailable()
     {
@@ -5885,144 +6403,51 @@ abort("Todo: what choice #s for basement");
         //acc3.equip(gingerAcc3);
     }
 
-    boolean CheesyRunaway(item i, slot s, int needRunaways)
+    boolean CheesyRunaway(item i, slot s, familiar f, item[slot] o)
     {
-        if (i.have_equipped())
+        if (o[s] == i)
             return true;
-        if (i.item_amount() == 0)
+        if (!i.HaveEquipment() || !i.can_equip())
             return false;
-        int haveRunaways = GetFreeRunaways();
-        item old = s.equipped_item();
-        if (i.item_amount() > 0 && i.can_equip())
-            s.equip(i);
-        
-        if (GetFreeRunaways() < haveRunaways && GetFreeRunaways() < needRunaways)
+        int oldRunaways = GetFamiliarRunaways(f, o);
+        item old = o[s];
+        o[s] = i;
+
+        int newRunaways = GetFamiliarRunaways(f, o);
+        if (newRunaways < oldRunaways && newRunaways < 0)
         {
             print("Not enough runaways with " + i + " equipped, swapping back", printColor);
-            s.equip(old);
+            o[s] = old;
         }
-        return i.have_equipped();
+        print("CheesyRunaway: Setting slot " + s + " to " + o[s]);
+        return o[s] == i;
     }
 
-    void CheesyRunaway(int needRunaways)
+    void CheesyRunaway(familiar f, item[slot] o)
     {
-        // having these cheesy items equipped during runaways counts towards combats for the day
-        int haveRunaways = GetFreeRunaways();
-        if (!CheesyRunaway(cheeseStaff, weapon, needRunaways))
-            CheesyRunaway(cheeseSword, weapon, needRunaways);
-        if (!CheesyRunaway(pantsgiving, pants, needRunaways))
-            CheesyRunaway(cheesePants, pants, needRunaways);
-        if (!CheesyRunaway(cheeseShield, offhand, needRunaways))
-            CheesyRunaway(kramco, offhand, needRunaways);
-        if (!CheesyRunaway(cheeseAccessory, acc1, needRunaways)
-            && CheesyRunaway(cheeseAccessory, acc2, needRunaways)
-            && CheesyRunaway(cheeseAccessory, acc3, needRunaways))
+        // getting doctor bag quest takes precedence over incrementing counters
+        if (get_property("doctorBagQuestLocation") == "" && doctorBag.HaveEquipment() && !OutfitContains(o, doctorBag))
         {
-        }
-    }
-
-    int GingerbreadTurns()
-    {
-        int turns = get_property("_gingerbreadCityTurns").to_int();
-        if (get_property("_gingerbreadClockAdvanced") == "true")
-            turns += 5;
-        print("Gingerbread turns = " + turns);
-        return turns;
-    }
-    int GingerbreadVirtualTurns()
-    {
-        int turns = get_property("_gingerbreadCityTurns").to_int();
-        if (get_property("gingerAdvanceClockUnlocked") == "true")
-        {
-            turns += 6;
-        }
-        return turns;
-    }
-    boolean CanGingerbreadCandy(int runsAvail)
-    {
-        return GingerbreadTurns() <= 9
-            && GingerbreadVirtualTurns() + runsAvail >= 9;
-    }
-    boolean CanGingerbreadParty(int runsAvail)
-    {
-        return GingerbreadTurns() <= 19
-            && GingerbreadVirtualTurns() + runsAvail >= 19;
-    }
-
-    void RunawayGingerbread()
-    {
-        visit_url("place.php?whichplace=gingerbreadcity");
-        if (get_property("gingerbreadCityAvailable") != "true" // not accessible
-            || GingerbreadTurns() > 20) // already ran turns
-        {
-            return;
-        }
-        if (stompingBoots.have_familiar())
-            stompingBoots.use_familiar();
-        else if (bandersnatch.have_familiar())
-            bandersnatch.use_familiar();
-        int runs = GetFreeRunaways();
-        iF (!CanGingerbreadCandy(runs) && !CanGingerbreadParty(runs))
-            return;
-        if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture/ginger wine using free runaway familiar?", true))
-        {
-            return;
-        }
-        string page;
-        if (get_property("gingerAdvanceClockUnlocked") == "true"
-            && get_property("_gingerbreadClockAdvanced") != "true")
-        {
-            page = LoadChoiceAdventure(gingerCivic, false); // civic center
-            run_choice(1); // clock choice
-        }
-        CheesyRunaway(3);
-        string filter = ReadyRunaway();
-        if (filter != "Filter_Runaway")
-            return;
-        runs = GetFreeRunaways();
-        while (CanGingerbreadCandy(runs))
-        {
-            if (GingerbreadTurns() == 9)
-                break;
-
-            PrepareSmokeBomb();
-            if (GetFreeRunaways() < 1)
+            foreach ix,sl in slot[] { acc1, acc2, acc3 }
             {
-                print("Out of free runaways, " + (9 - GingerbreadVirtualTurns()) + " adventures left until train candy.", "red");
-                return;
+                if (CheesyRunaway(doctorBag, sl, f, o))
+                    break;
             }
-            gingerTrain.adv1(-1, filter);
-            runs--;
         }
-        if (GingerbreadTurns() == 9)
+        // having these cheesy items equipped during runaways counts towards combats for the day
+        if (!CheesyRunaway(cheeseStaff, weapon, f, o))
+            CheesyRunaway(cheeseSword, weapon, f, o);
+        if (!CheesyRunaway(pantsgiving, pants, f, o))
+            CheesyRunaway(cheesePants, pants, f, o);
+        if (!CheesyRunaway(cheeseShield, offhand, f, o))
+            CheesyRunaway(kramco, offhand, f, o);
+        if (!OutfitContains(o, cheeseAccessory))
         {
-            page = LoadChoiceAdventure(gingerTrain, false);
-            run_choice(1); // dig for candy
-            if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
-                put_closet(swizzler.item_amount(), swizzler);
-        }
-
-        if (!HaveGingerbreadBest())
-            return;
-        runs = GetFreeRunaways();
-        while (CanGingerbreadParty(runs))
-        {
-            if (GingerbreadTurns() == 19)
-                break;
-            PrepareSmokeBomb();
-            gingerRetail.adv1(-1, filter);
-        }
-        if (GingerbreadTurns() == 19)
-        {
-            WearGingerbreadBest();
-            page = LoadChoiceAdventure(gingerRetail, false);
-            run_choice(2); // enter party
-            if (gingerSprinkles.item_amount() >= 300)
-                run_choice(2); // buy chocolate sculpture
-            else
+            foreach ix,sl in slot[] { acc1, acc2, acc3 }
             {
-                print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
-                run_choice(1); // take a free drink
+                if (o[sl] != doctorBag)
+                    if (CheesyRunaway(cheeseAccessory, sl, f, o))
+                        break;
             }
         }
     }
@@ -6072,41 +6497,163 @@ abort("Todo: what choice #s for basement");
 
     boolean TryPrepareFamiliarRunaways(boolean first, item[slot] weightOF)
     {
+        familiar f;
         if (stompingBoots.have_familiar())
-            stompingBoots.use_familiar();
+            f = stompingBoots;
         else if (bandersnatch.have_familiar())
-            bandersnatch.use_familiar();
+            f = bandersnatch;
         else
             return false;
         if (first)
         {
             weightOF = CopyOutfit(weightOutfitPieces);
-            if (HaveEquipment(snowSuit))
-                weightOF[famEqp] = snowSuit;
-            WearOutfit(weightOF);
+            weightOF[famEqp] = ChooseFamiliarEquipmentForWeight(f);
         }
-        if (GetFamiliarRunaways() > 1)
-        {
-            CheesyRunaway(1);
-            if (GetFamiliarRunaways() > 0)
-                return true;
-        }
+        int runaways = GetFamiliarRunaways(f, weightOF);
+        if (FeastingAvailable(f))
+            runaways += 2;
 
+        if (runaways <= 0)
+            return false;
+        if (runaways > 1)
+            CheesyRunaway(f, weightOF);
+        f.use_familiar();
+        if (f == bandersnatch)
+        {
+            CastSkill(odeToBooze, 1, true); // only need 1 turn of it
+            if (odeToBoozeEffect.have_effect() == 0)
+                return false;
+        }
         WearOutfit(weightOF);
         BjornCrownWeightFamiliar();
-        if (GetFamiliarRunaways() > 0)
+        runaways = GetFamiliarRunaways();
+        if (runaways > 0)
             return true;
 
-        TryUseMovableFeast();
+        if (runaways > -2)
+            TryUseMovableFeast();
         return GetFamiliarRunaways() > 0;
     }
+    boolean TryPrepareFamiliarRunaways()
+    {
+        item[slot] o;
+        return TryPrepareFamiliarRunaways(true, o);
+    }
+
+    int GingerbreadTurns()
+    {
+        int turns = get_property("_gingerbreadCityTurns").to_int();
+        if (get_property("_gingerbreadClockAdvanced") == "true")
+            turns += 5;
+        print("Gingerbread turns = " + turns);
+        return turns;
+    }
+    int GingerbreadVirtualTurns()
+    {
+        int turns = get_property("_gingerbreadCityTurns").to_int();
+        if (get_property("gingerAdvanceClockUnlocked") == "true")
+        {
+            turns += 6;
+        }
+        return turns;
+    }
+    boolean CanGingerbreadCandy(int runsAvail)
+    {
+        return GingerbreadTurns() <= 9
+            && GingerbreadVirtualTurns() + runsAvail >= 9;
+    }
+    boolean CanGingerbreadParty(int runsAvail)
+    {
+        return GingerbreadTurns() <= 19
+            && GingerbreadVirtualTurns() + runsAvail >= 19;
+    }
+
+    void RunawayGingerbread()
+    {
+        visit_url("place.php?whichplace=gingerbreadcity");
+        if (get_property("gingerbreadCityAvailable") != "true" // not accessible
+            || GingerbreadTurns() > 20) // already ran turns
+        {
+            return;
+        }
+        familiar f = my_familiar();
+        if (stompingBoots.have_familiar())
+            f = stompingBoots;
+        else if (bandersnatch.have_familiar())
+            f = bandersnatch;
+        int runs = GetFreeRunaways(f, weightOutfitPieces);
+        iF (!CanGingerbreadCandy(runs) && !CanGingerbreadParty(runs))
+            return;
+        if (!UserConfirmDefault("Do you want to auto-clear gingerbread today for candy and chocolate sculpture/ginger wine using free runaway familiar?", true))
+        {
+            return;
+        }
+        string page;
+        if (get_property("gingerAdvanceClockUnlocked") == "true"
+            && get_property("_gingerbreadClockAdvanced") != "true")
+        {
+            page = LoadChoiceAdventure(gingerCivic, false); // civic center
+            run_choice(1); // clock choice
+        }
+        TryPrepareFamiliarRunaways();
+        string filter = ReadyRunaway();
+        if (filter != "Filter_Runaway")
+            return;
+        runs = GetFreeRunaways();
+        while (CanGingerbreadCandy(runs))
+        {
+            if (GingerbreadTurns() == 9)
+                break;
+            TryPrepareFamiliarRunaways();
+            PrepareSmokeBomb();
+            if (GetFreeRunaways() < 1)
+            {
+                print("Out of free runaways, " + (9 - GingerbreadVirtualTurns()) + " adventures left until train candy.", "red");
+                return;
+            }
+            gingerTrain.adv1(-1, filter);
+            runs--;
+        }
+        if (GingerbreadTurns() == 9)
+        {
+            page = LoadChoiceAdventure(gingerTrain, false);
+            run_choice(1); // dig for candy
+            if (swizzler.item_amount() > 0) // don't want to accidentally use swizzler while drinking
+                put_closet(swizzler.item_amount(), swizzler);
+        }
+
+        if (!HaveGingerbreadBest())
+            return;
+        runs = GetFreeRunaways(f, weightOutfitPieces);
+        while (CanGingerbreadParty(runs))
+        {
+            if (GingerbreadTurns() == 19)
+                break;
+            TryPrepareFamiliarRunaways();
+            PrepareSmokeBomb();
+            gingerRetail.adv1(-1, filter);
+        }
+        if (GingerbreadTurns() == 19)
+        {
+            WearGingerbreadBest();
+            page = LoadChoiceAdventure(gingerRetail, false);
+            run_choice(2); // enter party
+            if (gingerSprinkles.item_amount() >= 300)
+                run_choice(2); // buy chocolate sculpture
+            else
+            {
+                print("Out of sprinkles, taking a drink instead of chocolate sculpture.", printColor);
+                run_choice(1); // take a free drink
+            }
+        }
+    }
+
+
 
     void RunawayDinseyBurnDelay()
     {
         boolean first = true;
         item[slot] weightOF;
-        if (!TryPrepareFamiliarRunaways(first, weightOF))
-            return;
         while (TryPrepareFamiliarRunaways(first, weightOF))
         {
             location zone = ChooseRunawayZone();
@@ -6141,6 +6688,30 @@ abort("Todo: what choice #s for basement");
         }
     }
 
+    boolean RunawayDoctorBagQuest()
+    {
+        if (WandererScheduled() != "")
+            return false;
+        location zone = GetDoctorBagQuestLocation();
+        if (zone == $location[none])
+            return false;
+        if (!AllNoncombatsSkippable(zone))
+            return false;
+        print("Try to burn delay on doctor bag quest", printColor);
+        if (!TryPrepareFamiliarRunaways())
+            return false;
+        string filter = "Filter_Runaway";
+        RemoveConfusionEffects(false);
+        HealUp(true);
+        string page = visit_url(zone.to_url().to_string());
+        while (ChooseSkipNoncombat(page))
+        {
+            page = visit_url(zone.to_url().to_string());
+        }
+        RunCombat(filter);
+        return true;
+    }
+
     void RunawayMadnessBakery()
     {
         boolean first = true;
@@ -6152,6 +6723,8 @@ abort("Todo: what choice #s for basement");
             && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true")
             && TryPrepareFamiliarRunaways(first, weightOF))
         {
+            if (RunawayDoctorBagQuest()) // this is higher priority than madness bakery
+                continue;
             if (first)
             {
                 first = false;
@@ -6211,6 +6784,8 @@ abort("Todo: what choice #s for basement");
 
     void FarmMojoFilters()
     {
+print("FarmMojoFilters.Enter " + ultrahydrated.have_effect(), printColor);
+//waitq(10);
         if (ultrahydrated.have_effect() == 0)
             return;
 
@@ -6227,9 +6802,12 @@ print("mob = " + canMobHit);
         boolean doubleDrops = needSquint || squintEffect.have_effect() > 0
             || (garbageTote.item_amount() > 0 && get_property("garbageChampagneCharges").to_int() == 0);
 print("Can use force = " + canUseForce, printColor);
-waitq(5);
+//waitq(5);
         if (!canUseForce && !(freeKills && doubleDrops))
+        {
+            print("No force uses and no free kills, skipping", printColor);
             return;
+        }
 
         if (!UserConfirmDefault("Use free kills and saber charges to farm mojo filters?", true))
             return;
@@ -6242,13 +6820,17 @@ waitq(5);
                 SwitchToFamiliar(goth);
             item[slot] forceOutfit = GetModifiableOutfit(true);
             forceOutfit[weapon] = cosplaySaber;
+            if (doctorBag.HaveEquipment())
+                forceOutfit[acc3] = doctorBag;
+            if (kgb.HaveEquipment())
+                forceOutfit[acc2] = kgb; // for dart banish
             WearOutfit(forceOutfit);
             PrepareFilterState(true);
         }
         while (canUseForce || canMissileLauncher)
         {
             print("Using the force or missile launcher for mojo filter", printColor);
-waitq(5);
+//waitq(5);
             string page = visit_url(oasis.to_url());
             RunCombat("Filter_MojoFarm");
 
@@ -6264,7 +6846,7 @@ waitq(5);
         }
         while (freeKills)
         {
-waitq(5);
+//waitq(5);
             item[slot] fkOutfit = GetModifiableOutfit(true);
             boolean chamCharges = false;
             if (garbageTote.item_amount() > 0)
@@ -6297,6 +6879,12 @@ waitq(5);
                 ChooseDropsFamiliar(false);
                 PrepareFreeCombat(fkOutfit, my_familiar());
             }
+            if (legendaryBeat.item_amount() > 0
+                && legendaryBeatEffect.have_effect() == 0
+                && get_property("_legendaryBeat") == "false")
+            {
+                use(1, legendaryBeat);
+            }
 
             float dropRate = (1.0 + item_drop_modifier() / 100.0) * 0.05;
         
@@ -6305,10 +6893,10 @@ waitq(5);
             if (dropRate > 0.6 && dropRate < 1 && fairCoin.item_amount() > 0 && fairCoinEffect.have_effect() == 0)
             {
                 print("Drop rate needs perfectly fair coin to guarantee mojo filter drop", printColor);
-waitq(5);
+//waitq(5);
                 use(1, fairCoin);
             }
-waitq(5);
+//waitq(5);
             PrepareFilterState(true);
             string page = visit_url(oasis.to_url());
             RunCombat("Filter_MojoFarm");
@@ -6321,6 +6909,7 @@ waitq(5);
 
     void SemiRareCastle()
     {
+        TryPrepareFamiliarRunaways();
         string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
         //castleTopFloor.adv1(-1, filter);
         string page = visit_url("adventure.php?snarfblat=324"); // castle top floor
@@ -6330,6 +6919,7 @@ waitq(5);
     }
     void SemiRareBilliard()
     {
+        TryPrepareFamiliarRunaways();
         string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
         string page = visit_url("adventure.php?snarfblat=391"); // spookyraven billiard room
 
@@ -6347,6 +6937,7 @@ waitq(5);
     }
     void SemiRarePurpleLight()
     {
+        TryPrepareFamiliarRunaways();
         needsCleesh = cleesh.have_skill();
         string filter = ReadyRunaway(); // should be a non-combat, so runaway if it's not
         //purpleLight.adv1(-1, filter);
@@ -6399,18 +6990,6 @@ waitq(5);
         }
     }
 
-    boolean MeatyScheduled()
-    {
-        if (my_turncount() == digitizeCounter)
-        {
-            return IsMeatyMonster(get_property("_sourceTerminalDigitizeMonster"));
-        }
-        if (my_turncount() == enamorangCounter)
-        {
-            return IsMeatyMonster(get_property("enamorangMonster"));
-        }
-        return false;
-    }
 
     void TryPrepareFax(monster mon)
     {
@@ -7147,7 +7726,7 @@ print("mob = " + canMobHit);
         // more fertilizer from turns spent, for a total of up to 5 cornucopias a day
         foreach it, count in get_campground()
         {
-            if ((it == thanksGarden || it == cornucopia) && pokeGarden.item_amount() > 0 && fertilizer.item_amount() > 0)
+            if ((it == thanksGarden || it == cornucopia) && pokeGarden.item_amount() > 0)
             {
                 if (count > 1 && UserConfirmDefault("Harvest " + count + " from Thanksgiving garden to switch to " + pokeGarden, true))
                 {
@@ -7330,8 +7909,15 @@ print("mob = " + canMobHit);
         if (!HaveEquipment(votedSticker))
             return false;
 
-        if (meat_drop_modifier() >= votedMeatLimit && get_property("_voteFreeFights").to_int() >= 3)
-            return false;
+        int freeFightsLeft = 3 - get_property("_voteFreeFights").to_int();
+        boolean underLimit = meat_drop_modifier() < votedMeatLimit;
+        if (!underLimit)
+        {
+            if (freeFightsLeft <= 0) // only run free fights until we're under the meat bonus limit
+                return false;
+            if (HaveEquipment(doctorBag) && get_property("doctorBagQuestLocation") == "") // save free fights for wanderers for doctor bag quest
+                return false;
+        }
 
         monster mon = get_property("_voteMonster").to_monster();
         if (mon == $monster[none]) // already voted, but don't know who it is yet
@@ -7343,9 +7929,12 @@ print("mob = " + canMobHit);
             print("Wearing I Voted sticker for wandering monsters", printColor);
             localOutfit[acc3] = votedSticker;
         }
-        if (HaveEquipment(doctorBag) && !OutfitContains(localOutfit, doctorBag) && get_property("doctorBagQuestLocation") == "")
+        if (HaveEquipment(doctorBag) && get_property("doctorBagQuestLocation") == "")
         {
-            localOutfit[acc2] = doctorBag;
+            if (HaveEquipment(doctorBag) && !OutfitContains(localOutfit, doctorBag) && get_property("doctorBagQuestLocation") == "")
+            {
+                localOutfit[acc2] = doctorBag;
+            }
         }
         if (mon == mutant)
         {
@@ -7372,6 +7961,148 @@ print("mob = " + canMobHit);
         return true;
     }
 
+
+    string Filter_PocketProfessor(int round, monster mon, string page)
+    {
+        if (!lecturedRelativity)
+        {
+            lecturedRelativity = true;
+            return "skill lecture on relativity";
+        }
+        if (canSingAlong)
+        {
+            canSingAlong = false;
+            return "skill Sing Along";
+        }
+        if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+        {
+            cursed = true;
+            return "skill " + curseOfWeaksauce.to_string();
+        }
+        return "";
+    }
+
+    item[slot] ChooseDoctorBagSlot(item[slot] o)
+    {
+        if (!HaveEquipment(doctorBag))
+            return o;
+        if (OutfitContains(o, doctorBag))
+            return o;
+        float lowestWeight = 1000;
+        slot bestSlot;
+        foreach ix,sl in slot[] { acc1, acc2, acc3 }
+        {
+            float weight = o[sl].numeric_modifier("Familiar Weight");
+            if (weight < lowestWeight)
+            {
+                lowestWeight = weight;
+                bestSlot = sl;
+            }
+        }
+        o[bestSlot] = doctorBag;
+        return o;
+    }
+    int CalculateRemainingProfessorCopies(int weight)
+    {
+        int used = get_property("_pocketProfessorLectures").to_int();
+        int copies = 2; // 2 from familiar equipment
+        int nextCost = 1;
+        int nextCostIncrement = 1;
+        while (nextCost <= weight)
+        {
+            copies++;
+            nextCost += nextCostIncrement;
+            nextCostIncrement += 2;
+        }
+        if (isDebug)
+            print("Total professor copies " + copies, printColor);
+        copies -= used;
+        if (isDebug)
+            print("Remaining professor copies " + copies, printColor);
+        return copies;
+    }
+
+    string ActivateMonsterFight(monster m)
+    {
+        if (m == $monster[none])
+            return "";
+
+        string result = ActivateWitchess(m);
+        if (result != "")
+            return result;
+
+        if (m == $monster[Eldritch Tentacle])
+            result = ActivateEldritchTentacle();
+        if (result != "")
+            return result;
+
+
+        if (WandererScheduled().to_monster() == m)
+        {
+            location zone = ChooseWandererZone();
+            if (zone == noLocation)
+                zone = barfMountain;
+            return visit_url(zone.to_url());
+        }
+        
+        return "";
+    }
+
+    boolean HandleProfessorCopies(boolean beforeRunaways)
+    {
+        if (!pocketProf.have_familiar())
+            return false;
+        monster m = pocketProfessorCloneMonster;
+        if (m == $monster[none])
+            return false;
+        boolean hasDoctorQuest = get_property("doctorBagQuestLocation") != "";
+        if (beforeRunaways && hasDoctorQuest)
+            return false;
+        item[slot] o = CopyOutfit(weightOutfitPieces);
+        if (!hasDoctorQuest)
+            o = ChooseDoctorBagSlot(o);
+        o[famEqp] = $item[Pocket Professor memory chip];
+        int weight = CalculateFamiliarWeight(pocketProf, o);
+        int copies = CalculateRemainingProfessorCopies(weight);
+        int copiesWithFeast = copies;
+        if (FeastingAvailable(pocketProf))
+        {
+            copiesWithFeast = CalculateRemainingProfessorCopies(weight + 10);
+        }
+        print(copiesWithFeast + " lectures remaining for pocket professor");
+        if (copies <= 0)
+            return false;
+
+        if (my_familiar() != pocketProf)
+            pocketProf.use_familiar();
+        if (my_familiar() != pocketProf)
+            return false;
+        WearOutfit(o);
+
+        PrepareFilterState(true);
+        if (copiesWithFeast > copies || !IsFreeFightMonster(m)) // if not a free fight, weight could change in the middle
+            TryUseMovableFeast();
+
+        if (get_property("friarsBlessingReceived") == "false") // professor benefits from bonus exp
+            cli_execute("friars familiar");
+
+        string page = ActivateMonsterFight(m);
+        while (page.contains_text("fight.php"))
+        {
+            page = run_combat("Filter_PocketProfessor");
+            if (page.contains_text("STEP INTO FOLD IN SPACETIME"))
+            {
+                ResetCombatState();
+                visit_url("fight.php");
+                page = "fight.php";
+            }
+            else
+                CheckPostCombat(page, "Filter_PocketProfessor");
+        }
+
+        return true;
+    }
+
     void RunTurns(int turnCount)
     {
         if (turnCount == 0)
@@ -7386,6 +8117,13 @@ print("mob = " + canMobHit);
         PrepGarden();
         try
         {
+            while (RunawayDoctorBagQuest()) { }
+
+            if (IsFreeFightMonster(pocketProfessorCloneMonster))
+            {
+                HandleProfessorCopies(true);
+                while (RunawayDoctorBagQuest()) { }
+            }
 
             // things to do while familiar weight is maxxed
             TryRunLTTFreeKills(turnCount);
@@ -7395,6 +8133,9 @@ print("mob = " + canMobHit);
             RunawayGingerbread();
             RunawayDinseyBurnDelay();
             RunawayMadnessBakery();
+
+            if (IsFreeFightMonster(pocketProfessorCloneMonster))
+                HandleProfessorCopies(false);
 
             int infiniteLoopCounter = 0;
             while (my_turnCount() <= endTurnCount)
@@ -7435,6 +8176,11 @@ print("mob = " + canMobHit);
                         infiniteLoopCounter = 0;
                         continue;
                     }
+                }
+                if (RunawayDoctorBagQuest())
+                {
+                    infiniteLoopCounter = 0;
+                    continue;
                 }
                 if (my_turnCount() >= endTurnCount)
                     return;
@@ -7538,12 +8284,19 @@ print("mob = " + canMobHit);
         use(1, dayPass);
     }
 
+    void ValidateNotBusy()
+    {
+        string mainPage = visit_url("main.php");
+        if (mainPage.contains_text("choice.php"))
+            abort("Script cannot start while you are stuck in a choice adventure");
+        if (InCombat(mainPage))
+            abort("Script cannot start while you are stuck in combat");
+    }
 
 // pass -1 for buffTurns if you're doing "night before" buffing
     void main(int buffTurns, int runTurns, string familiarName)
     {
-        if (visit_url("main.php").contains_text("choice.php"))
-            abort("Script cannot start while you are stuck in a choice adventure");
+        ValidateNotBusy();
         ReadSettings();
         WriteSettings(); // in case there are new properties
         autoConfirm = autoConfirmBarf || user_confirm("Auto-confirm all prompts this run?");

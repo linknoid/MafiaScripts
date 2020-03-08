@@ -74,35 +74,10 @@ abort();
 //}
 int GetOvernightAdventures()
 {
-	int GetAdventureGain(slot sl)
-	{
-		return sl.equipped_item().numeric_modifier("adventures").to_int();
-	}
-	slot head = $slot[hat];
-	slot back = $slot[back];
-	slot shirt = $slot[shirt];
-	slot weapon = $slot[weapon];
-	slot offhand = $slot[off-hand];
-	slot pants = $slot[pants];
-	slot acc1 = $slot[acc1];
-	slot acc2 = $slot[acc2];
-	slot acc3 = $slot[acc3];
-	slot famEqp = $slot[familiar];
-
-	int overnightAdventureGain = get_property("extraRolloverAdventures").to_int() + 40; // 40 basic regen for all characters
-	if (get_property("_borrowedTimeUsed") == "true")
-		overnightAdventureGain -= 20;
-	overnightAdventureGain += GetAdventureGain(head);
-	overnightAdventureGain += GetAdventureGain(back);
-	overnightAdventureGain += GetAdventureGain(shirt);
-	overnightAdventureGain += GetAdventureGain(weapon);
-	overnightAdventureGain += GetAdventureGain(offhand);
-	overnightAdventureGain += GetAdventureGain(pants);
-	overnightAdventureGain += GetAdventureGain(acc1);
-	overnightAdventureGain += GetAdventureGain(acc2);
-	overnightAdventureGain += GetAdventureGain(acc3);
-	overnightAdventureGain += GetAdventureGain(famEqp);
-	return overnightAdventureGain;
+	int result = 40;
+	result += numeric_modifier("adventures").to_int();
+	result += get_property("extraRolloverAdventures").to_int();
+	return result;
 }
 void SwitchToThanksgarden()
 {
@@ -228,18 +203,55 @@ void TryOvenCrafting()
 	}
 }
 
+string VisitDaycare(string page)
+{
+	if (page == "")
+	{
+		page = visit_url("place.php?whichplace=town_wrong&action=townwrong_boxingdaycare");
+		if (page.contains_text("Enter the Boxing Daycare"))
+			page = visit_url("choice.php?whichchoice=1334&option=3");
+	}
+	return page;
+}
+
 void CheckDaycare()
 {
-	if (get_property("daycareOpen") == "true")
+	if (get_property("daycareOpen") != "true")
+		return;
+
+	string page = "";
+	if (get_property("_daycareGymScavenges").to_int() == 0)
 	{
-		if (get_property("_daycareGymScavenges").to_int() == 0)
+		page = VisitDaycare(page);
+		if (page.contains_text("Scavenge for gym equipment") && page.contains_text("[free]"))
 		{
-			// todo scavenge
-		}
-		if (get_property("_daycareRecruits").to_int() == 0)
-		{
+			print("Scavenging gym equipment");
+			page = visit_url("choice.php?whichchoice=1336&option=2");
 		}
 	}
+	if (get_property("_daycareRecruits").to_int() < 2)
+	{
+		page = VisitDaycare(page);
+		while (true)
+		{
+			boolean containsRecruit = page.contains_text("Recruit toddlers");
+			boolean cheapEnough = page.contains_text("[100 Meat]") || page.contains_text("[1,000 Meat]");
+			if (!containsRecruit)
+			{
+				print("Can't recruit");
+				break;
+			}
+			if (!cheapEnough)
+			{
+				print("Recruit too expensive");
+				break;
+			}
+			print("Recruiting toddlers");
+			page = visit_url("choice.php?whichchoice=1336&option=1");
+		}
+	}
+	if (page != "")
+		visit_url("main.php"); // don't want Mafia to get stuck here
 }
 
 void DoVolcanoMining()
@@ -271,30 +283,14 @@ void main()
 		return;
 	SleepOutfit();
 	int advGain = GetOvernightAdventures();
+	int drunkLimit = inebriety_limit();
 	if (stooper.have_familiar() && my_familiar() != stooper)
 	{
-		stooper.use_familiar();
+		drunkLimit += 1;
 	}
-	int remainingDrunk = inebriety_limit() - my_inebriety();
-	if (advGain + my_adventures() + remainingDrunk * 4.5 > 200)
-	{
-		if (straightEdge.have_effect() == 0)
-		{
-			if (Xtattoo.item_amount() == 0)
-			{
-				if (skeletonX.item_amount() < 2)
-					buy(2, skeletonX);
-				// make our own
-				string page = visit_url("shop.php?whichshop=xo");
-				visit_url("shop.php?whichshop=xo&action=buyitem&quantity=1&whichrow=957&pwd=" + my_hash());
-			}
-			if (Xtattoo.item_amount() > 0)
-			{
-				use(1, Xtattoo);
-			}
-		}
-	}
-	else
+	int remainingDrunk = drunkLimit - my_inebriety();
+print("remaining drunk = " + remainingDrunk);
+	while (advGain + my_adventures() + remainingDrunk * 4.5 < 200 && remainingDrunk > 0)
 	{
 		if (get_property("barrelShrineUnlocked") == "true"
 			&& my_class().to_string() == "Accordion Thief"
@@ -302,17 +298,46 @@ void main()
 		{
 			cli_execute("barrelprayer buff");
 		}
-		while (inebriety_limit() > my_inebriety())
+		if (stooper.have_familiar() && my_familiar() != stooper)
+			stooper.use_familiar();
+		OdeUp(1);
+		drink(1, elemCaip);
+		remainingDrunk = drunkLimit - my_inebriety();
+	}
+	if (remainingDrunk >= 0)
+	{
+		int tomorrowAdventures = advGain + my_adventures();
+		if (tomorrowAdventures > 200)
+			tomorrowAdventures = 200;
+		if (remainingDrunk > 0 && tomorrowAdventures + remainingDrunk * 4.5 > 200)
 		{
-			OdeUp(1);
-			drink(1, elemCaip);
+			if (straightEdge.have_effect() == 0)
+			{
+				if (Xtattoo.item_amount() == 0)
+				{
+					if (skeletonX.item_amount() < 2)
+						buy(2, skeletonX);
+					// make our own
+					string page = visit_url("shop.php?whichshop=xo");
+					visit_url("shop.php?whichshop=xo&action=buyitem&quantity=1&whichrow=957&pwd=" + my_hash());
+				}
+				if (Xtattoo.item_amount() > 0)
+				{
+					use(1, Xtattoo);
+				}
+			}
 		}
-		if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
+		else
 		{
-			pinkyRing.to_slot().equip(pinkyRing);
+			if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
+			{
+				pinkyRing.to_slot().equip(pinkyRing);
+			}
+			OdeUp(10);
+			if (stooper.have_familiar() && my_familiar() != stooper)
+				stooper.use_familiar();
+			drink(1, wineBucket);
 		}
-		OdeUp(10);
-		drink(1, wineBucket);
 	}
 	SleepOutfit();
 	UseReplicator();
