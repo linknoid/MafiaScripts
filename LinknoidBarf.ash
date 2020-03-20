@@ -72,6 +72,7 @@
     int saveSpleen = 0; // how many spleen points to save back
     int saveStomach = 0; // how many stomach points to save back
     int saveLiver = 0; // how many liver points to save back
+    boolean saveFax = false; // don't use the fax, so it can be used for other things (like factoid hunting)
     int maxUsePrintScreens = 0; // how many print screens to use per day
     int maxUseEnamorangs = 1; // how many lov enamorangs to throw per day
     int turkeyLimit = 1; // how many ambitious turkeys to drink per day
@@ -104,6 +105,7 @@ void WriteSettings()
     map["saveSpleen"] = saveSpleen.to_string();
     map["saveStomach"] = saveStomach.to_string();
     map["saveLiver"] = saveLiver.to_string();
+    map["saveFax"] = saveFax.to_string();
     map["maxUsePrintScreens"] = maxUsePrintScreens.to_string();
     map["maxUseEnamorangs"] = maxUseEnamorangs.to_string();
     map["turkeyLimit"] = turkeyLimit.to_string();
@@ -141,6 +143,7 @@ void ReadSettings()
             case "saveSpleen": saveSpleen = value.to_int(); break;
             case "saveStomach": saveStomach = value.to_int(); break;
             case "saveLiver": saveLiver = value.to_int(); break;
+            case "saveFax": saveFax = value.to_boolean(); break;
             case "maxUsePrintScreens": maxUsePrintScreens = value.to_int(); break;
             case "maxUseEnamorangs": maxUseEnamorangs = value.to_int(); break;
             case "turkeyLimit": turkeyLimit = value.to_int(); break;
@@ -162,28 +165,6 @@ void ReadSettings()
     }
 }
 
-
-    item ToItem(string s)
-    {
-        item result = s.to_item();
-        if (result.to_int() < 0)
-            abort("Illegal item " + s);
-        return result;
-    }
-    effect ToEffect(string s)
-    {
-        effect result = s.to_effect();
-        if (result.to_int() < 0)
-            abort("Illegal effect " + s);
-        return result;
-    }
-    thrall ToThrall(string s)
-    {
-        thrall result = s.to_thrall();
-        if (result.to_int() < 0)
-            abort("Illegal thrall " + s);
-        return result;
-    }
 
     stat muscle = $stat[Muscle];
     stat mysticality = $stat[Mysticality];
@@ -381,10 +362,10 @@ void ReadSettings()
     skill clipArt = $skill[Summon Clip Art]; // to summon familiar jacks
 
 // pasta thralls
-    thrall lasagnaThrall = ToThrall("Lasagmbie"); // for meat
-    thrall spiceThrall = ToThrall("Spice Ghost"); // for items
-    thrall verminThrall = ToThrall("Vermincelli"); // for mana
-    thrall vampireThrall = ToThrall("Vampieroghi"); // for healing
+    thrall lasagnaThrall = $thrall[Lasagmbie]; // for meat
+    thrall spiceThrall = $thrall[Spice Ghost]; // for items
+    thrall verminThrall = $thrall[Vermincelli]; // for mana
+    thrall vampireThrall = $thrall[Vampieroghi]; // for healing
     skill lasagnaThrallSkill = $skill[Bind Lasagmbie]; 
     skill spiceThrallSkill = $skill[Bind Spice Ghost];
     skill verminThrallSkill = $skill[Bind Vermincelli];
@@ -801,6 +782,8 @@ void ReadSettings()
     item doctorBag = $item[Lil' Doctor&trade; Bag];
     item kramco = $item[Kramco Sausage-o-Matic&trade;];
     monster kramcoGoblin = $monster[sausage goblin];
+    item glitch = $item[[Glitch season reward name]];
+
 // seal clubber supplies
     item bludgeon = $item[Brimstone Bludgeon];
     item tenderizer = $item[Meat Tenderizer is Murder];
@@ -1357,6 +1340,8 @@ void ReadSettings()
 
     boolean MeatyFaxable()
     {
+        if (saveFax)
+            return false;
         if (vipKey.item_amount() == 0 || !(get_clan_lounge() contains faxMachine))
             return false;
         if (get_property("_photocopyUsed") != "false")
@@ -2296,7 +2281,7 @@ int GetFamiliarRunaways(familiar f, item[slot] o)
             craft("paste", 1, nothingInTheBox, beerLens);
         }
         needsCamera = usedCamera.item_amount() == 0 && camera.item_amount() > 0;
-        needsPrintScreen = printScreen.item_amount() > 0 && get_property("screencappedMonster") == "";
+        needsPrintScreen = printScreen.item_amount() > 0 && get_property("screencappedMonster") == "" && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens;
         needsRainDoh = rainDoh.item_amount() > 0 && usedRainDoh.item_amount() == 0;
         needsSpookyPutty = spookyPutty.item_amount() > 0 && usedSpookyPutty.item_amount() == 0;
 
@@ -2423,6 +2408,7 @@ int GetFamiliarRunaways(familiar f, item[slot] o)
             case $location[The Haunted Laundry Room]:
             case $location[The Haunted Boiler Room]:
             case $location[The Haunted Kitchen]:
+            case $location[The Haunted Conservatory]:
             case $location[The Haunted Billiards Room]:
             case $location[The Outskirts of Cobb's Knob]:
             case $location[Cobb's Knob Barracks]:
@@ -2442,8 +2428,12 @@ int GetFamiliarRunaways(familiar f, item[slot] o)
             case $location[The Hidden Office Building]:
             case $location[The Hidden Hospital]:
             case $location[The Hidden Bowling Alley]:
+            case $location[The Red Zeppelin]:
+            case $location[A Mob of Zeppelin Protesters]:
             case $location[The Upper Chamber]:
             case $location[The Middle Chamber]:
+            case $location[The "Fun" House]:
+            case $location[The Fungal Nethers]:
                 return true;
         }
         return false;
@@ -4263,6 +4253,16 @@ abort("Todo: what choice #s for basement");
             if (TryRunWitchess(filter))
                 return true;
         }
+        if (glitch.item_amount() > 0 && get_property("_glitchMonsterFights").to_int() == 0)
+        {
+            PrepareFreeCombat(selectedOutfit);
+            string page = visit_url("inv_eat.php?which=f0&whichitem=10207");
+            if (InCombat(page))
+            {
+                RunCombat(filter);
+                return true;
+            }
+        }
         // todo:
 // infernal seals
         if (my_class().to_string() == "Seal Clubber")
@@ -4698,44 +4698,44 @@ abort("Todo: what choice #s for basement");
         if ($skill[Mariachi Memory].have_skill())
             songSpace++;
 
-        boolean[string] songs = // boolean whether we should shrug the buff.  Stuff that's relevant to meat farming shouldn't be shrugged
+        boolean[effect] songs = // boolean whether we should shrug the buff.  Stuff that's relevant to meat farming shouldn't be shrugged
         {
-            "The Moxious Madrigal"                   : true,
-            "The Magical Mojomuscular Melody"        : true,
-            "Cletus's Canticle of Celerity"          : true,
-            "Power Ballad of the Arrowsmith"         : true,
-            "Polka of Plenty"                        : false, // buffs meat drops
-            "Jackasses' Symphony of Destruction"     : true,
-            "Fat Leon's Phat Loot Lyric"             : false, // buffs item drops
-            "Brawnee's Anthem of Absorption"         : true,
-            "Psalm of Pointiness"                    : true,
-            "Stevedave's Shanty of Superiority"      : true,
-            "Aloysius' Antiphon of Aptitude"         : true,
-            "Ode to Booze"                           : true,
-            "The Sonata of Sneakiness"               : true,
-            "Carlweather's Cantata of Confrontation" : true,
-            "Ur-Kel's Aria of Annoyance"             : true,
-            "The Ballad of Richie Thingfinder"       : false, // buffs item and meat drops
-            "Benetton's Medley of Diversity"         : true,
-            "Elron's Explosive Etude"                : true,
-            "Chorale of Companionship"               : false, // buffs pet weight
-            "Prelude of Precision"                   : true,
-            "Donho's Bubbly Ballad"                  : true,
-            "Cringle's Curative Carol"               : true,
-            "Inigo's Incantation of Inspiration"     : true  
+            $effect[The Moxious Madrigal]                   : true,
+            $effect[The Magical Mojomuscular Melody]        : true,
+            $effect[Cletus's Canticle of Celerity]          : true,
+            $effect[Power Ballad of the Arrowsmith]         : true,
+            $effect[Polka of Plenty]                        : false, // buffs meat drops
+            $effect[Jackasses' Symphony of Destruction]     : true,
+            $effect[Fat Leon's Phat Loot Lyric]             : false, // buffs item drops
+            $effect[Brawnee's Anthem of Absorption]         : true,
+            $effect[Psalm of Pointiness]                    : true,
+            $effect[Stevedave's Shanty of Superiority]      : true,
+            $effect[Aloysius' Antiphon of Aptitude]         : true,
+            $effect[Ode to Booze]                           : true,
+            $effect[The Sonata of Sneakiness]               : true,
+            $effect[Carlweather's Cantata of Confrontation] : true,
+            $effect[Ur-Kel's Aria of Annoyance]             : true,
+            $effect[The Ballad of Richie Thingfinder]       : false, // buffs item and meat drops
+            $effect[Benetton's Medley of Diversity]         : true,
+            $effect[Elron's Explosive Etude]                : true,
+            $effect[Chorale of Companionship]               : false, // buffs pet weight
+            $effect[Prelude of Precision]                   : true,
+            $effect[Donho's Bubbly Ballad]                  : true,
+            $effect[Cringle's Curative Carol]               : true,
+            $effect[Inigo's Incantation of Inspiration]     : true  
         };
 
         int activeSongs = songSpace;
         while (activeSongs >= songSpace)
         {
             activeSongs = 0;
-            string shrugBuff = "";
+            effect shrugBuff;
             string song;
             boolean canRemove;
 
             foreach song, canRemove in songs
             {
-                if (ToEffect(song).Have_effect() > 0)
+                if (song.have_effect() > 0)
                 {
                     activeSongs++;
                     if (canRemove)
@@ -4743,7 +4743,7 @@ abort("Todo: what choice #s for basement");
                 }
             }
     
-            if (activeSongs >= songSpace && shrugBuff != "")
+            if (activeSongs >= songSpace && shrugBuff != $effect[none])
             {
                 cli_execute("uneffect " + shrugBuff);
                 activeSongs--;
@@ -5375,80 +5375,79 @@ abort("Todo: what choice #s for basement");
     }
 
     // convert strings to the corresponding item and count in inventory
-    int[item] ToItemAndCount(string[] items)
+    int[item] ToItemAndCount(item[] items)
     {
         int[item] result;
-        foreach ix,s in items
+        foreach ix,i in items
         {
-            item i = ToItem(s);
             result[i] = i.item_amount();
         }
         return result;
     }
 
-    string[] candy1Str = 
+    item[] candy1Str = 
         {
-            "bag of W&Ws", // trick or treat
-            "Crimbo Candied Pecan", // summon crimbo candy
-            "breath mint", // glass gnoll eye once a day
-            "Now and Earlier",
-            "abandoned candy",
-            //"Wax Flask",
-            "piece of after eight",
-            "licorice root",
-            "garbage-juice flavored Hob-O",
-            "Necbro wafers",
-            "sugar shank",
+            $item[bag of W&Ws], // trick or treat
+            $item[Crimbo Candied Pecan], // summon crimbo candy
+            $item[breath mint], // glass gnoll eye once a day
+            $item[Now and Earlier],
+            $item[abandoned candy],
+            //$item[Wax Flask],
+            $item[piece of after eight],
+            $item[licorice root],
+            $item[garbage-juice-flavored Hob-O],
+            $item[Necbro wafers],
+            $item[sugar shank],
         };
-    string[] candy2Str =
+    item[] candy2Str =
         {
-            "Dweebs", // trick or treat
-            "Crimbo Fudge", // summon crimbo candy
-            "sugar-coated pine cone",
-            "PlexiPips",
-            "sugar shillelagh",
-            "licorice boa",
-            "double-ice gum",
-            "fry-oil-flavored Hob-O",
-            "Good 'n' Slimy",
-            "black candy heart",
-            "fruitfilm",
-            "fudge spork",
-            "peanut brittle shield",
-            "irradiated candy cane",
-            "bag of many confections",
+            $item[box of Dweebs], // trick or treat
+            $item[Crimbo Fudge], // summon crimbo candy
+            $item[sugar-coated pine cone],
+            $item[PlexiPips],
+            $item[sugar shillelagh],
+            $item[licorice boa],
+            $item[double-ice gum],
+            $item[fry-oil-flavored Hob-O],
+            $item[Good 'n' Slimy],
+            $item[black candy heart],
+            $item[fruitfilm],
+            $item[fudge spork],
+            $item[peanut brittle shield],
+            $item[irradiated candy cane],
+            $item[bag of many confections],
         };
-    string[] candy3Str =
+    item[] candy3Str =
         {
-            "Peez dispenser", // trick or treat
-            "hoarded candy wad", // from buddy bjorn + orphan tot
-            "Atomic Pop",
-            "Pain Dip",
-            "Gummi-DNA",
-            "spooky sap",
-            "nanite-infested candy cane",
-            "sugar chapeau",
-            "dubious peppermint",
-            "sugar shirt",
-            "strawberry-flavored Hob-O",
+            $item[Peez dispenser], // trick or treat
+            $item[hoarded candy wad], // from buddy bjorn + orphan tot
+            $item[Atomic Pop],
+            $item[Pain Dip],
+            $item[Gummi-DNA],
+            $item[spooky sap],
+            $item[nanite-infested candy cane],
+            $item[sugar chapeau],
+            $item[dubious peppermint],
+            $item[sugar shirt],
+            $item[strawberry-flavored Hob-O],
         };
-    string[] candy4Str =
+    item[] candy4Str =
         {
-            milkStud.to_string(), // trick or treat
-            "frostbite-flavored Hob-O",
-            "Nuclear Blastball",
-            "ribbon candy",
-            "children of the candy corn",
-            "elderly jawbreaker",
+            milkStud, // trick or treat
+            $item[frostbite-flavored Hob-O],
+            $item[Nuclear Blastball],
+            $item[ribbon candy],
+            $item[children of the candy corn],
+            $item[elderly jawbreaker],
            
         };
-    string[] candy5Str =
+    item[] candy5Str =
         {
-            swizzler.to_string(),
-            //"nasty gum", // does this drop from robortender?  Maybe I just bought a bunch on the market
-            "Comet Drop",
-            "sterno-flavored Hob-O",
-            "Fudgie Roll",
+            swizzler,
+            //$item[nasty gum], // does this drop from robortender?  Maybe I just bought a bunch on the market
+            $item[Comet Drop],
+            $item[sterno-flavored Hob-O],
+            $item[Fudgie Roll],
         };
     
     void SweetMeat(int requestedTurns)
@@ -6715,13 +6714,12 @@ abort("Todo: what choice #s for basement");
     void RunawayMadnessBakery()
     {
         boolean first = true;
-        item[slot] weightOF;
 
         while (strawberry.item_amount() > 0
             && dough.item_amount() > 0
             && icing.item_amount() > 0
             && (popPart.item_amount() > 0 || get_property("popularTartUnlocked") == "true")
-            && TryPrepareFamiliarRunaways(first, weightOF))
+            && TryPrepareFamiliarRunaways())
         {
             if (RunawayDoctorBagQuest()) // this is higher priority than madness bakery
                 continue;
@@ -7068,7 +7066,7 @@ print("Can use force = " + canUseForce, printColor);
             needsRainDoh = true;
             return ActivateCopyItem(usedRainDoh);
         }
-        else if (MeatyPrintScreened() && get_property("_printscreensUsedToday").to_int() < maxUsePrintScreens)
+        else if (MeatyPrintScreened())
         {
             print("using print screen " + meatyMonster, printColor);
 

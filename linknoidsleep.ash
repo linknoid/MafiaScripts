@@ -276,7 +276,7 @@ void main()
 		emptyOrgan = "spleen";
 	if (my_fullness() < fullness_limit())
 		emptyOrgan += "/stomach";
-	if (emptyOrgan != "" && !user_confirm("Your " + emptyOrgan + " is not full, do you wish to stop to fill it?"))
+	if (emptyOrgan != "" && user_confirm("Your " + emptyOrgan + " is not full, do you wish to stop to fill it?"))
 		return;
 	CheckDaycare();
 	if (!user_confirm("Ready for overdrinking?"))
@@ -381,6 +381,19 @@ print("remaining drunk = " + remainingDrunk);
 	if ($item[raffle ticket].item_amount() == 0)
 	{
 		cli_execute("raffle 1");
+	}
+        if ($item[Bird-a-Day calendar].item_amount() > 0)
+        {
+		if (get_property("_birdOfTheDay") == "")
+			use(1, $item[Bird-a-Day calendar]);
+		while(get_property("_birdsSoughtToday").to_int() < 6)
+		{
+			use_skill(1, $skill[Seek out a bird]);
+		}
+        }
+	if ($skill[Incredible Self-Esteem].have_skill() && get_property("_incredibleSelfEsteemCast") == "false")
+	{
+		use_skill(1, $skill[Incredible Self-Esteem]);
 	}
 	CombBeach(0);
 	MakeMagicalSausages();
