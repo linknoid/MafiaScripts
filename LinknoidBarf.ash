@@ -6798,7 +6798,7 @@ print("mob = " + canMobHit);
         boolean freeKills = hasFreeKillRemaining;
         boolean needSquint = (squint.have_skill() && get_property("_steelyEyedSquintUsed") == "false");
         boolean doubleDrops = needSquint || squintEffect.have_effect() > 0
-            || (garbageTote.item_amount() > 0 && get_property("garbageChampagneCharges").to_int() == 0);
+            || (garbageTote.item_amount() > 0 && get_property("garbageChampagneCharge").to_int() > 0);
 print("Can use force = " + canUseForce, printColor);
 //waitq(5);
         if (!canUseForce && !(freeKills && doubleDrops))
@@ -6849,12 +6849,12 @@ print("Can use force = " + canUseForce, printColor);
             boolean chamCharges = false;
             if (garbageTote.item_amount() > 0)
             {
-                if (get_property("garbageChampagneCharge").to_int() < 11 || get_property("_garbageItemChanged") == "false")
+                if (get_property("garbageChampagneCharge").to_int() > 0 || get_property("_garbageItemChanged") == "false")
                     chamCharges = true;
                 if (chamCharges && champagne.item_amount() == 0 && !champagne.have_equipped())
                 {
                     cli_execute("fold broken champagne bottle");
-                    chamCharges = get_property("garbageChampagneCharge").to_int() < 11;
+                    chamCharges = get_property("garbageChampagneCharge").to_int() > 0;
                 }
                 fkOutfit[weapon] = champagne;
             }
