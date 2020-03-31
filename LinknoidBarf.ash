@@ -212,6 +212,7 @@ void ReadSettings()
     item pokeGarden = $item[packet of tall grass seeds];
     item fertilizer = $item[Pok&eacute;-Gro fertilizer];
     item thanksGarden = $item[packet of thanksgarden seeds];
+    item mushroomGarden = $item[packet of mushroom spores];
 
 // LT&T
     item telegram = $item[plaintive telegram];
@@ -1267,10 +1268,20 @@ void ReadSettings()
             // if the outfit contains illegal items, mafia will refuse to even try to equip it on a call to "outfit", so
             // manually call the url to equip the outfit closest to our goal:
             CalcOutfitsByNumber();
-            if (outfitsByNumber contains bestMatch)
-                visit_url("inv_equip.php?action=outfit&which=2&whichoutfit=-" + outfitsByNumber[bestMatch]);
-            else
-                outfit(bestMatch);
+            //if (outfitsByNumber contains bestMatch)
+            //{
+            //    int outfitNum = outfitsByNumber[bestMatch];
+            //    print("wearing outfit #" + outfitNum);
+            //    string url = "inv_equip.php?action=outfit&which=2&whichoutfit=-" + outfitNum;
+	    //    //boolean ignore = cli_execute("try; visit_url " + url);
+            //    string ignore = visit_url(url);
+            //}
+            //else
+            {
+                print("outfit(" + bestMatch + ")", printColor);
+                cli_execute("/outfit " + bestMatch);
+                //outfit(bestMatch);
+            }
         }
         // remove wrong accessories, in case the slots don't match up
         foreach sl, it in outfitDef
@@ -1321,6 +1332,12 @@ void ReadSettings()
             }
         }
     }
+    void WearOutfit(string outfitName)
+    {
+        item[slot] o;
+        o = InitOutfit(outfitName, o);
+        WearOutfit(o);
+    }
     boolean IsAccordion(item it)
     {
         return it.item_type() == "accordion";
@@ -1340,14 +1357,14 @@ void ReadSettings()
 
     boolean MeatyFaxable()
     {
+        if (IsMeatyMonster(get_property("photocopyMonster")))
+            return true;
         if (saveFax)
             return false;
         if (vipKey.item_amount() == 0 || !(get_clan_lounge() contains faxMachine))
             return false;
         if (get_property("_photocopyUsed") != "false")
             return false;
-        if (IsMeatyMonster(get_property("photocopyMonster")))
-            return true;
         if (!can_faxbot(meatyMonster))
             return false;
         return true;
@@ -3557,9 +3574,8 @@ print("Running filter = " + result, printColor);
             }
             else if (get_property("_neverPartyQuest") == "Megawoots2")
             {
-abort("Todo: what choice #s for basement");
-                run_choice(1); // Head upstairs
-                run_choice(5); // Toss the red dress on the lamp
+                run_choice(4); // Head to the basement
+                run_choice(4); // Modify the living room lights
                 return true;
             }
             else if (get_property("_neverPartyQuest") == "None")
@@ -3788,6 +3804,32 @@ abort("Todo: what choice #s for basement");
             if (nextDay || (get_property("_eldritchHorrorEvoked") == "false"))
                 count += 1;
         return count;
+    }
+    boolean CanFightMushroomGarden()
+    {
+        if (get_property("_mushroomGardenVisited") != "false")
+            return false;
+        foreach it, count in get_campground()
+        {
+            if (it == mushroomGarden)
+            {
+                return true;
+            }
+            if (it == pokeGarden || it == cornucopia || it == thanksGarden)
+            {
+                if (mushroomGarden.item_amount() > 0)
+                {
+                    if (count > 1)
+                    {
+                        print("Can't swap to mushroom garden because current garden needs harvesting first", printColor);
+                        return false;
+                    }
+                    use(1, mushroomGarden);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     int EstimateFreeFightCost(boolean nextDay)
@@ -4262,6 +4304,18 @@ abort("Todo: what choice #s for basement");
                 RunCombat(filter);
                 return true;
             }
+        }
+        if (CanFightMushroomGarden())
+        {
+            PrepareFreeCombat(selectedOutfit);
+            string page = visit_url("adventure.php?snarfblat=543");
+            if (InCombat(page))
+            {
+                RunCombat(filter);
+                return true;
+            }
+            else
+                run_choice(2); // pick the mushroom
         }
         // todo:
 // infernal seals
@@ -5933,6 +5987,23 @@ abort("Todo: what choice #s for basement");
         {
             CastSkill(phatLoot, turns, restoreMP);
         }
+        if (my_class() == $class[Accordion Thief] && my_level() >= 15)
+        {
+            if (get_property("_companionshipCasts").to_int() < 10 && companionship.have_skill())
+            {
+                if (companionshipEffect.have_effect() > 0 || EnsureOneSongSpace())
+                {
+                    CastSkill(companionship, turns, restoreMP);
+                }
+            }
+            if (get_property("_thingfinderCasts").to_int() < 10 && thingfinder.have_skill())
+            {
+                if (thingfinderEffect.have_effect() > 0 || EnsureOneSongSpace())
+                {
+                    CastSkill(thingfinder, turns, restoreMP);
+                }
+            }
+        }
     }
 
     void AcquireAmuletCoin()
@@ -7487,7 +7558,7 @@ print("Can use force = " + canUseForce, printColor);
         {
             BurnManaAndRestores(20, true);
         }
-        outfit(manaOutfit);
+        WearOutfit(manaOutfit);
         if (bjorn.have_equipped() || crown.have_equipped())
         {
             EquipBjornCrownFamiliars(mayoWasp, grue); // extra 15% mysticality
@@ -7724,7 +7795,7 @@ print("mob = " + canMobHit);
         // more fertilizer from turns spent, for a total of up to 5 cornucopias a day
         foreach it, count in get_campground()
         {
-            if ((it == thanksGarden || it == cornucopia) && pokeGarden.item_amount() > 0)
+            if ((it == thanksGarden || it == cornucopia || it == mushroomGarden) && pokeGarden.item_amount() > 0)
             {
                 if (count > 1 && UserConfirmDefault("Harvest " + count + " from Thanksgiving garden to switch to " + pokeGarden, true))
                 {
