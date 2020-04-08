@@ -1069,13 +1069,18 @@ void ReadSettings()
     {
         if ( itm.item_amount() > 0 || itm.have_equipped() )
             return true;
-        if (itm.to_slot() != famEqp)
-            return false;
-        familiar[int] myFamiliars = GetFamiliarList();
-        foreach id, fam in myFamiliars
+        if (itm.to_slot() == weapon)
+            return $familiar[disembodied hand].familiar_equipped_equipment() == itm;
+        if (itm.to_slot() == offhand)
+            return $familiar[left-hand man].familiar_equipped_equipment() == itm;
+        if (itm.to_slot() == famEqp)
         {
-            if (fam.familiar_equipped_equipment() == itm)
-                return true;
+            familiar[int] myFamiliars = GetFamiliarList();
+            foreach id, fam in myFamiliars
+            {
+                if (fam.familiar_equipped_equipment() == itm)
+                    return true;
+            }
         }
         return false;
     }
@@ -1191,6 +1196,8 @@ void ReadSettings()
         int result = 0;
         foreach sl,it in outfitGoal
         {
+            if (!it.HaveEquipment())
+                return -1;
             if (swapGear[sl] == it
                 && (outfitSlots contains sl)) // don't count familiar equipment or stickers here
             {
@@ -1268,19 +1275,19 @@ void ReadSettings()
             // if the outfit contains illegal items, mafia will refuse to even try to equip it on a call to "outfit", so
             // manually call the url to equip the outfit closest to our goal:
             CalcOutfitsByNumber();
-            //if (outfitsByNumber contains bestMatch)
-            //{
-            //    int outfitNum = outfitsByNumber[bestMatch];
-            //    print("wearing outfit #" + outfitNum);
-            //    string url = "inv_equip.php?action=outfit&which=2&whichoutfit=-" + outfitNum;
-	    //    //boolean ignore = cli_execute("try; visit_url " + url);
-            //    string ignore = visit_url(url);
-            //}
-            //else
+            if (outfitsByNumber contains bestMatch)
+            {
+                int outfitNum = outfitsByNumber[bestMatch];
+                print("wearing outfit #" + outfitNum);
+                string url = "inv_equip.php?action=outfit&which=2&whichoutfit=-" + outfitNum;
+	        //boolean ignore = cli_execute("try; visit_url " + url);
+                string ignore = visit_url(url);
+            }
+            else
             {
                 print("outfit(" + bestMatch + ")", printColor);
-                cli_execute("/outfit " + bestMatch);
-                //outfit(bestMatch);
+                //cli_execute("try; /outfit " + bestMatch);
+                outfit(bestMatch);
             }
         }
         // remove wrong accessories, in case the slots don't match up
@@ -1325,7 +1332,7 @@ void ReadSettings()
                 if (matchedSlots[j])
                     continue;
                 item it = outfitDef[slots[i]];
-                if (it.can_equip())
+                if (it.can_equip() && HaveEquipment(it))
                     slots[j].equip(it);
                 matchedItems[i] = true;
                 matchedSlots[j] = true;
@@ -1515,7 +1522,9 @@ void ReadSettings()
     {
         if (!page.contains_text("choice.php"))
             return false;
-        if (page.contains_text("Tame it"))
+        if (page.contains_text("Tame it")
+            || page.contains_text("Grab Him!")
+            || page.contains_text("Fortune favors the fold -- tame it"))
         {
             run_choice(1); // tame the turtle
             return true;
@@ -1615,6 +1624,8 @@ void ReadSettings()
         if (TryChoose("Dammit, door, I'm an Adventurer, not a doctor!")) // You, M.D., Hidden Hospital
             return true;
         if (TryChoose("Let's don't")) // Life is Like a Cherry of Bowls, Hidden Bowling Alley
+            return true;
+        if (TryChoose("Sorry, gotta run.")) // Outskirts of Cobb's Knob
             return true;
         if (TryChoose("Leave the scene")) // Welcome to the Footlocker, Cobb's Knob Barracks
             return true;
@@ -3490,8 +3501,11 @@ print("Running filter = " + result, printColor);
         {
             if (get_property("snojoSetting") == "NONE")
             {
-                print("Cannot run snojo because it hasn't been configured yet", printColor);
-                return false;
+                print("Snojo not configured yet, setting to Muscle mode", printColor);
+                visit_url("place.php?whichplace=snojo&action=snojo_controller");
+                run_choice(1); // start with muscle
+                if (get_property("snojoSetting") == "NONE")
+                    return false;
             }
             RunAdventure(snojo, filter);
             return true;
@@ -3604,6 +3618,10 @@ print("Running filter = " + result, printColor);
         else if (page.contains_text("Party's Over"))
         {
             set_property("_neverendingPartyFreeTurns", 10);
+            return false;
+        }
+        else if (TryHandleNonCombat(page))
+        {
             return false;
         }
         else
@@ -5242,7 +5260,7 @@ print("Running filter = " + result, printColor);
         {
             cli_execute("barrelprayer buff"); // bonus adventures from drinking
         }
-        if (HaveEquipment(pinkyRing))
+        if (HaveEquipment(pinkyRing) && !pinkyRing.have_equipped())
         {
             acc1.equip(pinkyRing);
         }
@@ -8156,14 +8174,14 @@ print("mob = " + canMobHit);
             cli_execute("friars familiar");
 
         string page = ActivateMonsterFight(m);
-        while (page.contains_text("fight.php"))
+        while (InCombat(page))
         {
             page = run_combat("Filter_PocketProfessor");
             if (page.contains_text("STEP INTO FOLD IN SPACETIME"))
             {
                 ResetCombatState();
                 visit_url("fight.php");
-                page = "fight.php";
+                page = "You're fighting";
             }
             else
                 CheckPostCombat(page, "Filter_PocketProfessor");
