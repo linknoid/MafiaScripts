@@ -194,7 +194,6 @@ void ReadSettings()
 
 // campground items
     item witchess = $item[Witchess Set];
-    monster witchessKnight = $monster[Witchess Knight];
     item terminal = $item[Source terminal];
     item mayoClinic = $item[portable Mayo Clinic];
     item asdonMartin = $item[Asdon Martin keyfob];
@@ -484,8 +483,11 @@ void ReadSettings()
     item deck = $item[Deck of Every Card]; // required for knife or rope if part of outfit
     item knife = $item[knife]; // from deck of every card
     item rope = $item[rope]; // from deck of every card
+    item burningCrane = $item[burning paper crane]; // folding burning newspaper
     item bastille = $item[Bastille Battalion control rig];
     item brogues = $item[Brutal brogues]; // from Bastille Battalion
+    item cologne = $item[beggin cologne]; // 1 spleen for 100% for 60 turns
+    effect cologneEffect = $effect[Eau d' Clochard]; // 1 spleen for 100% for 60 turns
 
     item mafiaPointerRing = $item[mafia pointer finger ring]; // gets +200% base meat from crits
     skill furiousWallop = $skill[Furious Wallop]; // seal clubber skill with guaranteed crit
@@ -619,6 +621,7 @@ void ReadSettings()
     effect tomatoJuiceEffect = $effect[Tomato Power];
     item mascara = $item[glittery mascara];
     effect mascaraEffect = $effect[Glittering Eyelashes];
+    effect anyToMystEffect = $effect[Phairly Balanced];
     item muscleToMyst = $item[oil of stability];
     effect muscleToMystEffect = $effect[Stabilizing Oiliness];
     item moxieToMyst = $item[oil of slipperiness];
@@ -1158,6 +1161,12 @@ void ReadSettings()
         {
             ExecuteBastilleBattalion("", "BRUTALIST", "GESTURE"); // BRUTALIST = brogues, GESTURE = +25 meat
         }
+        if (!HaveEquipment(burningCrane)
+            && OutfitContains(outfitDef, burningCrane)
+            && $item[burning newspaper].item_amount() > 0)
+        {
+            cli_execute("create burning paper crane");
+        }
         if (!HaveEquipment(carpe)
             && OutfitContains(outfitDef, carpe)
             && vipKey.item_amount() > 0
@@ -1518,13 +1527,115 @@ void ReadSettings()
         }
         return false;
     }
+
+    void HandleLightsOut(string page)
+    {
+        if (page.contains_text("Light Out in the Storage Room"))
+        {
+            if (TryChoose("Look out the Window"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Laundry Room"))
+        {
+            if (TryChoose("Check a Pile of Stained Sheets"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Bathroom"))
+        {
+            if (TryChoose("Inspect the Bathtub"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Kitchen"))
+        {
+            if (TryChoose("Make a Snack"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Library"))
+        {
+            if (TryChoose("Go to the Childrens' Section"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Ballroom"))
+        {
+            if (TryChoose("Dance with Yourself"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Gallery"))
+        {
+            // save Elizabeth fight for when user is in control
+        }
+        else if (page.contains_text("Light Out in the Bedroom"))
+        {
+            if (TryChoose("Search for a light")
+                && TryChoose("Search a nearby nightstand")
+                && TryChoose("Check a nightstand on your left"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Nursery"))
+        {
+            if (TryChoose("Search for a lamp")
+                && TryChoose("Search over by the (gaaah) stuffed animals")
+                && TryChoose("Examine the dresser")
+                && TryChoose("Open the bear and put your hand inside")
+                && TryChoose("Unlock the box"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Conservatory"))
+        {
+            if (TryChoose("Make a torch")
+                && TryChoose("Examine the graves")
+                && TryChoose("Examine the grave marked \"Crumbles\""))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Billiards Room"))
+        {
+            if (TryChoose("Search for a light")
+                && TryChoose("What the heck, let's explore a bit")
+                && TryChoose("Examine the taxidermy heads"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Wine Cellar"))
+        {
+            if (TryChoose("Try to find a light")
+                && TryChoose("Keep your cool")
+                && TryChoose("Investigate the wine racks")
+                && TryChoose("Examine the Pinot Noir rack"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Boiler Room"))
+        {
+            if (TryChoose("Look for a light")
+                && TryChoose("Search the barrel")
+                && TryChoose("No, but I will anyway"))
+                return;
+        }
+        else if (page.contains_text("Light Out in the Laboratory"))
+        {
+            // save Stephen fight for when user is in control
+        }
+        if (TryChoose("Get the heck out of here")) // lights out
+            return;
+        if (TryChoose("Get out of here right now go go go")) // lights out in the wine cellar
+            return;
+        if (TryChoose("Quit the Gallery")) // lights out in the gallery
+            return;
+        if (TryChoose("Get the heck out of here")) // Lights out in the Haunted Billiards Room
+            return;
+        if (TryChoose("Get out of the Ballroom")) // Lights out in the Ballroom
+            return;
+        if (TryChoose("Leave well enough alone")) // Lights out in the Laboratory
+            return;
+        abort("Unhandled lights out quest");
+    }
+
     boolean TryHandleNonCombat(string page)
     {
         if (!page.contains_text("choice.php"))
             return false;
         if (page.contains_text("Tame it")
             || page.contains_text("Grab Him!")
-            || page.contains_text("Fortune favors the fold -- tame it"))
+            || page.contains_text("Walk the line")
+            || page.contains_text("Fortune favors the bold -- tame it"))
         {
             run_choice(1); // tame the turtle
             return true;
@@ -1576,6 +1687,11 @@ void ReadSettings()
             set_property("doctorBagQuestLocation", "");
             return true;
         }
+        if (page.contains_text("Lights Out in the"))
+        {
+            HandleLightsOut(page);
+            return true;
+        }
 
         return false;
     }
@@ -1591,16 +1707,6 @@ void ReadSettings()
             return true;
         }
 
-        if (TryChoose("Get the heck out of here")) // lights out
-            return true;
-        if (TryChoose("Get out of here right now go go go")) // lights out in the wine cellar
-            return true;
-        if (TryChoose("Quit the Gallery")) // lights out in the gallery
-            return true;
-        if (TryChoose("Get the heck out of here")) // Lights out in the Haunted Billiards Room
-            return true;
-        if (TryChoose("Get out of the Ballroom")) // Lights out in the Ballroom
-            return true;
         if (TryChoose("Hustle away")) // Welcome to Our ool Table
             return true;
         if (page.contains_text("Louvre It or Leave It") && TryChoose("Pass on by")) // Haunted Gallery
@@ -2211,7 +2317,7 @@ int GetFamiliarRunaways(familiar f, item[slot] o)
         ResetCombatState();
         if (!canPickpocket)
         {
-            canPickpocket = my_class().to_string() == "Disco Bandit" || my_class().to_string() == "Accordion Thief";
+            canPickpocket = my_class() == $class[Disco Bandit] || my_class() == $class[Accordion Thief];
             if (my_class().to_string() == "Disco Bandit")
             {
                 canRaveNirvana = get_property("raveCombo5") != "";
@@ -2527,7 +2633,7 @@ int GetFamiliarRunaways(familiar f, item[slot] o)
 
     string Filter_Duplicate(int round, monster mon, string page)
     {
-        if (canDuplicate && mon == witchessKnight)
+        if (canDuplicate && (mon == $monster[Witchess Knight] || mon == $monster[Witchess Bishop]))
         {
             if (canMortar && !mortared)
             {
@@ -2892,6 +2998,33 @@ print("Running filter = " + result, printColor);
         if (MeatyFaxable())
             return true;
         return false;
+    }
+    boolean KramcoScheduled()
+    {
+        if (!kramco.HaveEquipment())
+            return false;
+        // this is based on the code in Ezandora's Guide (relay_Guid.ash), which has the comment:
+        // "These ceilings are not correct; they are merely what I have spaded so far. The actual values are higher".
+        // So if better values are spaded, this should also be updated to match
+        int lastGoblin = get_property("_lastSausageMonsterTurn").to_int();
+        int sausageFights = get_property("_sausageFights").to_int();
+        int delay = 220;
+        switch (sausageFights)
+        {
+            case 0: delay = 0; break;
+            case 1: delay = 7; break;
+            case 2: delay = 10; break;
+            case 3: delay = 13; break;
+            case 4: delay = 16; break;
+            case 5: delay = 19; break;
+            case 6: delay = 23; break;
+            case 7: delay = 33; break;
+            case 8: delay = 54; break;
+            case 9: delay = 93; break;
+            case 10: delay = 154; break;
+            case 11: delay = 219; break;
+        }
+        return (total_turns_played() - lastGoblin >= delay);
     }
     string WandererScheduled()
     {
@@ -4723,7 +4856,14 @@ print("Running filter = " + result, printColor);
                 case 4: dropRates[jellyfish] = 0.20; break;
                 default: dropRates[jellyfish] = 0.05; break;
             }
-            itemDrops[jellyfish] = $item[hot jelly].historical_price();
+            if ($skill[Macrometeorite].have_skill() || powerGlove.HaveEquipment())
+            {
+                // jellyfish drops are easy to get all at once using macrometeorite, don't
+                // waste real turns on jellyfish unless it's the last resort
+                itemDrops[jellyfish] = 200;
+            }
+            else
+                itemDrops[jellyfish] = $item[hot jelly].historical_price();
         }
         if (intergnat.have_familiar())
         {
@@ -5412,7 +5552,7 @@ print("Running filter = " + result, printColor);
             && my_class().to_string() == "Turtle Tamer"
             && get_property("_barrelPrayer") != "true")
         {
-            cli_execute("barrelprayer buff");
+            cli_execute("barrelprayer buff"); // bonus adventures for eating
         }
 
         eat(1, food);
@@ -6189,6 +6329,9 @@ print("Running filter = " + result, printColor);
             UseItem(wealthy, resolve, turns, 20);
         else
             UseItem(wealthy, resolve, 1, 20, 1000);
+
+        TrySpleen(cologne, cologneEffect, 1, 10);
+
         if (mayflower.item_amount() > 0 && begpwnia.item_amount() > 0)
             UseOneTotal(begpwnia, begpwniaEffect);
         UseItem(avoidScams, avoidScamsEffect, turns, 20, 500);
@@ -6257,7 +6400,7 @@ print("Running filter = " + result, printColor);
             && my_class().to_string() == "Pastamancer"
             && get_property("_barrelPrayer") != "true")
         {
-            cli_execute("barrelprayer buff"); // bonus adventures from eating
+            cli_execute("barrelprayer buff"); // +90% item drop
         }
 
         SweetMeat(turns);
@@ -6491,8 +6634,10 @@ print("Running filter = " + result, printColor);
         //acc3.equip(gingerAcc3);
     }
 
-    boolean CheesyRunaway(item i, slot s, familiar f, item[slot] o)
+    boolean CheesyRunaway(item i, slot s, familiar f, item[slot] o, boolean realCheese)
     {
+        if (realCheese && get_property("_stinkyCheeseCount").to_int() >= 100)
+            return false;
         if (o[s] == i)
             return true;
         if (!i.HaveEquipment() || !i.can_equip())
@@ -6518,23 +6663,23 @@ print("Running filter = " + result, printColor);
         {
             foreach ix,sl in slot[] { acc1, acc2, acc3 }
             {
-                if (CheesyRunaway(doctorBag, sl, f, o))
+                if (CheesyRunaway(doctorBag, sl, f, o, false))
                     break;
             }
         }
         // having these cheesy items equipped during runaways counts towards combats for the day
-        if (!CheesyRunaway(cheeseStaff, weapon, f, o))
-            CheesyRunaway(cheeseSword, weapon, f, o);
-        if (!CheesyRunaway(pantsgiving, pants, f, o))
-            CheesyRunaway(cheesePants, pants, f, o);
-        if (!CheesyRunaway(cheeseShield, offhand, f, o))
-            CheesyRunaway(kramco, offhand, f, o);
+        if (!CheesyRunaway(cheeseStaff, weapon, f, o, true))
+            CheesyRunaway(cheeseSword, weapon, f, o, true);
+        if (!CheesyRunaway(pantsgiving, pants, f, o, false))
+            CheesyRunaway(cheesePants, pants, f, o, true);
+        if (!CheesyRunaway(cheeseShield, offhand, f, o, true))
+            CheesyRunaway(kramco, offhand, f, o, false);
         if (!OutfitContains(o, cheeseAccessory))
         {
             foreach ix,sl in slot[] { acc1, acc2, acc3 }
             {
                 if (o[sl] != doctorBag)
-                    if (CheesyRunaway(cheeseAccessory, sl, f, o))
+                    if (CheesyRunaway(cheeseAccessory, sl, f, o, true))
                         break;
             }
         }
@@ -6583,7 +6728,79 @@ print("Running filter = " + result, printColor);
         }
     }
 
-    boolean TryPrepareFamiliarRunaways(boolean first, item[slot] weightOF)
+    boolean TryReplaceWeightSlot(item[slot] o, item replacement, slot s, float weight)
+    {
+        if (o.OutfitContains(replacement))
+            return true;
+        float oldWeight = s.equipped_item().numeric_modifier("familiar weight");
+        if (weight > oldWeight)
+        {
+            o[s] = replacement;
+            return true;
+        }
+        return false;
+    }
+
+    // don't want the full maximizer, just replace equipment based on familiar
+    item[slot] MaximizeWeight(familiar f)
+    {
+        item[slot] result;
+        result = CopyOutfit(weightOutfitPieces);
+        if (bjorn.HaveEquipment())
+        {
+            result[back] = bjorn;
+            if (result[head] == crown)
+                result[head] = $item[none];
+        }
+        foreach i in $items[]
+        {
+            slot s = i.to_slot();
+            if (s == $slot[none] || s == famEqp)
+                continue;
+            if (!i.can_equip() || !i.HaveEquipment())
+                continue;
+            float modifier = i.numeric_modifier("familiar weight");
+            if (modifier == 0)
+                continue;
+            switch (i)
+            {
+                case $item[hewn moon-rune spoon]: // messes with text, breaks tracking
+                case $item[furry halo]: // only unarmed
+                    // don't use these items
+                    continue;
+                case $item[warbear foil hat]:
+                    if (my_class() == $class[Turtle Tamer])
+                    {
+                        modifier = 5;
+                        // list of robots is actually much bigger, do we care about any other familiars?
+                        //  https://kol.coldfront.net/thekolwiki/index.php/Category:Robotic_Familiars
+                        if (f == robort || f == npzr)
+                            modifier = 15;
+                    }
+                    break;
+                case $item[Crown of Thrones]: // can't use with Buddy Bjorn
+                    if (bjorn.HaveEquipment())
+                        continue;
+                    modifier = 5; // in case there's not a weight familiar enthroned
+                    break;
+                case $item[Buddy Bjorn]:
+                    modifier = 5; // in case there's not a weight familiar bjorned
+                    break;
+            }
+            if (s == acc1 || s == acc2 || s == acc3)
+            {
+                if (!TryReplaceWeightSlot(result, i, acc1, modifier))
+                    if (!TryReplaceWeightSlot(result, i, acc2, modifier))
+                        TryReplaceWeightSlot(result, i, acc3, modifier);
+            }
+            else
+                TryReplaceWeightSlot(result, i, s, modifier);
+        }
+        result[famEqp] = ChooseFamiliarEquipmentForWeight(f);
+        return result;
+    }
+
+    boolean TryPrepareFamiliarRunaways()
     {
         familiar f;
         if (stompingBoots.have_familiar())
@@ -6592,11 +6809,7 @@ print("Running filter = " + result, printColor);
             f = bandersnatch;
         else
             return false;
-        if (first)
-        {
-            weightOF = CopyOutfit(weightOutfitPieces);
-            weightOF[famEqp] = ChooseFamiliarEquipmentForWeight(f);
-        }
+        item[slot] weightOF = MaximizeWeight(f);
         int runaways = GetFamiliarRunaways(f, weightOF);
         if (FeastingAvailable(f))
             runaways += 2;
@@ -6621,11 +6834,6 @@ print("Running filter = " + result, printColor);
         if (runaways > -2)
             TryUseMovableFeast();
         return GetFamiliarRunaways() > 0;
-    }
-    boolean TryPrepareFamiliarRunaways()
-    {
-        item[slot] o;
-        return TryPrepareFamiliarRunaways(true, o);
     }
 
     int GingerbreadTurns()
@@ -6741,8 +6949,7 @@ print("Running filter = " + result, printColor);
     void RunawayDinseyBurnDelay()
     {
         boolean first = true;
-        item[slot] weightOF;
-        while (TryPrepareFamiliarRunaways(first, weightOF))
+        while (TryPrepareFamiliarRunaways())
         {
             location zone = ChooseRunawayZone();
             if (zone == noLocation)
@@ -6919,6 +7126,8 @@ print("Can use force = " + canUseForce, printColor);
             print("Using the force or missile launcher for mojo filter", printColor);
 //waitq(5);
             string page = visit_url(oasis.to_url());
+            if (TryHandleNonCombat(page))
+                continue;
             RunCombat("Filter_MojoFarm");
 
             PrepareFilterState(true);
@@ -6986,6 +7195,8 @@ print("Can use force = " + canUseForce, printColor);
 //waitq(5);
             PrepareFilterState(true);
             string page = visit_url(oasis.to_url());
+            if (TryHandleNonCombat(page))
+                continue;
             RunCombat("Filter_MojoFarm");
 
             PrepareFilterState(false);
@@ -7324,6 +7535,32 @@ print("Can use force = " + canUseForce, printColor);
         run_choice(5); // Total Eclipse of Your Meat
     }
 
+    boolean TryRunKramco()
+    {
+        if (!KramcoScheduled())
+            return false;
+        location zone = ChooseWandererZone();
+        if (zone == noLocation)
+            zone = barfMountain;
+        item[slot] o = GetModifiableOutfit(true);
+        o[offhand] = kramco;
+        ChooseDropsFamiliar(true);
+        WearOutfit(o);
+        if (!kramco.have_equipped())
+        {
+            print("Failed to equip Kramco in offhand", "red");
+            return false;
+        }
+        print("Kramco Sausage-o-Matic combat scheduled, attempting to fight sausage goblin", printColor);
+        string page = visit_url(zone.to_url());
+        if (TryHandleNonCombat(page))
+            return false; // already handled, don't make caller think they get to choose
+        else if (page.contains_text("choice.php"))
+            abort("Unexpected non-combat running Kramco in zone " + zone);
+        RunCombat("Filter_FreeCombat");
+        return true;
+    }
+
     boolean RunBarfMountain(boolean requireOutfit)
     {
         location zone = barfMountain;
@@ -7508,14 +7745,16 @@ print("Can use force = " + canUseForce, printColor);
             //use_skill(1, tripleSize); // this is currently broken, use url directly:
             visit_url("runskillz.php?action=Skillz&whichskill=7325&targetplayer=2813705&quantity=1");
         }
-
-        if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
+        if (anyToMystEffect.have_effect() == 0)
         {
-            BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 5000);
-        }
-        else if (moxie.my_basestat() > mysticality.my_basestat())
-        {
-            BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 5000);
+            if (muscle.my_basestat() > mysticality.my_basestat() && muscle.my_basestat() > moxie.my_basestat())
+            {
+                BuyAndUseOneTotal(muscleToMyst, muscleToMystEffect, 5000);
+            }
+            else if (moxie.my_basestat() > mysticality.my_basestat())
+            {
+                BuyAndUseOneTotal(moxieToMyst, moxieToMystEffect, 5000);
+            }
         }
         if (quietJudgementEffect.have_effect() == 0 && quietJudgement.have_skill())
         {
@@ -7560,14 +7799,7 @@ print("Can use force = " + canUseForce, printColor);
         }
         if (cucumberEffect.have_effect() == 0 && get_property("daycareOpen") == "true")
         {
-            string page = visit_url("place.php?whichplace=town_wrong&action=townwrong_boxingdaycare");
-            if (page.contains_text("Boxing Daycare (Lobby)"))
-            {
-                run_choice(1); // Have a Boxing Daydream
-                run_choice(2); // Visit the Boxing Day Spa
-                run_choice(3); // Get a Cucumber Eye Treatment
-                run_choice(4); // Leave
-            }
+            cli_execute("daycare mysticality");
         }
 
         if (!HaveEquipment(sphygmayo) && (get_campground() contains mayoClinic))
@@ -8124,7 +8356,8 @@ print("mob = " + canMobHit);
             return result;
 
 
-        if (WandererScheduled().to_monster() == m)
+        monster wanderer = WandererScheduled().to_monster();
+        if (wanderer == m)
         {
             location zone = ChooseWandererZone();
             if (zone == noLocation)
@@ -8288,6 +8521,11 @@ print("mob = " + canMobHit);
                         infiniteLoopCounter = 0;
                         continue;
                     }
+                }
+                if (TryRunKramco())
+                {
+                    infiniteLoopCounter = 0;
+                    continue;
                 }
                 PrepareFamiliar(false);
                 print("Running barf mountain");

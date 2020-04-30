@@ -6,7 +6,7 @@ void main()
 	string page = visit_url();
 	string searchText = "mushgarden.gif";
 	int ix = page.index_of(searchText);
-print(" found search text " + ix);
+//print(" found search text " + ix);
 	if (ix > 0)
 	{
 		ix += searchText.length();

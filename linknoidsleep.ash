@@ -384,11 +384,11 @@ print("remaining drunk = " + remainingDrunk);
 	}
         if ($item[Bird-a-Day calendar].item_amount() > 0)
         {
-		if (get_property("_birdOfTheDay") == "")
+		if (get_property("_canSeekBirds") == "false")
 			use(1, $item[Bird-a-Day calendar]);
 		while(get_property("_birdsSoughtToday").to_int() < 6)
 		{
-			use_skill(1, $skill[Seek out a bird]);
+			use_skill(1, $skill[Seek out a Bird]);
 		}
         }
 	if ($skill[Incredible Self-Esteem].have_skill() && get_property("_incredibleSelfEsteemCast") == "false")
