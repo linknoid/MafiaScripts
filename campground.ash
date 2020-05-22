@@ -23,12 +23,12 @@ void main()
 			case 2: crop = "plump free-range mushroom"; break;
 			case 3: crop = "bulky free-range mushroom"; break;
 			case 4: crop = "giant free-range mushroom"; break;
-			case 5: crop = "immense free-range mushroom"; break;
+			case 5:
 			case 6:
 			case 7:
 			case 8:
 			case 9:
-			case 10:
+			case 10: crop = "immense free-range mushroom"; break;
 			case 11: crop = "colossal free-range mushroom"; break;
 			default: crop = "house-sized mushroom";
 		}

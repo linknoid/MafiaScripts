@@ -56,6 +56,7 @@
 // prompt before harvesting/fertilizing mushroom garden
 // add "ascend today" setting to force harvest mushroom and don't swap workshed without explicit permission
 // use pill keeper free semi-rare to grab first embezzler if we don't already have a copy
+// thanksgarden over-eats for required buff turns
 
 
 
@@ -96,6 +97,7 @@ string executeBeforeEat = ""; // If you want another script or command to do you
 string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
 item elfDuplicateItem; // If you specify this, the machine elf adventure will automatically duplicate this instead of aborting
 monster pocketProfessorCloneMonster; // If you specify this, the pocket professor will automatically fight this
+boolean ascendToday = false; // todo
 
 void WriteSettings()
 {
@@ -4015,8 +4017,12 @@ int CountEldritchFights(boolean nextDay)
 }
 boolean CanFightMushroomGarden()
 {
-	if (get_property("_mushroomGardenVisited") != "false")
+	if (get_property("_mushroomGardenVisited") != "false") // whether we've fertilized/picked yet
 		return false;
+	// not sure if we should handle the choice automatically, this commented code will prevent visiting the pick/fertilize choice adventure
+	//int foughtCount = get_property("_mushroomGardenFights").to_int();
+	//if (foughtCount == 1 || foughtCount == 5) // once we've fought it once (or 5 times after a plumber run), no more
+	//	return false;
 	foreach it, count in get_campground()
 	{
 		if (it == mushroomGarden)
@@ -4549,7 +4555,31 @@ boolean RunFreeCombat(item[slot] selectedOutfit, string filter, boolean forMeat)
 			return true;
 		}
 		else
-			run_choice(2); // pick the mushroom
+		{
+			int cropLevel = get_property("mushroomGardenCropLevel").to_int();
+			string crop;
+			switch (cropLevel)
+			{
+				case 0:
+				case 1: crop = "free-range mushroom"; break;
+				case 2: crop = "plump free-range mushroom"; break;
+				case 3: crop = "bulky free-range mushroom"; break;
+				case 4: crop = "giant free-range mushroom"; break;
+				case 5:
+				case 6:
+				case 7:
+				case 8:
+				case 9:
+				case 10: crop = "immense free-range mushroom"; break;
+				case 11:
+				default: crop = "colossal free-range mushroom"; break;
+			}
+			boolean defaultConfirm = cropLevel >= 5; // pick once it's immense by default
+			if (ascendToday || UserConfirmDefault("Pick " + crop + " today, with " + (cropLevel - 1) + " days fertilized?", defaultConfirm))
+				run_choice(2); // pick the mushroom
+			else
+				run_choice(1); // fertilize the mushroom
+		}
 	}
 	// todo:
 // infernal seals
