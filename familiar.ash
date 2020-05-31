@@ -1,6 +1,3 @@
-// Put this in the relay folder to make it show more information on the
-// familiar page
-
 
 string Format(string page, string fam, string title, string prop, int max)
 {
@@ -38,6 +35,7 @@ void main()
 	page = Format(page, "Garbage Fire", "newspapers", "_garbageFireDropsCrown", 3);
 	page = Format(page, "Grimstone Golem", "bjorn", "_grimstoneMaskDropsCrown", 1);
 	page = Format(page, "Grimstone Golem", "adv", "_grimstoneMaskDrops", 1);
+	page = Format(page, "XO Skeleton", "hugs", "_xoHugsUsed", 11);
 	page = Format(page, "God Lobster", "fights", "_godLobsterFights", 3);
 	page = Format(page, "Space Jellyfish", "extracts", "_spaceJellyfishDrops", 0);
 	page = Format(page, "Gelatinous Cubeling", "drops", "cubelingProgress", 3);
