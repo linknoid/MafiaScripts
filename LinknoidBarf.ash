@@ -7,39 +7,31 @@
 
 
 // Costs:
-// 11 bacon @300										  =	 3,000
-// 1 4-d camera @7500									 =	 7,500
-// 6 cornucopia for thanksgiving feast @14,000			=	84,000
-// 1 scroll of ancient forbidden unspeakable evil @3100   =	 3,100
-// 1 distention pill @????								= turns
-// 1 drive-by shooting  @10000							=	10,000
-// 1 hell in a bucket @2400							   =	 2,400
-// 1 jumping horseradish @3333							=	 3,333
-// 1 Newark @4000										 =	 4,000
-// 2 Milk Studs @640									  =	 1,280
-// 3 pie man was not meant to eat @2500				   =	 7,500
-// 10 resolution: be wealthier @1300					  =	13,000
-// 1 senior mints @100									=	   100
-// 1 single entendre @10000							   =	10,000
-// 3 thin black candles @288							  =	   900
-// 24 bags of W&Ws @1300								  =	31,200
+// 11 bacon @300                                          =     3,000
+// 1 4-d camera @7500                                     =     7,500
+// 6 cornucopia for thanksgiving feast @14,000            =    84,000
+// 1 scroll of ancient forbidden unspeakable evil @3100   =     3,100
+// 1 distention pill @????                                = turns
+// 1 drive-by shooting  @10000                            =    10,000
+// 1 hell in a bucket @2400                               =     2,400
+// 1 jumping horseradish @3333                            =     3,333
+// 1 Newark @4000                                         =     4,000
+// 2 Milk Studs @640                                      =     1,280
+// 3 pie man was not meant to eat @2500                   =     7,500
+// 10 resolution: be wealthier @1300                      =    13,000
+// 1 senior mints @100                                    =       100
+// 1 single entendre @10000                               =    10,000
+// 3 thin black candles @288                              =       900
+// 24 bags of W&Ws @1300                                  =    31,200
 
-// total												  =   181,313 
-// income over 340 turns								  = 2,412,711
-// net gain											   = 2,221,038
+// total                                                  =   181,313 
+// income over 340 turns                                  = 2,412,711
+// net gain                                               = 2,221,038
 
 
 
 // TODO:
 
-// First digitize needs to visit adventure.php to actually trigger the digitize counter to start.
-// Can this be done by visiting an overgrown shrine?  (used to, no longer, now we need a zone which isn't nowander)
-
-// duplicate witchess knight (code is partly there, but it's not actually firing)
-
-// track candle/scroll drops from intergnat
-
-// broken: ChibiChanged, missing tattered scrap/inkwell
 
 
 // For dice gear:
@@ -47,16 +39,16 @@
 // When fighting annoying/etc. monsters, detect that skill casting has failed
 
 
+// First digitize needs to visit adventure.php to actually trigger the digitize counter to start.
+// Can this be done by visiting an overgrown shrine?  (used to, no longer, now we need a zone which isn't nowander)
 
-// Add for mana burning:
-// clara's bell and hobopolis if 20 hobo glyphs and have access
-// half-fill MP from latte
-
+// duplicate witchess knight (code is partly there, but it's not actually firing)
+// half-fill MP from latte for MP burning summoning
 // vote timer prevents LOV tunnel
-// prompt before harvesting/fertilizing mushroom garden
 // add "ascend today" setting to force harvest mushroom and don't swap workshed without explicit permission
 // use pill keeper free semi-rare to grab first embezzler if we don't already have a copy
 // thanksgarden over-eats for required buff turns
+// use vampire cloake wolf form in combat before using platinum express card so it can be extended 5 buffs
 
 
 
@@ -286,9 +278,13 @@ item roboMana = $item[hell in a bucket];
 item roboMeat = $item[drive-by shooting];
 item roboHobo = $item[Newark];
 item peppermintSprig = $item[peppermint sprig];
+item anis = $item[bottle of an&iacute;s];
 item boxedWine = $item[boxed wine];
+item tequila = $item[bottle of tequila];
+item doubleEntendre = $item[double entendre];
 item mentholatedWine = $item[mentholated wine];
 item orange = $item[orange];
+item lemon = $item[lemon];
 monster crayonElf = $monster[Black Crayon Crimbo Elf];
 item cigar = $item[exploding cigar];
 
@@ -482,6 +478,9 @@ skill phatLoot = $skill[Fat Leon's Phat Loot Lyric];
 skill sweetSynth = $skill[Sweet Synthesis];
 skill selfEsteem = $skill[Incredible Self-Esteem];
 skill favoriteBird = $skill[Visit your Favorite Bird];
+item birdCalendar = $item[Bird-a-Day calendar];
+skill seekBird = $skill[Seek out a bird];
+effect seekBirdEffect = $effect[Blessing of the bird];
 // skills for pet bonus
 skill leash = $skill[Leash of Linguini];
 skill empathy = $skill[Empathy of the Newt];
@@ -1662,6 +1661,8 @@ void HandleLightsOut(string page)
 	if (TryChoose("Leave well enough alone")) // Lights out in the Laboratory
 		return;
 	if (TryChoose("Flee")) // Lights out in the Bedroom
+		return;
+	if (TryChoose("Fumble Your Way to the Door")) // Lights out in the Bathroom
 		return;
 	abort("Unhandled lights out quest");
 }
@@ -2858,6 +2859,12 @@ string Filter_Standard(int round, monster mon, string page)
 		canMissileLauncher = false;
 		return "skill " + missileLauncher.to_string();
 	}
+	boolean fastkill = false;
+	if (get_property("_VYKEACompanionType") != "")
+	{
+		if (mon.monster_hp() < 800)
+			fastkill = true;
+	}
 
 	string result = "";
 	if (canPickpocket && can_still_steal()) // don't bother pickpocketing the embezzler, priority is copying and free kills
@@ -2874,12 +2881,12 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 		if (result != "")
 			return result;
 }
-	if (CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
+	if (!fastkill && CanCast(curseOfWeaksauce) && !cursed) // reduce damage taken
 	{
 		cursed = true;
 		result += "; skill " + curseOfWeaksauce.to_string();
 	}
-	if (expected_damage() * 8 > my_hp())
+	if (!fastkill && expected_damage() * 8 > my_hp())
 	{
 		if (CanCast(micrometeorite) && !micrometeorited) // reduce damage taken
 		{
@@ -2911,7 +2918,7 @@ if (false) // TODO: free kills are now worthless for farming, don't waste them h
 		&& (expected_damage() * 4 < my_hp()); // a combo will take 3 turns to execute, so make sure we can survive 4
 
 	// rave checks come after embezzler special handling, because we could accidentally kill embezzler too early
-	if (canRaveNirvana && CanCombo) // increase meat drops
+	if (!fastkill && canRaveNirvana && CanCombo) // increase meat drops
 	{
 		if (!ravedNirvana)
 		{
@@ -2951,7 +2958,7 @@ print("Running filter = " + result, printColor);
 		canTurbo = false;
 		result += "; skill Turbo";
 	}
-	if (canRaveConcentration && CanCombo) // increase item drops
+	if (!fastkill && canRaveConcentration && CanCombo) // increase item drops
 	{
 		if (!ravedConcentration)
 		{
@@ -2959,12 +2966,12 @@ print("Running filter = " + result, printColor);
 			result += "; combo rave concentration";
 		}
 	}
-	if (canExtract && my_mp() > 10)
+	if (!fastkill && canExtract && my_mp() > 10)
 	{
 		canExtract = false;
 		result += "; skill " + extract.to_string();
 	}
-	if (canPocketCrumb)
+	if (!fastkill && canPocketCrumb && pantsGiving.have_equipped())
 	{
 		canPocketCrumb = false;
 		result += "; skill " + pocketCrumbs.to_string();
@@ -2976,7 +2983,7 @@ print("Running filter = " + result, printColor);
 			result += crit;
 	}
 
-	if (canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
+	if (!fastkill && canRaveSteal && CanCombo) // sometimes steals an item, but don't do it in long running or difficult fights
 	{
 		if (!ravedSteal)
 		{
@@ -3043,7 +3050,6 @@ int PuttyCopiesRemaining()
 
 boolean CopiedMeatyAvailable()
 {
-	int count = 0;
 	if (MeatyPrintScreened())
 		return true;
 	if (MeatyCameraed())
@@ -3056,12 +3062,18 @@ boolean CopiedMeatyAvailable()
 		return true;
 	if (MeatyFaxable())
 		return true;
+	if (pillKeeper.HaveEquipment() && get_property("_freePillKeeperUsed") == "false")
+		return true;
 	return false;
 }
 boolean KramcoScheduled()
 {
 	if (!kramco.HaveEquipment())
 		return false;
+
+	// TODO: from discussion in /hardcore:
+	// Katarn: Ezandora: (y+1) / (5+x*3+max(0,x-5)^3) where y = turns since last goblin and x is the number of goblins encountered so far
+
 	// this is based on the code in Ezandora's Guide (relay_Guid.ash), which has the comment:
 	// "These ceilings are not correct; they are merely what I have spaded so far. The actual values are higher".
 	// So if better values are spaded, this should also be updated to match
@@ -5924,6 +5936,39 @@ string Filter_Elvish(int round, monster mon, string page)
 	abort("Unexpected failure of combat in elvish fight, please run manually");
 	return "";
 }
+void CraftRobortenderDrink(item baseDrop, item firstTier, item secondTier, item firstMixer, item secondMixer)
+{
+	boolean haveStill = get_campground() contains $item[warbear high-efficiency still];
+	if (haveStill || secondTier.item_amount() == 0) // only craft it if we're out, or a warbear still is installed
+	{
+		int craftAmount;
+		if (haveStill)
+			craftAmount = baseDrop.item_amount();
+		else if (firstTier.item_amount() > 0)
+			craftAmount = 0;
+		else
+			craftAmount = 1;
+
+		if (craftAmount > 0)
+		{
+			if (firstMixer.item_amount() < craftAmount)
+				buy(craftAmount + 5, firstMixer);
+			craft("cocktail", 1, baseDrop, firstMixer);
+		}
+
+		if (haveStill)
+			craftAmount = firstTier.item_amount();
+		else
+			craftAmount = 1;
+
+		if (craftAmount > 0)
+		{
+			if (secondMixer.item_amount() < craftAmount)
+				buy(craftAmount + 5, secondMixer);
+			craft("cocktail", 1, firstTier, secondMixer);
+		}
+	}
+}
 void TryElvishRobortender()
 {
 	// each peppermint sprig is worth like 40k+, so definitely worth the use of 2 free kills and a copy to grab 2
@@ -5991,16 +6036,7 @@ void TryElvishRobortender()
 		PrepareFilterState();
 		ActivateCopyItem(elfCopiedTo, "Filter_Elvish");
 	}
-	int sprigCount = peppermintSprig.item_amount();
-	if (sprigCount > 2) // only craft the ones we just got, not our whole inventory worth
-		sprigCount = 2;
-	if (boxedWine.item_amount() < 2)
-		buy(2, boxedWine);
-	if (orange.item_amount() < 2)
-		buy(2, orange);
-	
-	craft("cocktail", sprigCount, peppermintSprig, boxedWine);
-	craft("cocktail", sprigCount, orange, mentholatedWine);
+	CraftRobortenderDrink(peppermintSprig, mentholatedWine, roboCandy, boxedWine, orange);
 }
 void FeedRobotender()
 {
@@ -6020,9 +6056,11 @@ void FeedRobotender()
 	{
 		SwitchToFamiliar(robort);
 		FeedRobortender(roboMeat, drinkList);
+		CraftRobortenderDrink(anis, doubleEntendre, roboItems, tequila, lemon);
 		FeedRobortender(roboItems, drinkList);
 		FeedRobortender(roboMana, drinkList);
 		FeedRobortender(roboHobo, drinkList);
+		CraftRobortenderDrink(peppermintSprig, mentholatedWine, roboCandy, boxedWine, orange);
 		if (roboCandy.item_amount() == 0)
 			TryElvishRobortender();
 		FeedRobortender(roboCandy, drinkList);
@@ -6409,10 +6447,30 @@ void BuffTurns(int turns)
 		}
 	}
 
-	// to do: Mafia doesn't seem to know about this skill yet
-	if (favoriteBird.have_skill() && get_property("_favoriteBirdVisited") == "false")
+	if (birdCalendar.item_amount() > 0)
 	{
-		use_skill(1, favoriteBird);
+		if (favoriteBird.have_skill()
+			&& get_property("_favoriteBirdVisited") == "false"
+			&& get_property("yourFavoriteBirdMods").contains_text("Meat Drop"))
+		{
+			use_skill(1, favoriteBird);
+		}
+		if (get_property("_birdOfTheDayMods").contains_text("Meat Drop") && seekBirdEffect.have_effect() > 0)
+		{
+		}
+		else if (!seekBird.have_skill())
+		{
+			birdCalendar.use(1);
+		}
+		if (get_property("_birdOfTheDayMods").contains_text("Meat Drop"))
+		{
+			while (seekBird.mp_cost() < 200 // stop when it gets to 320, but checking against 200 to be safe
+				&& seekBird.mp_cost() <= my_mp()
+				&& seekBirdEffect.have_effect() < turns)
+			{
+				seekBird.use_skill(1);
+			}
+		}
 	}
 
 	// want to maximize our chances of increasing the limited/expensive effects, rather than the cheaper ones
@@ -7427,6 +7485,16 @@ void TryActivateDigitize()
 	}
 }
 
+boolean TryForceSemirare()
+{
+	if (fortuneCookieCounter < my_turnCount() && get_property("_freePillKeeperUsed") == "false" && pillKeeper.HaveEquipment())
+	{
+		cli_execute("pillkeeper semirare");
+		PrepareFilterState();
+	}
+	return fortuneCookieCounter == my_turnCount();
+}
+
 boolean RunCopiedMeaty()
 {
 	TryActivateDigitize();
@@ -7475,25 +7543,34 @@ boolean RunCopiedMeaty()
 	}
 	else if (MeatyChateaud())
 	{
-		print("using Chateau painting embezzler", printColor);
+		print("using Chateau painting " + meatyMonster, printColor);
 		visit_url("place.php?whichplace=chateau&action=chateau_painting");
 		RunCombat("Filter_Standard");
 		return true;
 	}
-	else if (get_property("_genieFightsUsed").to_int() < 3
-		&& (PuttyCopiesRemaining() >= 4
+	else if (PuttyCopiesRemaining() >= 4
 		|| (get_property("_sourceTerminalDigitizeUses").to_int() == 0
-		&& get_property("sourceTerminalEducateKnown").contains_text("digitize.edu"))))
+		&& get_property("sourceTerminalEducateKnown").contains_text("digitize.edu")))
 	{
-		// A wish is worth more than a single embezzler, but if we're copying a bunch,
-		// it's worth a wish.
-		print("Wishing for " + meatyMonster, printColor);
-		WishFor("to fight a " + meatyMonster);
-		visit_url("fight.php");
-		RunCombat("Filter_Standard");
-		return true;
+		if (meatyMonster == embezzler && TryForceSemirare())
+		{
+			print("Forcing semi-rare in treasury to generate an embezzler");
+			visit_url(treasury.to_url());
+			RunCombat("Filter_Standard");
+			return true;
+		}
+		if (get_property("_genieFightsUsed").to_int() < 3)
+		{
+			// A wish is worth more than a single embezzler, but if we're copying a bunch,
+			// it's worth a wish.
+			print("Wishing for " + meatyMonster, printColor);
+			WishFor("to fight a " + meatyMonster);
+			visit_url("fight.php");
+			RunCombat("Filter_Standard");
+			return true;
+		}
 	}
-	print("no embezzler found", printColor);
+	print("no " + meatyMonster + " found", printColor);
 	return false;
 }
 
@@ -7554,7 +7631,12 @@ void ActivateChibiBuddy()
 	{
 		//use(1, chibiOff);
 		visit_url("inv_use.php?pwd=" + my_hash() + "&which=f0&whichitem=5925");
-		print(visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=633&option=1&chibiname=ChibiBuffMaker"));
+		string page = visit_url("choice.php?pwd=" + my_hash() + "&whichchoice=633&option=1&chibiname=ChibiBuffMaker");
+		if (chibiOn.item_amount() == 0)
+		{
+			print("Chibibuddy activation failed", printColor);
+			print(page);
+		}
 	}
 	if (chibiOn.item_amount() > 0 && chibiEffect.have_effect() == 0)
 	{
@@ -8516,6 +8598,7 @@ boolean HandleProfessorCopies(boolean beforeRunaways)
 	return true;
 }
 
+
 void RunTurns(int turnCount)
 {
 	if (turnCount == 0)
@@ -8578,7 +8661,7 @@ void RunTurns(int turnCount)
 			SoulSauceToMana();
 			if (spookyravenCounter == my_turnCount())
 			{
-				print("Skipping Spookyraven in this script, if you don't want it to skip, add a 'counter script' in KoLMafia");
+				print("Skipping Spookyraven in this script, if you don't want it to skip, add a 'counter script' in KoLmafia");
 				BypassCounterError();
 			}
 
@@ -8607,7 +8690,7 @@ void RunTurns(int turnCount)
 			}
 			if (CopiedMeatyAvailable())
 			{
-				print("Running copied embezzler");
+				print("Running copied " + meatyMonster);
 				PrepareFamiliar(true);
 				if (RunCopiedMeaty())
 				{
@@ -8631,10 +8714,8 @@ void RunTurns(int turnCount)
 				print("Looks like we're in an infinite loop, stopping", printColor);
 				break;
 			}
-			if (fortuneCookieCounter < my_turnCount() && get_property("_freePillKeeperUsed") == "false" && pillKeeper.item_amount() > 0 && turnsRemaining > 2)
-			{
-				cli_execute("pillkeeper semirare");
-			}
+			if (turnsRemaining > 2)
+				TryForceSemirare();
 		}
 	}
 	finally
@@ -8658,6 +8739,7 @@ void RunTurns(int turnCount)
 		}
 	}
 }
+
 
 void SetRunFamiliar(string familiarName, int buffTurns)
 {
