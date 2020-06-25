@@ -377,7 +377,8 @@ boolean CheckForBunkerTurnin(string page, item i, int count)
 	if (i == $item[superheated metal])
 	{
 		i = $item[SMOOCH bracers];
-		while (i.item_amount() < 3)
+		count = 3;
+		while (i.item_amount() < count)
 		{
 			if (!create(1, i))
 				break;
