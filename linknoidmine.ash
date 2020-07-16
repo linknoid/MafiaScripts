@@ -203,6 +203,11 @@ void WearSleepGear()
 
 void WearMiningGear()
 {
+	if (my_inebriety() > inebriety_limit())
+	{
+		print("You are too drunk to continue.");
+		return;
+	}
 	while (!HaveItem(drill))
 	{
 		print("No high-temperature mining drill found, attempting to get one..", printColor);
@@ -444,6 +449,11 @@ boolean HasFreeTurns(string page)
 
 void DoMining(int advToSpend)
 {
+	if (my_inebriety() > inebriety_limit())
+	{
+		print("You are too drunk to continue.");
+		return;
+	}
 	print("Spending " + advToSpend + " mining.", printColor);
 
 	int crystalsThisRun = 0;

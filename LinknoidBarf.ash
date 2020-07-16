@@ -90,6 +90,7 @@ string executeAfterEat = ""; // If you want another script to fill you the rest 
 item elfDuplicateItem; // If you specify this, the machine elf adventure will automatically duplicate this instead of aborting
 monster pocketProfessorCloneMonster; // If you specify this, the pocket professor will automatically fight this
 boolean ascendToday = false; // todo
+boolean autoPvpCloset = false;
 
 void WriteSettings()
 {
@@ -123,6 +124,7 @@ void WriteSettings()
 	map["executeAfterEat"] = executeAfterEat;
 	map["elfDuplicateItem"] = elfDuplicateItem.to_int().to_string();
 	map["pocketProfessorCloneMonster"] = pocketProfessorCloneMonster.to_string();
+	map["autoPvpCloset"] = autoPvpCloset.to_string();
 	map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -161,6 +163,7 @@ void ReadSettings()
 			case "executeAfterEat": executeAfterEat = value; break;
 			case "elfDuplicateItem": elfDuplicateItem = value.to_int().to_item(); break;
 			case "pocketProfessorCloneMonster": pocketProfessorCloneMonster = value.to_monster(); break;
+			case "autoPvpCloset": autoPvpCloset = value == "true"; break;
 		}
 	}
 }
@@ -1049,17 +1052,49 @@ boolean HaveEaten(item food)
 	string itemID = food.to_int().to_string();
 	return InList(itemID, eatenList, ",");
 }
+
+boolean TryGetFromCloset(item i, int count)
+{
+	if (count <= 0)
+		return true;
+	if (!autoPvpCloset)
+		return false;
+	if (i.item_amount() < count && i.closet_amount() > 0)
+	{
+		int takeCount = i.closet_amount();
+		if (takeCount > count)
+			takeCount = count;
+		takeCount -= i.item_amount();
+		if (takeCount > 0)
+			take_closet(takeCount, i);
+	}
+	if (i.item_amount() < count && i.storage_amount() > 0)
+	{
+		int takeCount = i.storage_amount();
+		if (takeCount > count)
+			takeCount = count;
+		takeCount -= i.item_amount();
+		if (takeCount > 0)
+			take_storage(takeCount, i);
+	}
+	return i.item_amount() >= count;
+}
 void UseOneTotal(item i, effect e)
 {
-	if (i.item_amount() > 0 && e.have_effect() == 0)
+	if (e.have_effect() == 0)
 	{
-		use(1, i);
+		i.TryGetFromCloset(1);
+		if (i.item_amount() > 0)
+		{
+			use(1, i);
+		}
 	}
 }
 void BuyAndUseOneTotal(item i, effect e, int maxCost)
 {
 	if (e.have_effect() > 0)
 		return;
+	i.TryGetFromCloset(1);
 	if (i.item_amount() == 0)
 	{
 		buy(1, i, maxCost);
@@ -5175,6 +5210,7 @@ void UseItem(item itm, effect resultingEffect, int requestedTurns, int turnsPerI
 	while (buffsNeeded > 0)
 	{
 		int useCount = (buffsNeeded + turnsPerItem - 1) / turnsPerItem; // round up to the nearest integer
+		itm.TryGetFromCloset(useCount);
 		if (maxPrice > 0)
 		{
 			int buyCount = useCount - itm.item_amount();
@@ -5271,6 +5307,8 @@ void CastSkill(skill sk, int requestedTurns, boolean regenMP)
 			if (sk.mp_cost() > my_mp() - keepMP)
 				restore_mp(sk.mp_cost() - (my_mp() - keepMP));
 		}
+		if (turns_per_cast(sk) <= 0) // divide by 0 otherwise
+			return;
 		int beforeTurns = resultingEffect.have_effect();
 		int timesCast = (requestedTurns - resultingEffect.have_effect() + turns_per_cast(sk) - 1) / turns_per_cast(sk);
 		if (timesCast <= 0)
@@ -5371,6 +5409,7 @@ boolean AcquireFeast(item food, int cashewCost, boolean forWarbearOven)
 	if (forWarbearOven && get_property("_warbearInductionOvenUsed") == "true")
 		return false;
 
+	food.TryGetFromCloset(1);
 	if (food.item_amount() > 0 && !forWarbearOven)
 		return true;
 
@@ -5387,6 +5426,8 @@ boolean AcquireFeast(item food, int cashewCost, boolean forWarbearOven)
 	{
 		print("Invalid ingredients for " + food.to_string(), printColor);
 	}
+	cashewIngredient.TryGetFromCloset(1);
+	foodIngredient.TryGetFromCloset(1);
 	int priceLimit = thanksgettingFoodCostLimit;
 	boolean preferCashews = false;
 	if (priceLimit >= 0)
@@ -5470,6 +5511,7 @@ void TrySpleen(item spleenItem, effect desiredEffect, int providedSpleen, int tu
 boolean ignoreOde = false;
 void TryDrink(item booze, effect desiredEffect, int providedDrunk, int turnLimit)
 {
+	booze.TryGetFromCloset(1);
 	if (booze.item_amount() < 1)
 		return;
 	if (desiredEffect.have_effect() >= turnLimit)
@@ -5717,7 +5759,10 @@ int[item] ToItemAndCount(item[] items)
 	int[item] result;
 	foreach ix,i in items
 	{
-		result[i] = i.item_amount();
+		int count = i.item_amount();
+		if (autoPvpCloset || i == swizzler)
+			count += i.closet_amount();
+		result[i] = count;
 	}
 	return result;
 }
@@ -5810,7 +5855,6 @@ void SweetMeat(int requestedTurns)
 	// pair 3: milk studs with swizzler
 	int[item] candy3_1 = ToItemAndCount(candy4Str);
 	int[item] candy3_2 = ToItemAndCount(candy5Str);
-	candy3_2[swizzler] += swizzler.closet_amount();
 	
 
 	while (synthGreed.have_effect() < requestedTurns && TrySpleenSpace(1))
@@ -5827,9 +5871,12 @@ void SweetMeat(int requestedTurns)
 			print("Out of candy for sweet synthesis, skipping", printColor);
 			break;
 		}
-		if (meatBuffCandy1 == swizzler || meatBuffCandy2 == swizzler)
+		if (meatBuffCandy1 == meatBuffCandy2)
+			meatBuffCandy1.TryGetFromCloset(2);
+		else
 		{
-			take_closet(swizzler.closet_amount(), swizzler);
+			meatBuffCandy1.TryGetFromCloset(1);
+			meatBuffCandy2.TryGetFromCloset(1);
 		}
 		print("Sweet synthesis candies = " + meatBuffCandy1 + ", " + meatBuffCandy2, printColor);
 
@@ -5890,8 +5937,12 @@ void ValidateRobortender(item booze, string drinkList, string purpose)
 }
 void FeedRobortender(item booze, string drinkList)
 {
-	if (booze.item_amount() > 0 && !InList(booze.to_string(), drinkList, ","))
-		cli_execute("robo " + booze.name);
+	if (!InList(booze.to_string(), drinkList, ","))
+	{
+		TryGetFromCloset(booze, 1);
+		if (booze.item_amount() > 0)
+			cli_execute("robo " + booze.name);
+	}
 }
 
 item elfCopiedTo; // only copy once, after 2 drops, the drop rate quickly drops off
@@ -6149,6 +6200,7 @@ void RentAHorse()
 
 boolean AcquireFullFeast()
 {
+	horseradish.TryGetFromCloset(8);
 	cli_execute("acquire 8 jumping horseradish");
 	UseWarbearOven();
 	boolean success = true;
@@ -6604,7 +6656,10 @@ void BuffTurns(int turns)
 		for (int remaining = 30; remaining >= 18; remaining--)
 		{
 			if (horseradish.item_amount() < 1)
+			{
+				horseradish.TryGetFromCloset(1);
 				cli_execute("acquire 1 jumping horseradish");
+			}
 			TryEat(horseradish, kickedInSinuses, 1, remaining, turns, false);
 		}
 		TryEat(thanks1, thanksgetting, 2, 16, turns, true);
@@ -7491,6 +7546,7 @@ boolean TryForceSemirare()
 	{
 		cli_execute("pillkeeper semirare");
 		PrepareFilterState();
+		print("Fortune cookie counter = " + fortuneCookieCounter + ", on turn " + my_turnCount());
 	}
 	return fortuneCookieCounter == my_turnCount();
 }
@@ -7552,10 +7608,28 @@ boolean RunCopiedMeaty()
 		|| (get_property("_sourceTerminalDigitizeUses").to_int() == 0
 		&& get_property("sourceTerminalEducateKnown").contains_text("digitize.edu")))
 	{
+		print("Digitize or putty/black box available, checking if we can generate a new embezzler for copying", printColor);
 		if (meatyMonster == embezzler && TryForceSemirare())
 		{
-			print("Forcing semi-rare in treasury to generate an embezzler");
-			visit_url(treasury.to_url());
+			print("Forcing semi-rare in treasury to generate an embezzler", printColor);
+			string page = visit_url(treasury.to_url()); // first visit to skip the semi-rare warning
+			if (isDebug)
+			{
+				print("visited treasury url, resulting page:");
+				print("=============================", "orange");
+				print(page, "green");
+				print("=============================", "orange");
+			}
+
+
+			page = visit_url(treasury.to_url());
+			if (isDebug)
+			{
+				print("visited treasury url, resulting page:");
+				print("=============================", "orange");
+				print(page, "green");
+				print("=============================", "orange");
+			}
 			RunCombat("Filter_Standard");
 			return true;
 		}
