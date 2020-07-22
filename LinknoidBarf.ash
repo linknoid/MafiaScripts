@@ -46,10 +46,8 @@
 // half-fill MP from latte for MP burning summoning
 // vote timer prevents LOV tunnel
 // add "ascend today" setting to force harvest mushroom and don't swap workshed without explicit permission
-// use pill keeper free semi-rare to grab first embezzler if we don't already have a copy
 // thanksgarden over-eats for required buff turns
 // use vampire cloake wolf form in combat before using platinum express card so it can be extended 5 buffs
-
 
 
 
@@ -90,7 +88,8 @@ string executeAfterEat = ""; // If you want another script to fill you the rest 
 item elfDuplicateItem; // If you specify this, the machine elf adventure will automatically duplicate this instead of aborting
 monster pocketProfessorCloneMonster; // If you specify this, the pocket professor will automatically fight this
 boolean ascendToday = false; // todo
-boolean autoPvpCloset = false;
+boolean autoPvpCloset = false; // Automatically add and remove items from closet for protection from PVP
+int catHeistValue = 7000; // The value you place on 1 cat burglar heist
 
 void WriteSettings()
 {
@@ -125,6 +124,7 @@ void WriteSettings()
 	map["elfDuplicateItem"] = elfDuplicateItem.to_int().to_string();
 	map["pocketProfessorCloneMonster"] = pocketProfessorCloneMonster.to_string();
 	map["autoPvpCloset"] = autoPvpCloset.to_string();
+	map["catHeistValue"] = catHeistValue.to_string();
 	map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
 }
 void ReadSettings()
@@ -164,6 +164,7 @@ void ReadSettings()
 			case "elfDuplicateItem": elfDuplicateItem = value.to_int().to_item(); break;
 			case "pocketProfessorCloneMonster": pocketProfessorCloneMonster = value.to_monster(); break;
 			case "autoPvpCloset": autoPvpCloset = value == "true"; break;
+			case "catHeistValue": catHeistValue = value.to_int(); break;
 		}
 	}
 }
@@ -259,9 +260,7 @@ item pinkyRing = $item[mafia pinky ring]; // increases adventure yield from wine
 effect beerPolka = $effect[Beer Barrel Polka]; // increases adventure yield for up to 10 drunk, but only once a day
 
 // spleen items
-item egg1 = $item[black paisley oyster egg];
-item egg2 = $item[black polka-dot oyster egg];
-item egg3 = $item[black striped oyster egg];
+item egg1 = $item[lustrous oyster egg]; // old oyster eggs no longer show up
 item mojoFilter = $item[mojo filter];
 // Sweet Synthesis
 item milkStud = $item[Milk Studs];
@@ -741,6 +740,7 @@ item keyCardGamma = $item[keycard &gamma;];
 item keyCardDelta = $item[keycard &delta;];
 
 // barf mountain quest
+item bagOfGarbage = $item[bag of park garbage];
 item lubeShoes = $item[lube-shoes];
 string kioskUrl = "place.php?whichplace=airport_stench&action=airport3_kiosk";
 string maintenanceUrl = "place.php?whichplace=airport_stench&action=airport3_tunnels";
@@ -955,6 +955,7 @@ item ChooseCheapestThanksgetting();
 boolean TryHandleNonCombat(string page);
 boolean TryScratchNSniff(item[slot] forOutfit);
 void DoVoting();
+void PrepGarden();
 
 // general utility functions
 boolean RoomToEat(int size)
@@ -1479,9 +1480,10 @@ boolean MeatyChateaud()
 	return IsMeatyMonster(capped)
 		&& get_property("_chateauMonsterFought") == "false";
 }
-boolean BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
+boolean BuyItemIfNeeded(item itm, int count, int maxPrice)
 {
-	int buyCount = numberRequested - itm.item_amount();
+	TryGetFromCloset(itm, count);
+	int buyCount = count - itm.item_amount();
 	if (buyCount <= 0)
 		return true;
 	if (maxPrice < 0)
@@ -1491,7 +1493,7 @@ boolean BuyItemIfNeeded(item itm, int numberRequested, int maxPrice)
 	{
 		buy(buyCount, itm, maxPrice);
 	}
-	return numberRequested <= itm.item_amount();
+	return itm.item_amount() >= count;
 }
 
 boolean InCombat(string page)
@@ -2579,6 +2581,7 @@ location GetDoctorBagQuestLocation()
 	if (zone != noLocation)
 	{
 		item questItem = get_property("doctorBagQuestItem").to_item();
+		TryGetFromCloset(questItem, 3); // in case of pvp steal, we need to have multiple on hand to reduce changes of losing quest item while trying to complete quest
 		if (questItem.item_amount() == 0)
 			buy(1, questItem, 10000); // Not everything is buyable, how should we deal with this then?
 		if (questItem.item_amount() > 0)
@@ -3755,9 +3758,13 @@ boolean TryRunNeverendingParty(string filter)
 {
 	if (get_property("_neverendingPartyFreeTurns").to_int() >= 10)
 		return false;
-	if (get_property("_neverPartyQuest") == "Megawoots" && HaveEquipment(football))
+	if (get_property("_neverPartyQuest") == "Megawoots")
 	{
-		offhand.equip(football);
+		football.TryGetFromCloset(1);
+		if (!HaveEquipment(football))
+		{
+			offhand.equip(football);
+		}
 	}
 	string page = visit_url(neverParty.to_url());
 	if (page.contains_text("The Beginning of the Neverend"))
@@ -4626,6 +4633,7 @@ boolean RunFreeCombat(item[slot] selectedOutfit, string filter, boolean forMeat)
 				run_choice(2); // pick the mushroom
 			else
 				run_choice(1); // fertilize the mushroom
+			PrepGarden();
 		}
 	}
 	// todo:
@@ -4912,7 +4920,7 @@ void ChooseDropsFamiliar(boolean isElemental)
 			nextHeist *= 2;
 		}
 		dropRates[cat] = 1.0 / (nextHeist - charges);
-		itemDrops[cat] = 25000; // can be converted into an extra horseradish eaten, 100 turns of 250 meat
+		itemDrops[cat] = catHeistValue; // value determined by user
 	}
 	if (sandworm.have_familiar())
 	{
@@ -5499,6 +5507,7 @@ void TrySpleen(item spleenItem, effect desiredEffect, int providedSpleen, int tu
 		print("Not enough spleen space remaining for " + spleenItem);
 		return;
 	}
+	spleenItem.TryGetFromCloset(1);
 	if (spleenItem.item_amount() == 0)
 	{
 		print("Cannot spleen with " + spleenItem + ", buy in mall if you want me to use it.", "red");
@@ -5511,12 +5520,12 @@ void TrySpleen(item spleenItem, effect desiredEffect, int providedSpleen, int tu
 boolean ignoreOde = false;
 void TryDrink(item booze, effect desiredEffect, int providedDrunk, int turnLimit)
 {
-	booze.TryGetFromCloset(1);
-	if (booze.item_amount() < 1)
-		return;
 	if (desiredEffect.have_effect() >= turnLimit)
 		return;
 	if (!RoomToDrink(providedDrunk))
+		return;
+	booze.TryGetFromCloset(1);
+	if (booze.item_amount() < 1)
 		return;
 
 	if (odeToBoozeEffect.have_effect() < providedDrunk)
@@ -5706,6 +5715,7 @@ boolean TryEat(item food, effect desiredEffect, int providedFullness, int follow
 
 	if (get_property("_milkOfMagnesiumUsed") != "true")
 	{
+		TryGetFromCloset(milk, 1);
 		if (milk.item_amount() <= 0)
 			BuyItemIfNeeded(milk, 10, 2000);
 		if (milk.item_amount() > 0)
@@ -5929,11 +5939,13 @@ void ValidateRobortender(item booze, string drinkList, string purpose)
 {
 	if (InList(booze.to_string(), drinkList, ","))
 		return;
-	if (booze.item_amount() <= 0)
-	{
-		if (!UserConfirmDefault("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?", purpose != "meat"))
-			abort("Cannot buff Robortender, no " + booze.to_string());
-	}
+	if (booze.item_amount() > 0)
+		return;
+	if (autoPvpCloset && (booze.closet_amount() > 0 || booze.storage_amount() > 0))
+		return;
+
+	if (!UserConfirmDefault("Don't have Robotender booze " + booze.to_string() + " for " + purpose + ", do you wish to continue?", purpose != "meat"))
+		abort("Cannot buff Robortender, no " + booze.to_string());
 }
 void FeedRobortender(item booze, string drinkList)
 {
@@ -6464,7 +6476,6 @@ void BuffTurns(int turns)
 			UseOneTotal(peppermint, peppermintEffect);
 			UseOneTotal(sugar, sugarEffect);
 			UseOneTotal(cranberryCordial, cranberryCordialEffect);
-			UseOneTotal(pinkHeart, pinkHeartEffect);
 			UseOneTotal(polkaPop, polkaPopEffect);
 			if (needWeightBuffs)
 			{
@@ -6474,14 +6485,6 @@ void BuffTurns(int turns)
 			if (egg1.item_amount() > 0)
 			{
 				TrySpleen(egg1, eggEffect, 1, 1);
-			}
-			else if (egg2.item_amount() > 0)
-			{
-				TrySpleen(egg2, eggEffect, 1, 1);
-			}
-			else if (egg3.item_amount() > 0)
-			{
-				TrySpleen(egg3, eggEffect, 1, 1);
 			}
 			TryBuffForFreeCombats(true);
 			//if (covetous.have_effect() > 0 && CopiedMeatyAvailable() && PuttyCopiesRemaining() > 4)
@@ -6542,6 +6545,7 @@ void BuffTurns(int turns)
 		if (needWeightBuffs)
 			UseItem(geneFish, geneFishEffect, 10, 30, 0);
 	}
+	UseOneTotal(pinkHeart, pinkHeartEffect);
 	if (summonTaffy.have_skill() && needWeightBuffs)
 	{
 		UseItem(blueTaffy, blueTaffyEffect, 50, 10, 0);
@@ -7735,7 +7739,8 @@ void ActivateFortuneTeller()
 }
 
 boolean needsLube = false;
-boolean lubeChecked = false;
+// Don't like polluting settings file with script-specific stuff, but a daily setting should disappear tomorrow, right?
+boolean lubeChecked = get_property("_linknoidbarfCheckedQuest") == "true";
 
 void CheckLubeQuest()
 {
@@ -7745,6 +7750,7 @@ void CheckLubeQuest()
 	lubeChecked = true;
 	if (get_property("_dinseyGarbageDisposed") != "true")
 	{
+		bagOfGarbage.TryGetFromCloset(1);
 		if (LoadChoiceAdventure(maintenanceUrl, "Maint Misbehavin'", false))
 		{
 			run_choice(6); // Waste Disposal
@@ -7758,6 +7764,7 @@ void CheckLubeQuest()
 	{
 		needsLube = true;
 	}
+	set_property("_linknoidbarfCheckedQuest", "true");
 	if (needsLube)
 		return;
 	page = visit_url(kioskUrl);

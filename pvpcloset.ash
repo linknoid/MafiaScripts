@@ -1,5 +1,10 @@
 // adapted from http://kolmafia.us/showthread.php?10059-Save-items-from-pvp-theft
 
+boolean Closetable(item itm)
+{
+	return itm.tradeable && itm.discardable && !itm.gift && !itm.quest && itm != $item[toast];
+}
+
 void main(string Outfit)
 {
 	if (Outfit == "all")
@@ -23,7 +28,7 @@ void main(string Outfit)
 	        batch_open();
 	        foreach itm,quant in inv
 	        {
-			if (itm.tradeable && itm.discardable && !itm.gift && !itm.quest)
+			if (Closetable(itm))
 			{
 				put_closet(itm.item_amount(), itm);
 			}
@@ -35,14 +40,14 @@ void main(string Outfit)
 			{
 				if (piece.item_amount() == 0 && !piece.have_equipped() && piece.closet_amount() > 0)
 				{
-					take_closet(piece.closet_amount(), piece);
+					take_closet(1, piece);
 				}
 			}
 			outfit(Outfit);
 			inv = get_inventory();
 			foreach itm,quant in inv
 			{
-				if (itm.tradeable && itm.discardable && !itm.gift && !itm.quest)
+				if (Closetable(itm))
 				{
 					put_closet(itm.item_amount(), itm);
 				}
