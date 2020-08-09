@@ -106,6 +106,11 @@ Usage:
  * which familiar to use (if blank, it chooses the Robortender if buffing for
    at least 100 turns, or you've fed Robortender a drive-by shooting already
    today, otherwise the hobo monkey if you have it, otherwise a leprechaun).
+ * the familiar prompt also allows "ascend" or "noascend" to specify that you
+   intend to ascend today (or not), which will prevent it from swapping
+   workshed and make it pick your mushroom garden if necessory.
+ * if you didn't configure it for auto-confirm, it will ask if you want to
+   auto-confirm for just this run
 
 There are a number of prompts to warn you of important things, and give you a
 chance to cancel.  I recommend leaving them enabled at the beginning, but if
@@ -132,8 +137,6 @@ turns.
  * Concert Winklered buff
  * Game grid token
  * Asdon Martin: Driving Observantly
- * Knob Goblin Nasal Spray
- * Knob Goblin Pet Buffing Spray
  * Resolution: Be Wealthier (full turns if you have Libram of Resolutions, or
    just 1 use (20 turns) if you don't)
  * How to Scam Tourists
@@ -152,7 +155,7 @@ turns.
    and the rest of clicks go to +item
  * Crazy Horse from horsery unless you already have a horse
  * Summon lasagna/spice ghost if a pastamancer, and the lasagna buff for
-   embezzlers if you have the skill and mana (10 turns of 10% for 200 mana)
+   embezzlers if you have the skill and mana (10 turns of 10% meat for 200 mana)
  * Use Bag O' Tricks, Yendorian Express card, License to Chill to increase buff lengths
  * Clan pool table for familiar weight
  * Clan fortune teller for meat buff
@@ -163,7 +166,7 @@ turns.
  * Configurable number of Ambitious Turkey, defaults to 1
  * 1 Dirt Julep (low turn gen, but good buff)
  * 1 Gingerbread wine if you have it (untradable booze from gingerbread city)
- * Fills rest of liver with Sacramento wine
+ * Fills rest of liver with Sacramento wine (limited by configuration)
  * Activates Shrine to the Barrel God before eating or drinking, if appropriate class
  * Wears Mafia Pinky Ring before drinking
  * If you don't have Ode to Booze, it will send Buffy 2000 meat and request Ode befure drinking
@@ -216,12 +219,15 @@ Otherwise, if you have a deck of every card, it will fight a random elf from
 there, and use free kills (like shattering punch) to avoid wasting buff turns.
 
 
-It will also use free kills to extend the buff duration: (THIS IS NOW DISABLED BECAUSE OF 1000 MEAT LIMIT FOR FREE COMBATS)
+If you have ultra-hydrated buff, it will use banishes and free kills with
+Steely-Eyed Squint to farm mojo filters in the oasis:
  * Jokester's Gun
  * Replica Bat-oomerang
  * Shattering Punch
  * Gingerbread Mob Hit
+ * Li'l Doctor Bag
  * Asdon Martin: Missile Launcher
+ * Fourth of May sabre
 
 
 Since each person has different outfit names and such, those can be
@@ -270,26 +276,36 @@ Doesn't cast familiar weight buffs if using tot.
 
  
 
- Visits protonic accelorator pack quest adventures, uses combat with a "drops"
- familiar in this priority:
+Visits wandering monsters throughout your adventures, including vote
+monesters, protonic accelorator pack quest adventures, digitized monsters,
+enamorang monsters.  It will use these wanderers to burn delay where useful,
+mainly for completing doctor bag quests.  It will choose the most optimal
+familiar from the following based on drop percentage and value of drop:
+ * Cat burglar (value of heist is configurable, defaults to 7000 meat)
  * Baby Sand Worm
  * Fist Turkey
+ * Li'l xenomorph
+ * Llama Lama
+ * Rogue
+ * Astral badger
+ * Green Pixie
+ * XO skeleton
  * Space Jellyfish (if elemental)
  * Intergnat
  * Rockin' Robin
 
- And Crown of Throns or Buddy Bjorn for drops in this order:
+And Crown of Throns or Buddy Bjorn for drops in this order:
  * Garbage fire
  * Optimistic candle
  * Trick-or-treating Tot
  * Machine Elf
  * Warbear Drone
 
- Before casting buffs, automatically equips Oscus's outfit for -5 MP cost, KGB
- for -3 MP cost (or orcish rubber if that's not available), and brimstone
- bracelet for -3 MP cost.
+Before casting buffs, automatically equips Oscus's outfit for -5 MP cost, KGB
+for -3 MP cost (or orcish rubber if that's not available), and brimstone
+bracelet for -3 MP cost.
 
- If you have libram of resolutions, auto-burn mana between combats.
+If you have libram of resolutions, auto-burn mana between combats.
  * Uses source terminal Turbo.enh if it can use the mana for summons
 
  Also does massive mana burning via summon resolution at the beginning with maxing out MP:
@@ -297,6 +313,7 @@ Doesn't cast familiar weight buffs if using tot.
  * Cross the Streams (protonic pack)
  * Sweet synthesis +300% myst and +300% MP (if spleen available)
  * Spacagate vaccine +50% myst
+ * Powerful Glove buff Triple size
  * Hawking's +200% myst
  * Ointment of the Occult +100% myst
  * Tomato Juice +50% myst
@@ -357,7 +374,7 @@ enough volcoinos.
 
 You can skip the eat/drink/spleen part completely if you don't want it doing it.  Here's what it will do if you let it:
   * It will eat hi meins on Monday, and lasagna with field of gar the rest of the week.  With milk of magnesium.
-  * It will drink perfect ice drinks (by price) and then top off with cheapest robortender drinks, with Ode to booze, paying Buffy a 2000 meat gift if you don't have the Ode skill.
+  * It will drink perfect ice drinks (by price) and then top off with cheapest robortender drinks, with Ode to booze, sending Buffy a 2000 meat gift if you don't have the Ode skill.
   * It will spleen using powdered gold, agua de vida, and carrot juice as a finisher
   * It will borrow time 20 turns from tomorrow (with your permission)
 

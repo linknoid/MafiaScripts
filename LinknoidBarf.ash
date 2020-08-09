@@ -45,7 +45,6 @@
 // duplicate witchess knight (code is partly there, but it's not actually firing)
 // half-fill MP from latte for MP burning summoning
 // vote timer prevents LOV tunnel
-// add "ascend today" setting to force harvest mushroom and don't swap workshed without explicit permission
 // thanksgarden over-eats for required buff turns
 // use vampire cloake wolf form in combat before using platinum express card so it can be extended 5 buffs
 
@@ -87,7 +86,7 @@ string executeBeforeEat = ""; // If you want another script or command to do you
 string executeAfterEat = ""; // If you want another script to fill you the rest of the way after you've eaten, put it here
 item elfDuplicateItem; // If you specify this, the machine elf adventure will automatically duplicate this instead of aborting
 monster pocketProfessorCloneMonster; // If you specify this, the pocket professor will automatically fight this
-boolean ascendToday = false; // todo
+string ascendToday = ""; // stored as my_ascensions() + "," + my_daycount() if we're ascending today
 boolean autoPvpCloset = false; // Automatically add and remove items from closet for protection from PVP
 int catHeistValue = 7000; // The value you place on 1 cat burglar heist
 
@@ -123,6 +122,7 @@ void WriteSettings()
 	map["executeAfterEat"] = executeAfterEat;
 	map["elfDuplicateItem"] = elfDuplicateItem.to_int().to_string();
 	map["pocketProfessorCloneMonster"] = pocketProfessorCloneMonster.to_string();
+	map["ascendToday"] = ascendToday;
 	map["autoPvpCloset"] = autoPvpCloset.to_string();
 	map["catHeistValue"] = catHeistValue.to_string();
 	map_to_file(map, "linknoidfarm_" + my_name() + ".txt");
@@ -135,7 +135,7 @@ void ReadSettings()
 	{
 		switch (key)
 		{
-			case "autoConfirmBarf": autoConfirmBarf = value == "true"; break;
+			case "autoConfirmBarf": autoConfirmBarf = value.to_boolean(); break;
 			case "defaultOutfit": defaultOutfit = value; break;
 			case "meatyOutfit": meatyOutfit = value; break;
 			case "dropsOutfit": dropsOutfit = value; break;
@@ -153,17 +153,18 @@ void ReadSettings()
 			case "thanksgettingFoodCostLimit": thanksgettingFoodCostLimit = value.to_int(); break;
 			case "mojoCostLimit": mojoCostLimit = value.to_int(); break;
 			case "votedMeatLimit": votedMeatLimit = value.to_int(); break;
-			case "combatUserScript": combatUserScript = value == "true"; break;
-			case "allowExpensiveBuffs": allowExpensiveBuffs = value == "true"; break;
-			case "abortOnBeatenUp": abortOnBeatenUp = value == "true"; break;
-			case "preferCalcUniversePvP": preferCalcUniversePvP = value == "true"; break;
-			case "autoVoraciThanksgetting": autoVoraciThanksgetting = value == "true"; break;
+			case "combatUserScript": combatUserScript = value.to_boolean(); break;
+			case "allowExpensiveBuffs": allowExpensiveBuffs = value.to_boolean(); break;
+			case "abortOnBeatenUp": abortOnBeatenUp = value.to_boolean(); break;
+			case "preferCalcUniversePvP": preferCalcUniversePvP = value.to_boolean(); break;
+			case "autoVoraciThanksgetting": autoVoraciThanksgetting = value.to_boolean(); break;
 			case "hobopolisWhitelist": hobopolisWhitelist = value; break;
 			case "executeBeforeEat": executeBeforeEat = value; break;
 			case "executeAfterEat": executeAfterEat = value; break;
 			case "elfDuplicateItem": elfDuplicateItem = value.to_int().to_item(); break;
 			case "pocketProfessorCloneMonster": pocketProfessorCloneMonster = value.to_monster(); break;
-			case "autoPvpCloset": autoPvpCloset = value == "true"; break;
+			case "ascendToday": ascendToday = value; break;
+			case "autoPvpCloset": autoPvpCloset = value.to_boolean(); break;
 			case "catHeistValue": catHeistValue = value.to_int(); break;
 		}
 	}
@@ -1158,6 +1159,12 @@ boolean OutfitContains(item[slot] outfitDef, item eq)
 			return true;
 	return false;
 }
+
+boolean AscensionScheduledToday()
+{
+	return ascendToday == (my_ascensions() + "," + my_daycount());
+}
+
 void SetBastilleBattalionMode(int option, string target)
 {
 	if (target == "")
@@ -1731,6 +1738,7 @@ boolean TryHandleNonCombat(string page)
 		{
 			// Turtle tamer:
 			case "Tame it":
+			case "Tame It":
 			case "Tame it!":
 			case "Artfully tame it":
 			case "Try to tame it":
@@ -1738,6 +1746,7 @@ boolean TryHandleNonCombat(string page)
 			case "Recue him":
 			case "Grab Him":
 			case "Grab Him!":
+			case "Grab him!":
 			case "Grab it":
 			case "Get her out":
 			case "Help her out":
@@ -1750,10 +1759,12 @@ boolean TryHandleNonCombat(string page)
 			case "Tame the Turtle":
 			case "Tame the turtle":
 			case "Tame the wild spirit":
+			case "Tame the two turtles!":
 			case "Duel the turtle":
 			case "Rescue the turtle":
 			case "Rescue it!":
 			case "Train the train":
+			case "Investigate":
 			case "Walk the line":
 			case "And your changes for looting are fertile.":
 			case "Fortune favors the bold -- tame it":
@@ -4629,7 +4640,7 @@ boolean RunFreeCombat(item[slot] selectedOutfit, string filter, boolean forMeat)
 				default: crop = "colossal free-range mushroom"; break;
 			}
 			boolean defaultConfirm = cropLevel >= 5; // pick once it's immense by default
-			if (ascendToday || UserConfirmDefault("Pick " + crop + " today, with " + (cropLevel - 1) + " days fertilized?", defaultConfirm))
+			if (AscensionScheduledToday() || UserConfirmDefault("Pick " + crop + " today, with " + (cropLevel - 1) + " days fertilized?", defaultConfirm))
 				run_choice(2); // pick the mushroom
 			else
 				run_choice(1); // fertilize the mushroom
@@ -4976,7 +4987,7 @@ void ChooseDropsFamiliar(boolean isElemental)
 	}
 	if (rogue.have_familiar())
 	{
-		switch (get_property("_astralDrops").to_int())
+		switch (get_property("_tokenDrops").to_int())
 		{
 			case 0: dropRates[rogue] = 0.25; break;
 			case 1: dropRates[rogue] = 0.20; break;
@@ -5593,11 +5604,22 @@ void ConsumeMayo(boolean convertToDrunk)
 		if (!eatWithoutMayo)
 		{
 			if (get_property("_workshedItemUsed") == "false"
-				&& mayoClinic.item_amount() > 0
-				&& UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
+				&& mayoClinic.item_amount() > 0)
 			{
-				BeforeSwapOutWorkshop(mayoClinic);
-				use(1, mayoClinic);
+				if (AscensionScheduledToday())
+				{
+					// force a prompt, don't want to swap workshed without permissions
+					if (user_confirm("Mayo clinic not installed, do you wish to install for eating?"))
+					{
+						BeforeSwapOutWorkshop(mayoClinic);
+						use(1, mayoClinic);
+					}
+				}
+				else if (UserConfirmDefault("Mayo clinic not installed, do you wish to install for eating?", true))
+				{
+					BeforeSwapOutWorkshop(mayoClinic);
+					use(1, mayoClinic);
+				}
 			}
 			if (!(get_campground() contains mayoClinic)
 				&& !UserConfirmDefault("Mayo clinic is not in workshed, do you wish to eat without mayo?", true))
@@ -6143,7 +6165,16 @@ void DriveObservantly(int turns, boolean promptForActivate)
 			return;
 		if (asdonMartin.item_amount() == 0)
 			return;
-		if (UserConfirmDefault("Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?", true))
+		string confirmText = "Fullness at " + my_fullness() + " / " + fullness_limit() + ", do you wish to switch to Asdon Martin for buffing?";
+		if (AscensionScheduledToday())
+		{
+			if (user_confirm(confirmText))
+			{
+				BeforeSwapOutWorkshop(asdonMartin);
+				use(1, asdonMartin);
+			}
+		}
+		else if (UserConfirmDefault(confirmText, my_fullness() >= fullness_limit()))
 		{
 			BeforeSwapOutWorkshop(asdonMartin);
 			use(1, asdonMartin);
@@ -8875,7 +8906,7 @@ void ValidateNotBusy()
 }
 
 // pass -1 for buffTurns if you're doing "night before" buffing
-void main(int buffTurns, int runTurns, string familiarName)
+void main(int buffTurns, int runTurns, string familiarOrDirective)
 {
 	ValidateNotBusy();
 	ReadSettings();
@@ -8883,6 +8914,23 @@ void main(int buffTurns, int runTurns, string familiarName)
 	autoConfirm = autoConfirmBarf || user_confirm("Auto-confirm all prompts this run?");
 	InitOutfits();
 	ChooseSummonType();
+	string[int] parts = familiarOrDirective.split_string("[,;]");
+	string familiarName = "";
+	foreach ix,part in parts
+	{
+		switch (part)
+		{
+			case "ascend":
+				ascendToday = my_ascensions() + "," + my_daycount();
+				print("Setting ascension for today = " + ascendToday, printColor);
+				break;
+			case "noascend":
+				ascendToday = "";
+				print("Clearing ascension for today", printColor);
+				break;
+			default: familiarName = part; break;
+		}
+	}
 	SetRunFamiliar(familiarName, buffTurns);
 
 	RemoveConfusionEffects(true);
