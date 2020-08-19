@@ -2918,9 +2918,10 @@ void DoQuest5()
 			$slot[off-hand].equip($item[ghostly reins]);
 		else
 		{
-			if (!HaveItem($item[rope]))
+			if (!HaveItem($item[rope]) && get_property("_deckCardsDrawn").to_int() <= 10)
 				cli_execute("cheat rope");
-			$slot[off-hand].equip($item[rope]);
+			if (HaveItem($item[rope]))
+				$slot[off-hand].equip($item[rope]);
 		}
 		$slot[acc1].equip($item[Beach Comb]);
 		$slot[acc2].equip($item[hewn moon-rune spoon]);
@@ -2980,13 +2981,15 @@ void DoQuest6()
 			ChateauRest(100);
 			UseSkillForEffect($skill[Bow-Legged Swagger], $effect[Bow-Legged Swagger]);
 		}
+		$slot[acc2].equip($item[Kremlin's Greatest Briefcase]);
+		$slot[acc3].equip($item[Powerful Glove]);
 		if ($item[intimidating chainsaw].HaveItem())
 			$slot[weapon].equip($item[intimidating chainsaw]);
-		else
-			FoldGarbage($item[broken champagne bottle], $slot[weapon]);
-		$slot[acc3].equip($item[Powerful Glove]);
+		$familiar[Disembodied Hand].use_familiar();
+		FoldGarbage($item[broken champagne bottle], $slot[familiar]);
 
 		DoQuest(6, 28); // weapon damage, not many options to improve
+		$slot[familiar].equip($item[none]);
 	}
 }
 void DoQuest7()
@@ -3008,7 +3011,10 @@ void DoQuest7()
 		ChateauRest(100);
 		UseSkillForEffect($skill[Bend Hell], $effect[Bendin' Hell]);
 		SaberBuff();
-		DoQuest(7, 56); // (+spell damage)
+		if (!$item[weeping willow wand].HaveItem() && $item[flimsy hardwood scraps].item_amount() > 0)
+			buy($coinmaster[Your SpinMaster&trade; lathe], 1, $item[weeping willow wand]);
+		$slot[weapon].equip($item[weeping willow wand]);
+		DoQuest(7, 45); // (+spell damage)
 	}
 }
 void DoQuest8()
@@ -3472,6 +3478,8 @@ void InitCharacter()
 		MakeGreenMana();
 	}
 	use(1, $item[Bird-a-Day calendar]);
+
+	visit_url("shop.php?whichshop=lathe"); // get hardwood scraps
 }
 
 

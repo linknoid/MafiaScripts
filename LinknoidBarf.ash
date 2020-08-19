@@ -6026,6 +6026,8 @@ void CraftRobortenderDrink(item baseDrop, item firstTier, item secondTier, item 
 	boolean haveStill = get_campground() contains $item[warbear high-efficiency still];
 	if (haveStill || secondTier.item_amount() == 0) // only craft it if we're out, or a warbear still is installed
 	{
+		if (baseDrop.item_amount() == 0)
+			TryGetFromCloset(baseDrop, 1);
 		int craftAmount;
 		if (haveStill)
 			craftAmount = baseDrop.item_amount();
@@ -6484,7 +6486,8 @@ void BuffTurns(int turns)
 	{
 		if (BuyItemIfNeeded($item[tattered scrap of paper], 1, 6000)
 			&& BuyItemIfNeeded($item[disintegrating quill pen], 1, 1000)
-			&& BuyItemIfNeeded($item[inkwell], 1, 1000))
+			&& BuyItemIfNeeded($item[inkwell], 1, 1000)
+			&& BuyItemIfNeeded($item[thin black candle], 3, 1000))
 		{
 			cli_execute(summonGreed);
 		}
