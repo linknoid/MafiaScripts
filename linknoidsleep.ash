@@ -264,6 +264,203 @@ void DoVolcanoMining()
 	}
 }
 
+boolean HaveItem(item i, int count)
+{
+	if (i.item_amount() >= count)
+		return true;
+	if (i.closet_amount() + i.item_amount() >= count)
+		i.take_closet(count - i.item_amount());
+	if (i.storage_amount() + i.item_amount() >= count && pulls_remaining() < 0)
+		i.take_storage(count - i.item_amount());
+	return i.item_amount() >= count;
+}
+record swordDrinkDef
+{
+	item mixer;
+	item skewer;
+	item baseBooze;
+	item mixedDrink;
+	item finishedDrink;
+};
+swordDrinkDef[6] recipes;
+
+void CreateSwordRecipes()
+{
+	recipes[0].mixer = $item[lime];
+	recipes[1].mixer = $item[lime];
+	recipes[2].mixer = $item[jumbo olive];
+	recipes[3].mixer = $item[jumbo olive];
+	recipes[4].mixer = $item[cherry];
+	recipes[5].mixer = $item[cherry];
+	recipes[0].skewer = $item[skewered lime];
+	recipes[1].skewer = $item[skewered lime];
+	recipes[2].skewer = $item[skewered jumbo olive];
+	recipes[3].skewer = $item[skewered jumbo olive];
+	recipes[4].skewer = $item[skewered cherry];
+	recipes[5].skewer = $item[skewered cherry];
+	recipes[0].baseBooze = $item[bottle of rum];
+	recipes[1].baseBooze = $item[bottle of tequila];
+	recipes[2].baseBooze = $item[bottle of gin];
+	recipes[3].baseBooze = $item[bottle of vodka];
+	recipes[4].baseBooze = $item[bottle of whiskey];
+	recipes[5].baseBooze = $item[boxed wine];
+	recipes[0].mixedDrink = $item[grog];
+	recipes[1].mixedDrink = $item[tequila with training wheels];
+	recipes[2].mixedDrink = $item[dry martini];
+	recipes[3].mixedDrink = $item[dry vodka martini];
+	recipes[4].mixedDrink = $item[old-fashioned];
+	recipes[5].mixedDrink = $item[sangria];
+	recipes[0].finishedDrink = $item[grogtini];
+	recipes[1].finishedDrink = $item[bodyslam];
+	recipes[2].finishedDrink = $item[dirty martini];
+	recipes[3].finishedDrink = $item[vesper];
+	recipes[4].finishedDrink = $item[cherry bomb];
+	recipes[5].finishedDrink = $item[sangria del diablo];
+}
+boolean HaveTPS()
+{
+	if (HaveItem($item[tiny plastic sword], 1))
+		return true;
+	for (int i = 0; i < 6; i++)
+	{
+		if (recipes[i].skewer.HaveItem(1))
+			return true;
+		if (recipes[i].finishedDrink.HaveItem(1))
+			return true;
+	}
+	return false;
+}
+
+boolean TryOverdrink(item i)
+{
+	if (HaveItem(i, 1))
+	{
+		overdrink(1, i);
+		return true;
+	}
+	return false;
+}
+
+boolean TryDrinkTPS()
+{
+	print("TryDrinkTPS()");
+	for (int i = 0; i < 6; i++)
+	{
+		if (recipes[i].finishedDrink.HaveItem(1))
+		{
+			if (TryOverdrink(recipes[i].finishedDrink))
+				return true;
+		}
+	}
+	return false;
+}
+boolean TryCraftTPSFinal()
+{
+	print("TryCraftTPSFinal()");
+	for (int i = 0; i < 6; i++)
+	{
+		if (recipes[i].skewer.HaveItem(1) && recipes[i].mixedDrink.HaveItem(1))
+		{
+			print("Crafting " + recipes[i].skewer + " with " + recipes[i].mixedDrink);
+			return craft("cocktail", 1, recipes[i].skewer, recipes[i].mixedDrink) > 0;
+		}
+	}
+	return false;
+}
+boolean TryCraftMixedDrink()
+{
+	print("TryCraftMixedDrink()");
+	for (int i = 0; i < 6; i++)
+	{
+		if (recipes[i].skewer.HaveItem(1))
+		{
+			if (recipes[i].baseBooze.HaveItem(1) || recipes[i].mixer.HaveItem(1))
+			{
+				print("Crafting " + recipes[i].baseBooze + " with " + recipes[i].mixer);
+				return craft("cocktail", 1, recipes[i].baseBooze, recipes[i].mixer) > 0;
+			}
+		}
+	}
+	return false;
+}
+boolean TryBuyMixedDrink()
+{
+	print("TryBuyMixedDrink()");
+	for (int i = 0; i < 6; i++)
+	{
+		if (recipes[i].skewer.HaveItem(1))
+		{
+			if (!recipes[i].baseBooze.HaveItem(1))
+				buy(1, recipes[i].baseBooze);
+			if (!recipes[i].mixer.HaveItem(1))
+				buy(1, recipes[i].mixer);
+			return true;
+		}
+	}
+	return false;
+}
+boolean TryCraftSkewer()
+{
+	print("TryCraftSkewer()");
+	if (!$item[tiny plastic sword].HaveItem(1))
+		return false;
+	int cheapestIx = 0;
+	int cheapest = 999999;
+	for (int i = 0; i < 6; i++)
+	{
+		int price = 0;
+		if (recipes[i].mixedDrink.HaveItem(1))
+		{
+			price = recipes[i].mixer.historical_price();
+		}
+		else
+		{
+			price = recipes[i].baseBooze.historical_price()
+				+ 2 * recipes[i].mixer.historical_price();
+		}
+		if (price < cheapest)
+		{
+			cheapestIx = 0;
+		}
+	}
+	if (!recipes[cheapestIx].mixer.HaveItem(2))
+	{
+		buy(2, recipes[cheapestIx].mixer);
+	}
+	print("Crafting " + $item[tiny plastic sword] + " with " + recipes[cheapestIx].mixer);
+	return craft("cocktail", 1, $item[tiny plastic sword], recipes[cheapestIx].mixer) > 0;
+}
+
+void TryOverdrink()
+{
+	if (stooper.have_familiar() && my_familiar() != stooper)
+		stooper.use_familiar();
+	OdeUp(10);
+	CreateSwordRecipes();
+	if (HaveTPS())
+	{
+		if (TryDrinkTPS())
+			return;
+		if (TryCraftTPSFinal() && TryDrinkTPS())
+			return;
+		if (TryCraftMixedDrink() && TryCraftTPSFinal() && TryDrinkTPS())
+			return;
+		if (TryBuyMixedDrink() && TryCraftMixedDrink() && TryCraftTPSFinal() && TryDrinkTPS())
+			return;
+		if (TryCraftSkewer() && TryBuyMixedDrink() && TryCraftMixedDrink() && TryCraftTPSFinal() && TryDrinkTPS())
+			return;
+		abort("failed to drink tiny plastic sword");
+	}
+	else
+	{
+		if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
+		{
+			pinkyRing.to_slot().equip(pinkyRing);
+		}
+		TryOverdrink(wineBucket);
+	}
+}
+
 // todo:
 // check free kills first
 // lynyrd snares
@@ -329,14 +526,7 @@ print("remaining drunk = " + remainingDrunk);
 		}
 		else
 		{
-			if (pinkyRing.item_amount() > 0 && !pinkyRing.have_equipped())
-			{
-				pinkyRing.to_slot().equip(pinkyRing);
-			}
-			OdeUp(10);
-			if (stooper.have_familiar() && my_familiar() != stooper)
-				stooper.use_familiar();
-			drink(1, wineBucket);
+			TryOverdrink();
 		}
 	}
 	SleepOutfit();

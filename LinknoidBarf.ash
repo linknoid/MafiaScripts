@@ -5975,7 +5975,10 @@ void FeedRobortender(item booze, string drinkList)
 	{
 		TryGetFromCloset(booze, 1);
 		if (booze.item_amount() > 0)
+		{
+			SwitchToFamiliar(robort);
 			cli_execute("robo " + booze.name);
+		}
 	}
 }
 
@@ -6028,18 +6031,21 @@ void CraftRobortenderDrink(item baseDrop, item firstTier, item secondTier, item 
 	{
 		if (baseDrop.item_amount() == 0)
 			TryGetFromCloset(baseDrop, 1);
-		int craftAmount;
+		int craftAmount = 0;
 		if (haveStill)
 			craftAmount = baseDrop.item_amount();
 		else if (firstTier.item_amount() > 0)
 			craftAmount = 0;
-		else
+		else if (baseDrop.item_amount() > 0)
 			craftAmount = 1;
 
 		if (craftAmount > 0)
 		{
+			if (baseDrop.item_amount() == 0)
+				return;
+			TryGetFromCloset(firstMixer, 1);
 			if (firstMixer.item_amount() < craftAmount)
-				buy(craftAmount + 5, firstMixer);
+				buy(craftAmount + 10, firstMixer);
 			craft("cocktail", 1, baseDrop, firstMixer);
 		}
 
@@ -6050,8 +6056,11 @@ void CraftRobortenderDrink(item baseDrop, item firstTier, item secondTier, item 
 
 		if (craftAmount > 0)
 		{
+			if (firstTier.item_amount() == 0)
+				return;
+			TryGetFromCloset(secondMixer, 1);
 			if (secondMixer.item_amount() < craftAmount)
-				buy(craftAmount + 5, secondMixer);
+				buy(craftAmount + 10, secondMixer);
 			craft("cocktail", 1, firstTier, secondMixer);
 		}
 	}
@@ -6098,6 +6107,7 @@ void TryElvishRobortender()
 		return;
 	}
 
+	SwitchToFamiliar(robort);
 	if (chateauElf)
 	{
 		print("Using Chateau painting " + chateauMon, printColor);
@@ -6129,30 +6139,27 @@ void FeedRobotender()
 {
 	if (!robort.have_familiar())
 		return;
+	TryElvishRobortender(); // if it didn't happen because of a lack of feliz navidad, do it now
 
 	string drinkList = get_property("_roboDrinks");
-	if (InList(roboMeat.to_string(), drinkList, ",")) // already fed robortender, don't check again
-		return;
-
-	ValidateRobortender(roboMeat, drinkList, "meat");
-	ValidateRobortender(roboItems, drinkList, "item");
-	ValidateRobortender(roboMana, drinkList, "mana");
-	ValidateRobortender(roboHobo, drinkList, "hobo");
-	ValidateRobortender(roboCandy, drinkList, "candy");
-	if (get_property("_roboDrinks") == "")
+	if (!InList(roboMeat.to_string(), drinkList, ",")) // already fed robortender, don't check again
 	{
-		SwitchToFamiliar(robort);
+		ValidateRobortender(roboMeat, drinkList, "meat");
+		ValidateRobortender(roboItems, drinkList, "item");
+		ValidateRobortender(roboMana, drinkList, "mana");
+		ValidateRobortender(roboHobo, drinkList, "hobo");
+		ValidateRobortender(roboCandy, drinkList, "candy");
+	}
+	//if (get_property("_roboDrinks") == "")
+	{
 		FeedRobortender(roboMeat, drinkList);
 		CraftRobortenderDrink(anis, doubleEntendre, roboItems, tequila, lemon);
 		FeedRobortender(roboItems, drinkList);
 		FeedRobortender(roboMana, drinkList);
 		FeedRobortender(roboHobo, drinkList);
 		CraftRobortenderDrink(peppermintSprig, mentholatedWine, roboCandy, boxedWine, orange);
-		if (roboCandy.item_amount() == 0)
-			TryElvishRobortender();
 		FeedRobortender(roboCandy, drinkList);
 	}
-	TryElvishRobortender(); // if it didn't happen because of a lack of feliz navidad, do it now
 }
 void DriveObservantly(int turns, boolean promptForActivate)
 {
