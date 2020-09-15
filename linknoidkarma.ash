@@ -280,7 +280,7 @@ void AsdonMartin(effect e)
 	{
 		if (e == asdonEffects[i])
 			option = i;
-		if (e.have_effect() > 0)
+		else if (asdonEffects[i].have_effect() > 0)
 			currentlyDriving = true;
 	}
 	if (option >= 0)
@@ -720,6 +720,14 @@ candyplan CalculateCandyPlan(candyplan plan, int[item] lowCandyCount, int[item] 
 		candyCounts2[plan.candy2]--;
 	return plan;
 }
+item[5] gnoMartCandy =
+{
+	$item[lime-and-chile-flavored chewing gum],
+	$item[jaba&ntilde;ero-flavored chewing gum],
+	$item[tamarind-flavored chewing gum],
+	$item[pickle-flavored chewing gum],
+	$item[marzipan skull]
+};
 candyplan CreateCandyPlan(int questNum)
 {
 	// Cheapest isn't always best.  Candy supply is very limited, and we have to make sure we
@@ -744,6 +752,9 @@ candyplan CreateCandyPlan(int questNum)
 		if (value.item_amount() > 0)
 			lowCandyCount[value] = value.item_amount() + value.closet_amount();
 	}
+	// this assumes we can buy candy from Gno-Mart, if we haven't tuned moon yet, this will not be valid
+	for (int i = 0; i < 5; i++)
+		lowCandyCount[gnoMartCandy[i]] += 5;
 	foreach key, value in candy_for_tier(3) // high candy
 	{
 		if (value == $item[Ultra Mega Sour Ball]) // never use this for sweet synthesis
@@ -772,6 +783,13 @@ void ExecuteCandyPlan(candyplan plan)
 {
 	TakeAllCloset(plan.candy1);
 	TakeAllCloset(plan.candy2);
+	for (int i = 0; i < 5; i++)
+	{
+		if (plan.candy1 == gnoMartCandy[i] && plan.candy1.item_amount() == 0)
+			plan.candy1.buy(1);
+		if (plan.candy2 == gnoMartCandy[i] && plan.candy2.item_amount() == 0)
+			plan.candy2.buy(1);
+	}
 	sweet_synthesis(plan.candy1, plan.candy2);
 }
 
@@ -1317,10 +1335,6 @@ void ChooseFamiliar()
 	{
 		$familiar[Garbage Fire].use_familiar();
 	}
-	else if (get_property("camelSpit").to_int() < 100 && dayNumber == 1)
-	{
-		$familiar[Melodramedary].use_familiar();
-	}
 	else if (get_property("_aguaDrops").to_int() < 3 && dayNumber == 1)
 	{
 		$familiar[Baby Sandworm].use_familiar();
@@ -1335,6 +1349,10 @@ void ChooseFamiliar()
 	{
 		$familiar[XO Skeleton].use_familiar();
 	}
+	//else if (get_property("camelSpit").to_int() < 100 && dayNumber == 1)
+	//{
+	//	$familiar[Melodramedary].use_familiar();
+	//}
 	//else if (get_property("optimisticCandleProgress").to_int() >= 25)
 	//{
 	//	$familiar[Optimistic Candle].use_familiar();
@@ -2283,12 +2301,14 @@ int TurnSavings(int questNum)
 			return numeric_modifier("Weapon Damage").to_int() * multiplier / 50
 				+ numeric_modifier("Weapon Damage Percent").to_int() * multiplier / 50;
 		case 7: // spell damage
-			return numeric_modifier("Spell Damage").to_int() / 50 + numeric_modifier("Spell Damage Percent").to_int() / 50;
+			return numeric_modifier("Spell Damage").to_int() / 50
+				+ numeric_modifier("Spell Damage Percent").to_int() / 50;
 		case 8: // -combat
 			int rate = numeric_modifier("Combat Rate").to_int();
 			if (rate < -25)
-				rate = (5 + (-rate - 25)) ;
-			return -rate * 3 / 5;
+				return (5 + (-rate - 25));
+			else
+				return -rate * 3 / 5;
 		case 9: // item drop
 			return numeric_modifier("Item Drop").to_int() / 30 + numeric_modifier("Booze Drop").to_int() / 15;
 		case 10: // hot resist
@@ -2303,7 +2323,7 @@ int TurnsExpected(int questNum)
 		return 1;
 	if (savings < 0)
 		return 60;
-	return 60;
+	return 60 - savings;
 }
 
 void DoQuest(int questNum, int maxTurns)
@@ -2811,7 +2831,8 @@ void DoSleep()
 		ChateauRest(my_maxmp());
 	}
 	cli_execute("cast * summon resolutions");
-	$slot[hat].equip($item[Hairpiece On Fire]);
+	if ($item[Hairpiece On Fire].item_amount() > 0)
+		$slot[hat].equip($item[Hairpiece On Fire]);
 	if ($item[shoe ad T-shirt].HaveItem())
 		$slot[shirt].equip($item[shoe ad T-shirt]);
 	if ($item[burning cape].HaveItem())
@@ -3006,7 +3027,8 @@ void DoQuest4()
 //		abort("check for A Contender");
 //		cli_execute("genie wish to be A Contender");
 	}
-	$slot[hat].equip($item[Hairpiece on Fire]);
+	if ($item[Hairpiece On Fire].item_amount() > 0)
+		$slot[hat].equip($item[Hairpiece on Fire]);
 	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
 	$slot[off-hand].equip($item[A Light that Never Goes Out]);
 	$slot[pants].equip($item[Vicar's Tutu]);
@@ -3097,7 +3119,7 @@ void DoQuest6()
 		{
 			visit_url("gamestore.php?action=buysnack&whichsnack=5019");
 		}
-		cli_execute("cast * summon resolutions");
+		//cli_execute("cast * summon resolutions");
 		$item[wasabi marble soda].use(1);
 	}
 	ExecuteForEffect("pool 1", $effect[Billiards Belligerence]);
@@ -3119,12 +3141,17 @@ void DoQuest6()
 	$familiar[Disembodied Hand].use_familiar();
 	FoldGarbage($item[broken champagne bottle], $slot[familiar]);
 
+	if ($effect[Song of the North].have_effect() == 0)
+	{
+		ChateauRest(100);
+		UseSkillForEffect($skill[Song of the North], $effect[Song of the North]);
+	}
 	if ($effect[Bow-Legged Swagger].have_effect() == 0)
 	{
 		ChateauRest(100);
 		UseSkillForEffect($skill[Bow-Legged Swagger], $effect[Bow-Legged Swagger]);
 	}
-	DoQuest(6, 28); // weapon damage, not many options to improve
+	DoQuest(6, 22); // weapon damage
 	$slot[familiar].equip($item[none]);
 }
 void DoQuest7()
@@ -3210,6 +3237,7 @@ void DoQuest9()
 	{
 		FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
 		$slot[back].equip($item[vampyric cloake]);
+		$slot[weapon].equip($item[Fourth of may Cosplay Saber]);
 		$slot[off-hand].equip($item[latte lovers member's mug]);
 		$familiar[Ms. Puck Man].use_familiar();
 		string page = visit_url($location[The Haunted Kitchen].to_url());
@@ -3269,107 +3297,107 @@ void DoQuest10()
 {
 	if (completedQuests[10])
 		return;
+
+	cli_execute("beach head hot");
+	string page;
+	if (get_property("spacegateVaccine") != "true")
+		cli_execute("spacegate vaccine 1"); // +resist
+	$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
+	if ($effect[Misty Form].have_effect() == 0)
 	{
-		cli_execute("beach head hot");
-		string page;
-		if (get_property("spacegateVaccine") != "true")
-			cli_execute("spacegate vaccine 1"); // +resist
-		if ($effect[Misty Form].have_effect() == 0)
-		{
-			FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
-			$slot[back].equip($item[vampyric cloake]);
-			$slot[off-hand].equip($item[latte lovers member's mug]);
-			$familiar[Ms. Puck Man].use_familiar();
-			page = visit_url($location[The Haunted Kitchen].to_url());
-			run_combat("Filter_CloakeMistForm");
-		}
+		FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
+		$slot[back].equip($item[vampyric cloake]);
 		$slot[off-hand].equip($item[latte lovers member's mug]);
-		cli_execute("latte refill chili pumpkin cinnamon");
-
-		boolean lavaproof = false;
-		if ($item[lava-proof pants].HaveItem())
-		{
-			$slot[pants].equip($item[lava-proof pants]);
-			lavaproof = true;
-		}
-		else if ($item[pantogram pants].HaveItem())
-			$slot[pants].equip($item[pantogram pants]);
-		if ($item[high-temperature mining mask].HaveItem())
-		{
-			$slot[hat].equip($item[high-temperature mining mask]);
-			lavaproof = true;
-		}
-
-		$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
-		//if ($item[fireproof megaphone].HaveItem())
-		//	$slot[off-hand].equip($item[fireproof megaphone]);
-		boolean slot2used = false;
-		boolean slot3used = false;
-		if ($item[heat-resistant necktie].HaveItem())
-		{
-			$slot[acc2].equip($item[heat-resistant necktie]);
-			slot2used = true;
-			lavaproof = true;
-		}
-		if ($item[heat-resistant gloves].HaveItem())
-		{
-			lavaproof = true;
-			if (slot2used)
-			{
-				$slot[acc3].equip($item[heat-resistant gloves]);
-				slot3used = true;
-			}
-			else
-			{
-				$slot[acc2].equip($item[heat-resistant gloves]);
-				slot2used = true;
-			}
-		}
-		if (!slot3used)
-			$slot[acc3].equip($item[LOV earrings]);
-		if ($item[burning newspaper].item_amount() > 0 && !$item[burning cape].HaveItem())
-			cli_execute("create burning cape");
-		if (get_property("latteUnlocks").contains_text("chili") && !get_property("latteModifier").contains_text("Hot Resistance"))
-		{
-			cli_execute("latte refill chili pumpkin cinnamon");
-		}
-		$slot[back].equip($item[burning cape]);
-		$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
-		page = visit_url("main.php?action=may4");
-                if (page.contains_text("Force Resistance Multiplier"))
-			visit_url("choice.php?whichchoice=1386&option=3"); // +3 resist
-		$familiar[Trick-or-Treating Tot].use_familiar();
-		if (!HaveItem($item[li'l candy corn costume]) && my_meat() >= 1000)
-			buy(1, $item[li'l candy corn costume]);
-		if ($item[li'l candy corn costume].item_amount() > 0)
-			$slot[familiar].equip($item[li'l candy corn costume]);
-
-		if (get_property("_mayoTankSoaked") != "true" && get_campground() contains $item[portable Mayo Clinic])
-			visit_url("shop.php?action=bacta&whichshop=mayoclinic");
-		UseSkillForEffect($skill[Elemental Saucesphere], $effect[Elemental Saucesphere]);
-		UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
-		UseItemForEffect($item[hot powder], $effect[Flame-Retardant Trousers]);
-		CraftPotionForEffect($item[lotion of stench], $item[stench powder], false, $effect[Stinky Hands], false);
-		CraftPotionForEffect($item[lotion of sleaziness], $item[sleaze powder], false, $effect[Sleazy Hands], false);
-		UseItemForEffect($item[Gene Tonic: Elemental], $effect[Human-Elemental Hybrid]);
-		cli_execute("Briefcase enchantment hot");
-		// pale horse?  500 meat to switch
-		if (my_sign() == "Vole")
-		{
-			if ($item[bugbear beanie].item_amount() == 0)
-				buy(1, $item[bugbear beanie]);
-			if ($item[bugbear bungguard].item_amount() == 0)
-				buy(1, $item[bugbear bungguard]);
-			if ($item[frilly skirt].item_amount() == 0 && $item[Vicar's Tutu].item_amount() == 0)
-				buy(1, $item[frilly skirt]);
-			//use(1, $item[hewn moon-rune spoon);
-			visit_url("inv_use.php?whichitem=10254&doit=96&whichsign=8");
-		}
-		if ($item[jaba&ntilde;ero-flavored chewing gum].item_amount() < 2)
-			buy(2, $item[jaba&ntilde;ero-flavored chewing gum]);
-		SweetSynthesisEffect(10); // hot resist
-		DoQuest(10, 1); // (+hot resist)
+		$familiar[Ms. Puck Man].use_familiar();
+		page = visit_url($location[The Haunted Kitchen].to_url());
+		run_combat("Filter_CloakeMistForm");
 	}
+	$slot[off-hand].equip($item[latte lovers member's mug]);
+	cli_execute("latte refill chili pumpkin cinnamon");
+
+	boolean lavaproof = false;
+	if ($item[lava-proof pants].HaveItem())
+	{
+		$slot[pants].equip($item[lava-proof pants]);
+		lavaproof = true;
+	}
+	else if ($item[pantogram pants].HaveItem())
+		$slot[pants].equip($item[pantogram pants]);
+	if ($item[high-temperature mining mask].HaveItem())
+	{
+		$slot[hat].equip($item[high-temperature mining mask]);
+		lavaproof = true;
+	}
+
+	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]);
+	//if ($item[fireproof megaphone].HaveItem())
+	//	$slot[off-hand].equip($item[fireproof megaphone]);
+	boolean slot2used = false;
+	boolean slot3used = false;
+	if ($item[heat-resistant necktie].HaveItem())
+	{
+		$slot[acc2].equip($item[heat-resistant necktie]);
+		slot2used = true;
+		lavaproof = true;
+	}
+	if ($item[heat-resistant gloves].HaveItem())
+	{
+		lavaproof = true;
+		if (slot2used)
+		{
+			$slot[acc3].equip($item[heat-resistant gloves]);
+			slot3used = true;
+		}
+		else
+		{
+			$slot[acc2].equip($item[heat-resistant gloves]);
+			slot2used = true;
+		}
+	}
+	if (!slot3used)
+		$slot[acc3].equip($item[LOV earrings]);
+	if ($item[burning newspaper].item_amount() > 0 && !$item[burning cape].HaveItem())
+		cli_execute("create burning cape");
+	$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
+	if (get_property("latteUnlocks").contains_text("chili") && !get_property("latteModifier").contains_text("Hot Resistance"))
+	{
+		cli_execute("latte refill chili pumpkin cinnamon");
+	}
+	$slot[back].equip($item[burning cape]);
+	page = visit_url("main.php?action=may4");
+	if (page.contains_text("Force Resistance Multiplier"))
+		visit_url("choice.php?whichchoice=1386&option=3"); // +3 resist
+	$familiar[Trick-or-Treating Tot].use_familiar();
+	if (!HaveItem($item[li'l candy corn costume]) && my_meat() >= 1000)
+		buy(1, $item[li'l candy corn costume]);
+	if ($item[li'l candy corn costume].item_amount() > 0)
+		$slot[familiar].equip($item[li'l candy corn costume]);
+
+	if (get_property("_mayoTankSoaked") != "true" && get_campground() contains $item[portable Mayo Clinic])
+		visit_url("shop.php?action=bacta&whichshop=mayoclinic");
+	UseSkillForEffect($skill[Elemental Saucesphere], $effect[Elemental Saucesphere]);
+	UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
+	UseItemForEffect($item[hot powder], $effect[Flame-Retardant Trousers]);
+	CraftPotionForEffect($item[lotion of stench], $item[stench powder], false, $effect[Stinky Hands], false);
+	CraftPotionForEffect($item[lotion of sleaziness], $item[sleaze powder], false, $effect[Sleazy Hands], false);
+	UseItemForEffect($item[Gene Tonic: Elemental], $effect[Human-Elemental Hybrid]);
+	cli_execute("Briefcase enchantment hot");
+	// pale horse?  500 meat to switch
+	if (my_sign() == "Vole")
+	{
+		if ($item[bugbear beanie].item_amount() == 0)
+			buy(1, $item[bugbear beanie]);
+		if ($item[bugbear bungguard].item_amount() == 0)
+			buy(1, $item[bugbear bungguard]);
+		if ($item[frilly skirt].item_amount() == 0 && $item[Vicar's Tutu].item_amount() == 0)
+			buy(1, $item[frilly skirt]);
+		//use(1, $item[hewn moon-rune spoon);
+		visit_url("inv_use.php?whichitem=10254&doit=96&whichsign=8");
+	}
+	if ($item[jaba&ntilde;ero-flavored chewing gum].item_amount() < 2)
+		buy(2, $item[jaba&ntilde;ero-flavored chewing gum]);
+	SweetSynthesisEffect(10); // hot resist
+	DoQuest(10, 1); // (+hot resist)
 }
 void DoQuest11()
 {
@@ -3486,7 +3514,7 @@ void InitCharacter()
 	EquipEmpty($slot[hat], $item[Iunion Crown]);
 	EquipEmpty($slot[shirt], $item[makeshift garbage shirt]);
 	EquipEmpty($slot[back], $item[protonic accelerator pack]);
-	EquipEmpty($slot[weapon], $item[Fourth of May Cosplay Saber]);
+	$slot[weapon].equip($item[Fourth of May Cosplay Saber]);
 	EquipEmpty($slot[off-hand], $item[latte lovers member's mug]);
 	EquipEmpty($slot[pants], $item[Cargo Cultist Shorts]);
 	EquipEmpty($slot[acc1], $item[Retrospecs]);
@@ -3525,6 +3553,13 @@ void InitCharacter()
 		cli_execute("genie wish for more wishes");
 
 	visit_url("place.php?whichplace=chateau&action=chateau_desk2");
+	if (get_property("_campAwayCloudBuffs").to_int() == 0)
+	{
+		visit_url("place.php?whichplace=campaway&action=campaway_sky");
+		visit_url("place.php?whichplace=campaway&action=campaway_sky");
+		visit_url("place.php?whichplace=campaway&action=campaway_sky");
+		visit_url("place.php?whichplace=campaway&action=campaway_sky");
+	}
 
 
 	if (my_meat() == 0)
@@ -3581,7 +3616,8 @@ void InitCharacter()
 		create(1, $item[Shakespeare's Sister's Accordion]);
 		if ($item[maiden wig].item_amount() == 0)
 			buy(1, $item[maiden wig]);
-		create(1, $item[Hairpiece on Fire]);
+		if ($item[lump of Brituminous coal].item_amount() > 0)
+			create(1, $item[Hairpiece on Fire]);
 	}
 
 	
