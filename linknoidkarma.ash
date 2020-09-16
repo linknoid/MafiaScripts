@@ -150,6 +150,57 @@ void DoDrink(item i, int count)
 	drink(count, i);
 }
 
+void ChateauRest(int needMP)
+{
+	if (my_level() >= 4 && my_level() < 9) // before level 4, we need the exp more, so use the chateau then, 
+		while (my_mp() < needMP && needMP - my_mp() < 50 && $item[psychokinetic energy blob].item_amount() >= 2)
+			$item[psychokinetic energy blob].use(1);
+
+	if (my_mp() < needMP)
+	{
+		print("Resting in chateau to recover", "orange");
+		waitq(1);
+		visit_url("place.php?whichplace=chateau&action=chateau_restlabelfree");
+	}
+}
+
+void RecoverHPorMP(boolean force)
+{
+	if ($effect[Beaten Up].have_effect() > 0) // should never get beaten up
+		abort("Got beaten up, please debug");
+	ChateauRest(20);
+	boolean needHeal = my_hp() < (my_maxhp() / 2)
+		|| (force && my_hp() < (my_maxhp() * .95));
+	if (needHeal && my_mp() >= 20)
+	{
+		$skill[Cannelloni Cocoon].use_skill(1);
+		needHeal = false;
+	}
+	if (needHeal || my_mp() < 20)
+	{
+		ChateauRest(20);
+	}
+}
+
+void EnsureMP(int needMP)
+{
+	if (needMP > my_maxmp())
+		abort("Can't achieve " + needMP + " MP");
+
+	while (my_mp() < needMP)
+	{
+		int curMP = my_mp();
+		ChateauRest(needMP);
+		if (my_mp() <= curMP)
+		{
+			if ($item[psychokinetic energy blob].item_amount() > 0)
+				$item[psychokinetic energy blob].use(1);
+			else
+				abort("Could not restore MP");
+		}
+	}
+}
+
 void OpenToys()
 {
 	foreach i in $items[ Gathered Meat-Clip,
@@ -409,38 +460,7 @@ boolean AmDrunk()
 {
 	return my_inebriety() > NonStooperDrunkLimit();
 }
-void ChateauRest(int needMP)
-{
-	if (my_level() >= 4 && my_level() < 9) // before level 4, we need the exp more, so use the chateau then, 
-		while (my_mp() < needMP && needMP - my_mp() < 50 && $item[psychokinetic energy blob].item_amount() >= 2)
-			$item[psychokinetic energy blob].use(1);
 
-	if (my_mp() < needMP)
-	{
-		print("Resting in chateau to recover", "orange");
-		waitq(1);
-		visit_url("place.php?whichplace=chateau&action=chateau_restlabelfree");
-	}
-}
-
-void EnsureMP(int needMP)
-{
-	if (needMP > my_maxmp())
-		abort("Can't achieve " + needMP + " MP");
-
-	while (my_mp() < needMP)
-	{
-		int curMP = my_mp();
-		ChateauRest(needMP);
-		if (my_mp() <= curMP)
-		{
-			if ($item[psychokinetic energy blob].item_amount() > 0)
-				$item[psychokinetic energy blob].use(1);
-			else
-				abort("Could not restore MP");
-		}
-	}
-}
 
 void MaxCombatItemDrop()
 {
@@ -1591,10 +1611,78 @@ void UnlockIsland()
 		abort("Failed at creating dingy dinghy");
 }
 
+void FightGhost()
+{
+	if (AmDrunk())
+		return;
+	location loc = get_property("ghostLocation").to_location();
+	if (loc == $location[none])
+		return;
+	GearForCombat();
+	RecoverHPorMP(true);
+	ChooseFamiliar();
+	ResetCombatState();
+	visit_url(loc.to_url());
+	run_combat("Filter_Ghost");
+}
+
+void FightWanderers(boolean withBuffs)
+{
+	if (AmDrunk())
+		return;
+	FightGhost();
+	boolean hasWanderer = true;
+	while (hasWanderer && my_turnCount() < portscanCounter)
+	{
+		hasWanderer = false;
+		string[int] counters = get_property("relayCounters").split_string(":");
+		for (int i = 2 ; i < counters.count(); i += 3)
+		{
+			int turns = counters[i - 2].to_int();
+			string type = counters[i - 1];
+			if (type.contains_text("Digitize Monster") || type.contains_text("Romantic Monster window end"))
+			{
+				if (turns < my_turncount())
+					hasWanderer = true;
+			}
+		}
+print ("here 2");
+		if (!hasWanderer)
+		{
+			FightGhost();
+			return;
+		}
+		if (withBuffs)
+		{
+			UseSkillForEffect($skill[Inscrutable Gaze], $effect[Inscrutable Gaze]);
+			UseSkillForEffect($skill[Springy Fusilli], $effect[Springy Fusilli]);
+			UseSkillForEffect($skill[Blood Bubble], $effect[Blood Bubble]);
+			UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
+			GeneralBuffStats();
+		}
+print ("here 1");
+		ChooseFamiliar();
+		GearForCombat();
+
+		int turnsBefore = my_adventures();
+
+		ResetCombatState();
+		string page = visit_url($location[The Haunted Kitchen].to_url());
+		if (page.contains_text($monster[The Icewoman].to_string()))
+			run_combat("Filter_Ghost");
+		else
+			run_combat("Filter_Standard");
+
+		if (turnsBefore != my_adventures())
+			return;
+	}
+}
+
 void UnlockHippyStore()
 {
 	for (int i = 0; i < 5; i++)
 	{
+		FightWanderers(false);
 		if ($item[filthy knitted dread sack].HaveItem() && $item[filthy corduroys].HaveItem())
 			break;
 		if (get_property("_missileLauncherUsed") == "false" && get_campground() contains $item[Asdon Martin keyfob])
@@ -1677,24 +1765,6 @@ void RunLOVTunnel(int day)
 	run_choice(3); // LOV Extraterrestial Chocolate
 }
 
-
-void RecoverHPorMP(boolean force)
-{
-	if ($effect[Beaten Up].have_effect() > 0) // should never get beaten up
-		abort("Got beaten up, please debug");
-	ChateauRest(20);
-	boolean needHeal = my_hp() < (my_maxhp() / 2)
-		|| (force && my_hp() < (my_maxhp() * .95));
-	if (needHeal && my_mp() >= 20)
-	{
-		$skill[Cannelloni Cocoon].use_skill(1);
-		needHeal = false;
-	}
-	if (needHeal || my_mp() < 20)
-	{
-		ChateauRest(20);
-	}
-}
 
 void FightTentacle()
 {
@@ -1843,20 +1913,6 @@ boolean RunSnojo()
 	return true;
 }
 
-void FightGhost()
-{
-	if (AmDrunk())
-		return;
-	location loc = get_property("ghostLocation").to_location();
-	if (loc == $location[none])
-		return;
-	GearForCombat();
-	RecoverHPorMP(true);
-	ChooseFamiliar();
-	ResetCombatState();
-	visit_url(loc.to_url());
-	run_combat("Filter_Ghost");
-}
 
 void GrabPirateDNA()
 {
@@ -2514,57 +2570,6 @@ void FightChateauPainting()
 	MakeGeneTonic("Elf", 7);
 }
 
-void FightWanderers(boolean withBuffs)
-{
-	if (AmDrunk())
-		return;
-	FightGhost();
-	boolean hasWanderer = true;
-	while (hasWanderer && my_turnCount() < portscanCounter)
-	{
-		hasWanderer = false;
-		string[int] counters = get_property("relayCounters").split_string(":");
-		for (int i = 2 ; i < counters.count(); i += 3)
-		{
-			int turns = counters[i - 2].to_int();
-			string type = counters[i - 1];
-			if (type.contains_text("Digitize Monster") || type.contains_text("Romantic Monster window end"))
-			{
-				if (turns < my_turncount())
-					hasWanderer = true;
-			}
-		}
-print ("here 2");
-		if (!hasWanderer)
-		{
-			FightGhost();
-			return;
-		}
-		if (withBuffs)
-		{
-			UseSkillForEffect($skill[Inscrutable Gaze], $effect[Inscrutable Gaze]);
-			UseSkillForEffect($skill[Springy Fusilli], $effect[Springy Fusilli]);
-			UseSkillForEffect($skill[Blood Bubble], $effect[Blood Bubble]);
-			UseSkillForEffect($skill[Astral Shell], $effect[Astral Shell]);
-			GeneralBuffStats();
-		}
-print ("here 1");
-		ChooseFamiliar();
-		GearForCombat();
-
-		int turnsBefore = my_adventures();
-
-		ResetCombatState();
-		string page = visit_url($location[The Haunted Kitchen].to_url());
-		if (page.contains_text($monster[The Icewoman].to_string()))
-			run_combat("Filter_Ghost");
-		else
-			run_combat("Filter_Standard");
-
-		if (turnsBefore != my_adventures())
-			return;
-	}
-}
 
 
 void MakeGovernmentCheese()
@@ -2583,7 +2588,7 @@ void MakeGovernmentCheese()
 	}
 	if ($item[spooky jelly].item_amount() > 0)
 	{
-		$item[spooky jelly].use(1);
+		$item[spooky jelly].chew(1);
 	}
 	else
 	{
@@ -3143,12 +3148,12 @@ void DoQuest6()
 
 	if ($effect[Song of the North].have_effect() == 0)
 	{
-		ChateauRest(100);
+		EnsureMP(100);
 		UseSkillForEffect($skill[Song of the North], $effect[Song of the North]);
 	}
 	if ($effect[Bow-Legged Swagger].have_effect() == 0)
 	{
-		ChateauRest(100);
+		EnsureMP(100);
 		UseSkillForEffect($skill[Bow-Legged Swagger], $effect[Bow-Legged Swagger]);
 	}
 	DoQuest(6, 22); // weapon damage
@@ -3169,15 +3174,18 @@ void DoQuest7()
 	UseSkillForEffect($skill[Spirit of Garlic], $effect[Spirit of Garlic]);
 	UseSkillForEffect($skill[Simmer], $effect[Simmering]);
 //abort("Drink Sockdollager");
-	ChateauRest(30);
+	EnsureMP(30);
 	UseSkillForEffect($skill[Carol of the Hells], $effect[Carol of the Hells]);
-	ChateauRest(100);
+	EnsureMP(100);
+	UseSkillForEffect($skill[Song of Sauce], $effect[Song of Sauce]);
+	EnsureMP(100);
 	UseSkillForEffect($skill[Bend Hell], $effect[Bendin' Hell]);
 	SaberBuff();
 	if (!$item[weeping willow wand].HaveItem() && $item[flimsy hardwood scraps].item_amount() > 0)
-		buy($coinmaster[Your SpinMaster&trade; lathe], 1, $item[weeping willow wand]);
-	$slot[weapon].equip($item[weeping willow wand]);
-	DoQuest(7, 45); // (+spell damage)
+		$coinmaster[Your SpinMaster&trade; lathe].buy(1, $item[weeping willow wand]);
+	if ($item[weeping willow wand].item_amount() > 0)
+		$slot[weapon].equip($item[weeping willow wand]);
+	DoQuest(7, 43); // (+spell damage)
 }
 void DoQuest8()
 {
@@ -3737,7 +3745,7 @@ void Day1()
 	GetNeverendingPartyBuff();
 	while ( RunSnojo() )
 	{
-		MakeGovernmentCheese();
+		//MakeGovernmentCheese(); // doesn't seem to be necessary anymore
 	}
 	RunNeverendingParty(10);
 
