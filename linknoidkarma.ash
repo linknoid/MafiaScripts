@@ -219,6 +219,20 @@ void EnsureMP(int needMP)
 	}
 }
 
+void EnsureMeat(int amount)
+{
+	if (my_meat() < amount)
+	{
+		if (get_property("_deckCardsDrawn").to_int() <= 10)
+		{
+			if ($item[1952 Mickey Mantle card].item_amount() == 0)
+				cli_execute("cheat 1952");
+			autosell(1, $item[1952 Mickey Mantle card]);
+		}
+	}
+}
+
+
 void OpenToys()
 {
 	foreach i in $items[ Gathered Meat-Clip,
@@ -427,6 +441,7 @@ void CraftPotionIfNeeded(item pot, item ingredient, boolean isHighPotion, boolea
 		ingredient2 = $item[scrumdiddlyumptious solution];
 		if (ingredient2.item_amount() == 0 && $item[scrumptious reagent].item_amount() > 0)
 		{
+			EnsureMeat(1000);
 			if ($item[delectable catalyst].item_amount() == 0 && my_meat() > 1000)
 				$item[delectable catalyst].buy(1);
 			$item[delectable catalyst].use(1);
@@ -689,6 +704,7 @@ void UpdateQuestStatus()
 void DailySummons()
 {
 	ChateauRest(20);
+	use(1, $item[Bird-a-Day calendar]);
 
 	$skill[Perfect Freeze].use_skill(1);
 	$skill[Pastamastery].use_skill(1);
@@ -1588,7 +1604,10 @@ void GearForCombat(location loc)
 		$slot[off-hand].equip($item[KoL Con 13 snowglobe]);
 	else
 		$slot[off-hand].equip($item[Kramco Sausage-o-Matic&trade;]);
-	$slot[pants].equip($item[pantogram pants]); // make sure we're wearing pants first
+	if ($item[pantogram pants].HaveItem())
+		$slot[pants].equip($item[pantogram pants]); // make sure we're wearing pants first
+	else
+		$slot[pants].equip($item[Cargo Cultist Shorts]);
 	$slot[acc1].equip($item[Kremlin's Greatest Briefcase]); // for escaping
 	$slot[acc2].equip($item[gold detective badge]);
 	if ($item[LOV earrings].HaveItem())
@@ -2482,6 +2501,12 @@ void EatBrowserCookie()
 {
 	while (my_fullness() + 4 <= fullness_limit())
 	{
+		if (get_campground() contains $item[diabolic pizza cube])
+		{
+			if (user_confirm("About to eat browser cookie at " + my_fullness() + " fullness, skip eating?"))
+				return;
+				//abort("Eat your pizza and run again to continue");
+		}
 		if (my_fullness() % 4 == 0 && my_meat() >= 1000 && fullness_limit() < 16
 			&& get_campground() contains $item[portable Mayo Clinic])
 		{
@@ -3136,7 +3161,8 @@ void DoQuest3()
 	$slot[hat].equip($item[FantasyRealm Mage's Hat]);
 	if ($item[denim jacket].item_amount() > 0)
 		$slot[shirt].equip($item[denim jacket]);
-	$slot[pants].equip($item[Vicar's Tutu]);
+	if ($item[Vicar's Tutu].item_amount() > 0)
+		$slot[pants].equip($item[Vicar's Tutu]);
 	if ($item[dorky glasses].item_amount() > 0)
 		$slot[acc2].equip($item[dorky glasses]);
 	$slot[off-hand].equip($item[A Light that Never Goes Out]);
@@ -3197,7 +3223,8 @@ void DoQuest4()
 		$slot[hat].equip($item[Hairpiece on Fire]);
 	$slot[weapon].equip($item[Shakespeare's Sister's Accordion]);
 	$slot[off-hand].equip($item[A Light that Never Goes Out]);
-	$slot[pants].equip($item[Vicar's Tutu]);
+	if ($item[Vicar's Tutu].item_amount() > 0)
+		$slot[pants].equip($item[Vicar's Tutu]);
 	if ($item[noticeable pumps].HaveItem())
 		$slot[acc2].equip($item[noticeable pumps]);
 	$slot[acc3].equip($item[your cowboy boots]);
@@ -3214,7 +3241,6 @@ void DoQuest5()
 		return;
 
 	cli_execute("beach head familiar");
-	HarvestGrass();
 	if (get_property("tomeSummons").to_int() < 3)
 	{
 		if (HaveSize10FamEqp() == $item[none])
@@ -3260,15 +3286,27 @@ void DoQuest5()
 	{
 		cli_execute("witchess");
 	}
-	$familiar[XO Skeleton].use_familiar(); // should be the heaviest familiar at this point
+	$familiar[Baby Bugged Bugbear].use_familiar(); // gets a 10 pound equipment for free
+	visit_url("arena.php");
+	if ($item[bugged balaclava].item_amount() > 0)
+		$item[bugged balaclava].use(1);
+	if ($item[bugged beanie].item_amount() > 0)
+		$slot[familiar].equip($item[bugged beanie]);
+
+	//$familiar[XO Skeleton].use_familiar(); // should be the heaviest familiar at this point
+	//HarvestGrass();
+	//$slot[familiar].equip(HaveSize10FamEqp()); // add 10 pounds
+
 	if ($effect[Fidoxene].have_effect() == 0)
 		while ($item[Ghost Dog Chow].item_amount() > 0)
 			$item[Ghost Dog Chow].use(1);
-	$slot[familiar].equip(HaveSize10FamEqp()); // add 10 pounds
 	if (get_property("_freePillKeeperUsed") == "false" && $effect[Fidoxene].have_effect() == 0)
 		cli_execute("pillkeeper free familiar");
 	SaberBuff();
-	DoQuest(5, 31); // familiar weight
+	if (get_campground() contains $item[diabolic pizza cube] && my_fullness() <= fullness_limit() - 3)
+		user_confirm("Eat a pizza for familiar weight");
+
+	DoQuest(5, 36); // familiar weight
 	ChooseFamiliar();
 }
 void DoQuest6()
@@ -3318,7 +3356,7 @@ void DoQuest6()
 		EnsureMP(100);
 		UseSkillForEffect($skill[Bow-Legged Swagger], $effect[Bow-Legged Swagger]);
 	}
-	DoQuest(6, 22); // +weapon damage
+	DoQuest(6, 18); // +weapon damage
 	$slot[familiar].equip($item[none]);
 }
 void DoQuest7()
@@ -3349,7 +3387,7 @@ void DoQuest7()
 		$coinmaster[Your SpinMaster&trade; lathe].buy(1, $item[weeping willow wand]);
 	if ($item[weeping willow wand].item_amount() > 0)
 		$slot[off-hand].equip($item[weeping willow wand]);
-	DoQuest(7, 41); // +spell damage
+	DoQuest(7, 37); // +spell damage
 }
 void DoQuest8()
 {
@@ -3381,6 +3419,8 @@ void DoQuest8()
 	// try to intergnat "Rational Thought"
 
 	$item[squeaky toy rose].use(1);
+	if (get_campground() contains $item[diabolic pizza cube] && my_fullness() <= fullness_limit() - 3)
+		user_confirm("Eat a pizza for -combat");
 
 	DoQuest(8, expectedTurns); // (-combat)
 }
@@ -3405,6 +3445,7 @@ void DoQuest9()
 	UseSkillForEffect($skill[Singer's Faithful Ocelot], $effect[Singer's Faithful Ocelot]);
 	UseItemForEffect($item[Gene Tonic: Pirate], $effect[Human-Pirate Hybrid]);
 
+	FreeKillNinja();
 	if ($effect[Bat-Adjacent Form].have_effect() == 0)
 	{
 		FightWanderers(false); // clear out wanderers before using the latte banish on some random encounter
@@ -3428,7 +3469,7 @@ void DoQuest9()
 	$slot[off-hand].equip($item[A Light that Never Goes Out]);
 	if ($item[fancy party pants].HaveItem())
 		$slot[pants].equip($item[fancy party pants]);
-	else
+	else if ($item[Vicar's Tutu].item_amount() > 0)
 		$slot[pants].equip($item[Vicar's Tutu]);
 	if ($item[Source essence].item_amount() > 100 && !$item[Source shades].HaveItem()
 		&& get_property("_sourceTerminalExtrudes").to_int() < 3)
@@ -3444,7 +3485,7 @@ void DoQuest9()
 	if (get_property("_barrelPrayer") != "true")
 		cli_execute("barrelprayer buff");
 	AsdonMartin($effect[Driving Observantly]);
-	if (get_property("_steelyEyedSquintUsed") != "true")
+	if (get_property("_steelyEyedSquintUsed") != "true" && $effect[Steely-Eyed Squint].have_effect() == 0)
 	{
 		EnsureMP(100);
 		use_skill(1, $skill[Steely-Eyed Squint]);
@@ -3566,7 +3607,7 @@ void DoQuest10()
 			buy(1, $item[bugbear bungguard]);
 		if ($item[frilly skirt].item_amount() == 0 && $item[Vicar's Tutu].item_amount() == 0)
 			buy(1, $item[frilly skirt]);
-		//use(1, $item[hewn moon-rune spoon);
+		//use(1, $item[hewn moon-rune spoon]);
 		visit_url("inv_use.php?whichitem=10254&doit=96&whichsign=8");
 	}
 	if ($item[jaba&ntilde;ero-flavored chewing gum].item_amount() < 2)
@@ -3746,7 +3787,7 @@ void InitCharacter()
 	}
 
 
-	if (my_meat() == 0)
+	if (my_meat() < 10)
 	{
 		cli_execute("numberology 14");
 		cli_execute("numberology 14");
@@ -3869,7 +3910,6 @@ void InitCharacter()
 	//	MakeGreenMana();
 	//	MakeGreenMana();
 	//}
-	use(1, $item[Bird-a-Day calendar]);
 
 	visit_url("shop.php?whichshop=lathe"); // get hardwood scraps
 
@@ -4003,14 +4043,13 @@ void Day1()
 	TryForJumboOlive();
 }
 
-
-
 void Day2()
 {
 	if (get_property("_horsery") == "")
 		cli_execute("horsery dark");
 	if (!HaveItem($item[A Light that Never Goes Out]))
 	{
+		EnsureMeat(1000);
 		use_skill(1, $skill[Summon Smithsness]);
 		if ($item[third-hand lantern].item_amount() == 0)
 			buy(1, $item[third-hand lantern]);
@@ -4018,6 +4057,7 @@ void Day2()
 	}
 	if (!HaveItem($item[Vicar's Tutu])) // todo
 	{
+		EnsureMeat(1000);
 		use_skill(1, $skill[Summon Smithsness]);
 		if ($item[frilly skirt].item_amount() == 0)
 			buy(1, $item[frilly skirt]);
@@ -4025,6 +4065,13 @@ void Day2()
 	}
 	//ExecuteBastilleBattalion("BABAR", "BRUTALIST", "CANNON"); // muscle stats, +8 familiar weight, muscle buff
 	ExecuteBastilleBattalion("BARBERSHOP", "BRUTALIST", "CANNON"); // moxie stats, +8 familiar weight, muscle buff
+	if ($effect[Steely-Eyed Squint].have_effect() > 0)
+	{
+		RunGingerbread();
+		while ( RunSnojo() ) { }
+		// do +items quest 9 before yesterday's squint wears off from other quests
+		DoQuest9(); // Items
+	}
 
 
 	if (!HaveItem($item[pantogram pants]))
@@ -4051,8 +4098,6 @@ void Day2()
 	while ( RunSnojo() ) { }
 	RunGingerbread();
 	GrabPirateDNA();
-	FreeKillNinja();
-	//FaxNinja();
 	//FightWitchessBishop(2, false);
 	//FightWitchessBishop(3, false);
 
