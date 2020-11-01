@@ -258,6 +258,7 @@ void DoVolcanoMining()
 {
 	if (get_property("_hotAirportToday") == "true" || get_property("hotAirportAlways") == "true")
 	{
+		ReadSettings();
 		DoVolcoino();
 		WearMiningGear();
 		DoMining(0);
@@ -468,6 +469,45 @@ void TryOverdrink()
 void main()
 {
 	DoVolcanoMining();
+	CheckDaycare();
+	if (get_property("_sourceTerminalExtrudes").to_int() < 3)
+	{
+		cli_execute("terminal extrude food.ext");
+		cli_execute("terminal extrude booze.ext");
+		cli_execute("terminal extrude booze.ext");
+	}
+	if (get_property("_pottedTeaTreeUsed") == "false" && get_campground() contains $item[Potted Tea Tree])
+	{
+		cli_execute("teatree royal");
+	}
+	if ($item[raffle ticket].item_amount() == 0)
+	{
+		cli_execute("raffle 1");
+	}
+        if ($item[Bird-a-Day calendar].item_amount() > 0)
+        {
+		if (get_property("_canSeekBirds") == "false")
+			use(1, $item[Bird-a-Day calendar]);
+		while(get_property("_birdsSoughtToday").to_int() < 6)
+		{
+			use_skill(1, $skill[Seek out a Bird]);
+		}
+        }
+	if ($skill[Incredible Self-Esteem].have_skill() && get_property("_incredibleSelfEsteemCast") == "false")
+	{
+		use_skill(1, $skill[Incredible Self-Esteem]);
+	}
+	CombBeach(0);
+	UseReplicator();
+
+	if ($skill[That's Not a Knife].have_skill())
+	{
+		if ($item[soap knife].item_amount() > 0)
+			put_closet($item[soap knife].item_amount(), $item[soap knife]);
+		use_skill(1, $skill[That's Not a Knife]);
+	}
+	MakeMagicalSausages();
+
 	string emptyOrgan;
 	if (my_spleen_use() < spleen_limit())
 		emptyOrgan = "spleen";
@@ -475,7 +515,6 @@ void main()
 		emptyOrgan += "/stomach";
 	if (emptyOrgan != "" && user_confirm("Your " + emptyOrgan + " is not full, do you wish to stop to fill it?"))
 		return;
-	CheckDaycare();
 	if (!user_confirm("Ready for overdrinking?"))
 		return;
 	SleepOutfit();
@@ -530,14 +569,6 @@ print("remaining drunk = " + remainingDrunk);
 		}
 	}
 	SleepOutfit();
-	UseReplicator();
-
-	if ($skill[That's Not a Knife].have_skill())
-	{
-		if ($item[soap knife].item_amount() > 0)
-			put_closet($item[soap knife].item_amount(), $item[soap knife]);
-		use_skill(1, $skill[That's Not a Knife]);
-	}
 	while (get_property("_chocolatesUsed").to_int() < 2 && advGain + my_adventures() < 197)
 	{
 		item choc;
@@ -558,35 +589,6 @@ print("remaining drunk = " + remainingDrunk);
 	SwitchToThanksgarden();
 	TryOvenCrafting();
 
-	if (get_property("_sourceTerminalExtrudes").to_int() < 3)
-	{
-		cli_execute("terminal extrude food.ext");
-		cli_execute("terminal extrude booze.ext");
-		cli_execute("terminal extrude booze.ext");
-	}
-	if (get_property("_pottedTeaTreeUsed") == "false" && get_campground() contains $item[Potted Tea Tree])
-	{
-		cli_execute("teatree royal");
-	}
-	if ($item[raffle ticket].item_amount() == 0)
-	{
-		cli_execute("raffle 1");
-	}
-        if ($item[Bird-a-Day calendar].item_amount() > 0)
-        {
-		if (get_property("_canSeekBirds") == "false")
-			use(1, $item[Bird-a-Day calendar]);
-		while(get_property("_birdsSoughtToday").to_int() < 6)
-		{
-			use_skill(1, $skill[Seek out a Bird]);
-		}
-        }
-	if ($skill[Incredible Self-Esteem].have_skill() && get_property("_incredibleSelfEsteemCast") == "false")
-	{
-		use_skill(1, $skill[Incredible Self-Esteem]);
-	}
-	CombBeach(0);
-	MakeMagicalSausages();
 	if (get_property("hasDetectiveSchool") == "true"
 		&& get_property("_detectiveCasesCompleted").to_int() < 3)
 	{

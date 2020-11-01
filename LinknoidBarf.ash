@@ -32,7 +32,7 @@
 
 // TODO:
 
-
+// string [location, 3] get_florist_plants()
 
 // For dice gear:
 // Change filter to kill ticking modifier monsters immediately instead of dragging out combat
@@ -1782,6 +1782,11 @@ boolean TryHandleNonCombat(string page)
 			case "A path away. All ways. Always.":
 				run_choice(key); // skip the adventure
 				return true;
+
+//			case "Let's ride!":
+//				if (needsLube && !lubeShoes.have_equipped())
+//				run_choice(key); // rollercoaster
+//				return true;
 		}
 	}
 	if (page.contains_text("Lights Out in the"))
@@ -3274,8 +3279,8 @@ void EquipBjornCrownFamiliars(familiar first, familiar second)
 		if (my_bjorned_familiar() != first)
 		{
 			first.bjornify_familiar();
-			first = second;
 		}
+		first = second;
 	}
 	if (crown.have_equipped() && first.to_string() != noFamiliar)
 	{
@@ -6558,7 +6563,8 @@ void BuffTurns(int turns)
 		{
 			birdCalendar.use(1);
 		}
-		if (get_property("_birdOfTheDayMods").contains_text("Meat Drop"))
+		if (get_property("_birdOfTheDayMods").contains_text("Meat Drop")
+			&& seekBird.have_skill())
 		{
 			while (seekBird.mp_cost() < 200 // stop when it gets to 320, but checking against 200 to be safe
 				&& seekBird.mp_cost() <= my_mp()
@@ -8365,7 +8371,7 @@ void RestoreGarden()
 	{
 		if (it == pokeGarden && thanksGarden.item_amount() > 0)
 		{
-			if (count == 0 && fertilizer.item_amount() > 0)
+			if (count == 0 && fertilizer.item_amount() > 0 && !AscensionScheduledToday())
 			{
 				use(1, fertilizer); // this will get converted to a single cornucopia, but it should grow to 3 tomorrow
 			}
